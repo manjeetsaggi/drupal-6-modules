@@ -1,0 +1,64 @@
+<?php
+// $Id: extlink.module,v 1.3 2008/01/28 00:33:21 quicksketch Exp $
+
+function extlink_menu() {
+  $items = array();
+  $items['admin/settings/extlink'] = array(
+    'title' => t('External links'),
+    'description' => t('Alter the display of external links on the site.'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('extlink_admin_settings'),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer site configuration'),
+  );
+  return $items;
+}
+
+/**
+ * Implementation of hook_init().
+ */
+function extlink_init() {
+  $path = drupal_get_path('module', 'extlink');
+  drupal_add_js($path .'/extlink.js');
+  drupal_add_js(array('extlink' => array('extTarget' => variable_get('extlink_target', 0), 'extClass' => variable_get('extlink_class', 'ext'), 'extSubdomains' => variable_get('extlink_subdomains', 1), 'mailtoClass' => variable_get('extlink_mailto_class', 'mailto'))), 'setting');
+  if (variable_get('extlink_class', 'ext') == 'ext' || variable_get('extlink_mailto_class', 'mailto') == 'mailto') {
+    drupal_add_css($path .'/extlink.css');
+  }
+}
+
+function extlink_admin_settings() {
+  $form = array();
+
+  $form['extlink_class'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Add icon to external links'),
+    '#return_value' => 'ext',
+    '#default_value' => variable_get('extlink_class', 'ext'),
+    '#description' => t('Places an !icon icon next to external links.', array('!icon' => theme_image(drupal_get_path('module', 'extlink') .'/extlink.png'))),
+  );
+
+  $form['extlink_mailto_class'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Add icon to mailto links'),
+    '#return_value' => 'mailto',
+    '#default_value' => variable_get('extlink_mailto_class', 'mailto'),
+    '#description' => t('Places an !icon icon next to external links.', array('!icon' => theme_image(drupal_get_path('module', 'extlink') .'/mailto.png'))),
+  );
+
+  $form['extlink_subdomains'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Consider subdomains internal'),
+    '#default_value' => variable_get('extlink_subdomains', 1),
+    '#description' => t('If checked, links with the same primary domain will all be considered internal. A link from www.example.com to my.example.com would be considered internal. Links between the www. and non-www. domain are always considered internal.'),
+  );
+
+  $form['extlink_target'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Open external links in a new window'),
+    '#return_value' => '_blank',
+    '#default_value' => variable_get('extlink_target', 0),
+    '#description' => t('Should all external links be opened in a new window?'),
+  );
+  
+  return system_settings_form($form);
+}

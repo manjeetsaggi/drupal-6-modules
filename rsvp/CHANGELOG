@@ -1,0 +1,42 @@
+12/09/2008 - ulf1
+#344338 : emails sent have \n\r in front of each line
+-Fixed a problem with attendees not having their emails properly stored which generates issues
+when sending invitations.
+
+12/05/2008 - ulf1
+#344083 : RSVP tab visible on other users user page 
+#344334 : anon users can view and alter other RSVPs
+
+12/04/2008 - ulf1
+- port to drupal 6.0
+- Now supports Drupal 6 and Date or Event.
+- Now View 2 complient files. (removed contributes directory).
+- Cleanup: Removed also rsvp.mysql
+- Added a new permission "maintain rsvp"
+- Added a page for admins/maintainers to manage all RSVPs.
+- Added supports "Invitation Links" in Nodes.
+- Added general RSVP setting to choose which email address to use.
+- Added specific RSVP option to show attendees or just a summary.
+- Added specific RSVP option to show responses only after reply.
+- Added Comment field for attendees.
+- Added completed abstraction of response list output using theme hooks.
+- Added icons.
+- It is now possible to create multiple rsvp's for the same start date (on same node).
+- Attendees added by other people then the owner are now marked as such in the response list.
+- Added configurable response text per rsvp.
+- Added field for number of guests to invitation reply.
+
+3/25/05 - crunchywelch
+- port to 4.6
+- complete reworking of UI to include tabs
+- better confirmation screens for creating and editing
+- better hook_help implementation
+- update hook_link to work with new 4.6 event module
+- remove db tables rsvp_event and rsvp_user_prefs
+- rename db table rsvp_to_user to rsvp_invite
+- removed user preferences in favor of good defaults
+- user permissions audit
+- better email address input validation
+- invitation url by hash value access is always allowed
+- all html broken out into rsvp.theme file and theme functions
+- pruned rsvp.css

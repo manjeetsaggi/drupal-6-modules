@@ -1,0 +1,13 @@
+; $Id: rsvp.info,v 1.6.2.2 2008/12/06 00:40:21 ulf1 Exp $
+name = RSVP
+description = Provides rsvp functionality.
+package = RSVP
+core = 6.x
+
+
+; Information added by drupal.org packaging script on 2008-12-10
+version = "6.x-1.x-dev"
+core = "6.x"
+project = "rsvp"
+datestamp = "1228911181"
+

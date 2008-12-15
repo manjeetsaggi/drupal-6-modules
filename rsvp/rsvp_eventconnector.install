@@ -1,0 +1,45 @@
+<?php
+// $Id: rsvp_eventconnector.install,v 1.1 2008/11/30 21:12:07 owahab Exp $
+
+/**
+ * Implementation of hook_install().
+ */
+function rsvp_eventconnector_install() {
+
+  // check the rsvp module weight:
+  $rsvp_weight = db_result(db_query("SELECT weight FROM {system} WHERE name = 'rsvp'"));
+  // make rsvp_eventconnector execute after rsvp:
+  db_query("UPDATE {system} SET weight = %d+1 WHERE name = 'rsvp_eventconnector'", $rsvp_weight);
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function rsvp_eventconnector_uninstall() {
+
+  db_query('DELETE FROM {rsvp}');
+  db_query('DELETE FROM {rsvp_invite}');
+    
+  variable_del('rsvp_content_types'); 
+}
+
+/**
+ * Implementation of hook_enable().
+ */
+function rsvp_eventconnector_enable() {
+  variable_set('rsvp_connector', 'event');
+  variable_set('rsvp_content_types', array('event' => ''));    
+}
+
+/**
+ * Implementation of hook_disable().
+ */
+function rsvp_eventconnector_disable() {
+  $connector = variable_get('rsvp_connector', NULL);
+  //This disable func is being called preventive even if other modules are being modified.
+  //Delete variable only if we set it.
+  if (isset($connector) && $connector == 'event' ) { 
+    variable_del('rsvp_connector');
+  }
+}
+

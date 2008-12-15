@@ -1,0 +1,19 @@
+<?php
+// $Id: gravatar.install,v 1.1.4.3 2008/11/08 21:22:20 narno Exp $
+
+/**
+ * @file
+ * Installation for gravatar module
+ */
+
+/**
+ * Implementation of hook_uninstall
+ */
+function gravatar_uninstall() {
+  variable_del('gravatar_toggle');
+  variable_del('gravatar_disabled_by_users');
+  variable_del('gravatar_displaysize');
+  variable_del('gravatar_displayrating');
+  variable_del('gravatar_imagedefault');
+  variable_del('gravatar_default_type');
+}

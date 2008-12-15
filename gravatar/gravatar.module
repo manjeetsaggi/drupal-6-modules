@@ -1,0 +1,363 @@
+<?php
+// $Id: gravatar.module,v 1.6.2.11 2008/11/08 21:22:20 narno Exp $
+
+/**
+ * Integrate gravatars into your drupal site
+ * 
+ * Rewritten 'gravatar' module for drupal 6.x, based on Arnaud 'Narno' Ligny
+ * "identicon" patch by adobo (http://drupal.org/user/6675)
+ * 
+ * @author Arnaud Ligny <arnaud / AT / ligny.org>
+ * @author Matthias Adler <adler / AT / bitshaker.net>
+ * @license gpl v2
+ * 
+ * @see http://site.gravatar.com/site/implement
+ */
+
+define('GRAVATAR_SERVICEURL', 'http://www.gravatar.com/avatar/');
+
+/**
+ * Implementation of hook_perm
+ */
+function gravatar_perm() {
+  return array('administer gravatar', 'use gravatar');
+} // gravatar_perm
+
+/**
+ * Implementation of hook_help
+ */ 
+function gravatar_help($path, $arg) {
+  $help = '';
+
+  switch ($path) {
+    // module settings page
+    case 'admin/user/gravatar':
+      $help_check = TRUE;
+      // picture enabled ?
+      if (_gravatar_check_required() == FALSE) {
+        $help .= '<li>' . t("Make sure !user_picture_support is enabled to enable Gravatar integration", array('!user_picture_support' => l(t('user picture support'), 'admin/user/settings', array('fragment'=>'edit-user-pictures-0-wrapper')))) . '</li>';
+        $help_check = FALSE;
+      }
+      // check users access
+      $user_roles = user_roles(FALSE, 'use gravatar');
+      if (empty($user_roles)) {
+        $help .= '<li>' . t("Make sure !user_access is enabled for appropriate role(s)", array('!user_access' => l(t('user access'), 'admin/user/permissions', array('fragment'=>'module-gravatar')))) . '</li>';
+        $help_check = FALSE;
+      }
+      // picture enabled in comments ?
+      if (_gravatar_check_required('comments') == FALSE) {
+        $help .= '<li>' . t("Make sure !user_picture_in_comments is enabled to use gravatar in comments", array('!user_picture_in_comments' => l(t('user picture in comments'), 'admin/build/themes/settings'))) . '</li>';
+        $help_check = FALSE;
+      }
+      // picture enabled in nodes ?
+      if (_gravatar_check_required('nodes') == FALSE) {
+        $help .= '<li>' . t("Make sure !user_picture_in_nodes is enabled to use gravatar in nodes", array('!user_picture_in_nodes' => l(t('user picture in nodes'), 'admin/build/themes/settings'))) . '</li>';
+        $help_check = FALSE;
+      }
+      if (!$help_check) {
+        $help = '<ul>' . $help . '</ul>';
+      }
+      break;
+    
+    case 'admin/user/settings':
+      if (variable_get('gravatar_toggle', 0)) {
+        $help .= '<p>' . t("Please note that !gravatar_module_page integration is enabled.", array('!gravatar_module_page' => l(t('Gravatar'), 'admin/user/gravatar'))) . '</p>';
+      }
+      break;
+    // general help
+    case 'admin/help#gravatar':
+      $help .= '<h3>' . t("Global settings") . '</h3>';
+      $help .= '<p>' . t("Go to the !gravatar_integration_settings and enable gravatar integration. ", array('!gravatar_integration_settings' => l(t("gravatar integration settings"), 'admin/user/gravatar')));
+      $help .= t("If enabled, all user images will be replaced with gravatars. If disabled, the site's default user picture settings are used.") . '<br />';
+      $help .= t("The site administrator may set a default image width, the maximum allowed maturity level, and select the site's default user image, the default user image provided by this module, or the image provided by gravatar.com, for the case no avatar could be retrieved.") . '</p>';
+      $help .= '<h3>' . t("Per user settings") . '</h3>';
+      $help .= '<p>' . t("In the user profile page, each authenticated user can choose to use his or her gravatar, or the uploaded user image. There the user may also enter an alternative email address for which to retrieve the registered gravatar.") . '</p>';
+      break;
+  }
+  
+  return $help;
+} // gravatar_help
+
+/**
+ * Implementation of hook_menu
+ */
+function gravatar_menu() {
+  $items['admin/user/gravatar'] = array(
+    'title'            => 'Gravatar',
+    'description'      => t('Administer how gravatars are used.'),
+    'file'             => 'gravatar.admin.inc',
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('gravatar_admin_settings'),
+    'access arguments' => array('administer gravatar'),
+    'type'             => MENU_NORMAL_ITEM,
+  );
+  $items['admin/user/gravatar/settings'] = array(
+    'title'            => 'Settings',
+    'type'             => MENU_DEFAULT_LOCAL_TASK,
+    'weight'           => 0,
+  );
+  $items['admin/user/gravatar/advanced'] = array(
+    'title'            => 'Advanced settings',
+    'file'             => 'gravatar.admin.inc',
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('gravatar_admin_advanced_settings'),
+    'access arguments' => array('administer gravatar'),
+    'type'             => MENU_LOCAL_TASK,
+    'weight'           => 1,
+  );
+  $items['admin/user/gravatar/checkemail'] = array(
+    'title'            => 'Tools',
+    'file'             => 'gravatar.admin.inc',
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('gravatarcheckemail_form'),
+    'access arguments' => array('administer gravatar'),
+    'type'             => MENU_LOCAL_TASK,
+    'weight'           => 2,
+  );
+
+  return $items;
+} // gravatar_menu
+
+/**
+ * Override template_preprocess_user_picture
+ */
+function gravatar_preprocess_user_picture(&$variables) {
+  $variables['picture'] = '';
+  
+  if (variable_get('user_pictures', 0)) {
+    $account = $variables['account'];
+    $data    = (object)unserialize($account->data);
+    $alt     = t("@user's picture", array('@user' => $account->name ? $account->name : variable_get('anonymous', t('Anonymous'))));
+
+    // old behavior from user.module
+    if (!empty($account->picture) && file_exists($account->picture)) {
+      $picture = file_create_url($account->picture);
+    }
+    // disable for anonymous
+    elseif (variable_get('user_picture_default', '')) {
+      $picture = variable_get('user_picture_default', '');
+    }
+
+    // gravatar is enabled
+    $user = user_load(array('uid' => $account->uid));
+    if (variable_get('gravatar_toggle', 0) && user_access('use gravatar', $user)) {
+      // anonymous
+      if (empty($account->uid)) {
+        $gravatar = _gravatar_get_gravatar($account->mail);
+      }
+      // user
+      elseif (!isset($data->gravatar_mode) || ($data->gravatar_mode || variable_get('gravatar_disabled_by_users', 0) == 0)) {
+        $gravatar = _gravatar_get_gravatar(($data->gravatar_email ? $data->gravatar_email : $user->mail));
+      }
+    }
+
+    // theme picture
+    if (!empty($picture) || !empty($gravatar)) {
+      $size = '';
+      if (!empty($picture)) {
+        if ($picture == variable_get('user_picture_default', '')) {
+          $dimension = explode('x', variable_get('user_picture_dimensions', '85x85'));
+          $real = is_file($picture) ? getimagesize($picture) : $dimension;
+          $size = array('width' => min($dimension[0], $real[0]), 'height' => min($dimension[1], $real[1]));
+        }
+      }
+      // theme picture with gravatar
+      if (!empty($gravatar)) {
+        $size = array('width' => variable_get('gravatar_displaysize', 48), 'height' => variable_get('gravatar_displaysize', 48));
+      }
+      $variables['picture'] = theme('image', (!empty($gravatar) ? $gravatar : $picture), $alt, $alt, $size, FALSE);
+
+      // enable link to user profile
+      if (!empty($account->uid) && user_access('access user profiles')) {
+        $attributes = array('attributes' => array('title' => t('View user profile.')), 'html' => TRUE);
+        $variables['picture'] = l($variables['picture'], "user/$account->uid", $attributes);
+      }
+      // or link to homepage (if exist)
+      elseif (!empty($account->homepage)) {
+        $attributes = array('attributes' => array('title' => t('View user homepage.')), 'html' => TRUE, 'absolute' => TRUE);
+        $variables['picture'] = l($variables['picture'], $account->homepage, $attributes);
+      }
+    }
+  }
+} // gravatar_preprocess_user_picture
+
+/**
+ * Implementation of hook_user
+ */
+function gravatar_user($op, &$edit, &$account, $category = NULL) {
+  global $user;
+
+  if (variable_get('user_pictures', 0) && user_access('use gravatar')) {
+    if ($op == 'form' && $category == 'account' && variable_get('gravatar_toggle', 0)) {
+      // disable gravatar option
+      if (variable_get('gravatar_disabled_by_users', 0) == 1) {
+        $form['picture']['gravatar_mode'] = array(
+          '#type'          => 'checkbox',
+          '#title'         => t('Enable Gravatar'),
+          '#description'   => t('If enabled, replaces your user image with the avatar submitted to your gravatar.com account.'),
+          '#default_value' => isset($edit['gravatar_mode']) ? $edit['gravatar_mode'] : 1,
+          '#options'       => array(
+            0 => t('Disable'),
+            1 => t('Enable'),
+          ),
+        );
+      }
+      // gravatar email field
+      $user_data = (object)unserialize($user->data);
+      if ((!isset($user_data->gravatar_mode) || ($user_data->gravatar_mode || variable_get('gravatar_disabled_by_users', 0) == 0))) {
+        $form['picture']['gravatar_email'] = array(
+          '#type'             => 'textfield',
+          '#title'            => t('Gravatar email address'),
+          '#description'      => t('Enter the email address under which you registered your avatar at !gravatar_website. Leave blank to use your user account email setting.', array('!gravatar_website' => l('gravatar.com', 'http://www.gravatar.com'))),
+          '#default_value'    => $edit['gravatar_email'],
+          '#element_validate' => array('gravatar_email_validate'),
+        );
+      }
+
+      return $form;
+    }
+  }
+} // gravatar_user
+
+/**
+ * Custom validation hook for gravatar_email
+ */
+function gravatar_email_validate($element, &$form_state) {
+  if ($form_state['values']['gravatar_mode']) {
+    if (!empty($element['#value']) && !valid_email_address($element['#value'])) {
+      form_error($element, t('Please enter a valid email address.'));    
+    }
+  }
+} // gravatar_email_validate
+
+/**
+ * Implementation of hook_form_alter()
+ */
+function gravatar_form_alter(&$form, $form_state, $form_id) {  
+  // gravatar is enabled
+  if (variable_get('gravatar_toggle', 0) && user_access('use gravatar')) {
+    switch ($form_id) {
+        // more details on comment form
+        case 'comment_form':
+          $form['mail']['#description'] .= '<br /><span>' . t('If you have a <a href="@gravatar-website">Gravatar</a> account, used to display your avatar.', array('@gravatar-website' => url('http://www.gravatar.com'))) . '</span>';
+          break;
+        // "clean" user profile form
+        case 'user_profile_form':
+          global $user;
+          $user_data = (object)unserialize($user->data);
+          if ((!isset($user_data->gravatar_mode) || ($user_data->gravatar_mode || variable_get('gravatar_disabled_by_users', 0) == 0))) {
+            $form['picture']['#title'] = 'Gravatar';
+            unset($form['picture']['picture_delete']);
+            unset($form['picture']['picture_upload']);
+          }
+          break;
+      }
+  }
+} // gravatar_form_alter
+
+/**
+ * Generate a gravatar.com request url
+ *
+ * @param (string) $email
+ *   a valid email address
+ * @return (string)
+ *   url encoded string
+ */
+function _gravatar_get_gravatar($email) {
+  global $base_url;
+  $gravatar = '';
+  
+  // email valid ?
+  if ($email && valid_email_address($email)) {
+    // base parameters
+    $gravatar = variable_get('gravatar_url', GRAVATAR_SERVICEURL) . md5($email);
+    // default picture
+    switch (variable_get('gravatar_imagedefault', 0)) {
+      // drupal default picture
+      case 1:
+        $path = variable_get('user_picture_default', '');
+        //$path = url($path, array('absolute' => TRUE)); // fixe URL with absolute path ?
+        $gravatar .= '?d=' . urlencode($path);
+        break;
+      // gravatar module default picture
+      case 2:
+        $path = $base_url . '/' . drupal_get_path('module', 'gravatar') . '/avatar.png';
+        $gravatar .= '?d=' . urlencode($path);
+        break;
+      // gravatar default picture
+      default:
+    }
+    // optional parameters
+    if ($size = variable_get('gravatar_displaysize', 48)) {
+      $gravatar .= '&s=' . $size;
+    }
+    if ($rating = variable_get('gravatar_displayrating', 'PG')) {
+      $gravatar .= '&r=' . $rating;      
+    }
+
+  }
+  // no e-mail for gravatar but ok for identicon ?
+  /*
+  elseif (variable_get('gravatar_imagedefault', 0) == 3 && variable_get('gravatar_default_type', 4) != 4) {
+    $gravatar = variable_get('gravatar_url', GRAVATAR_SERVICEURL) . _gravatar_translate_type();
+  }
+  */
+  
+  return $gravatar;
+} // _gravatar_get_gravatar
+
+/**
+ * Translate default_type to a string
+ *
+ * @return (string)
+ *   "&default=associated type"
+ */
+function _gravatar_translate_type() {
+  $type = variable_get('gravatar_default_type', 4);
+
+  if ($type != 4) {
+    $string = '';
+    switch ($type) {
+      case 1:
+        $string = 'identicon';
+        break;
+      case 2:
+        $string = 'wavatar';
+        break;
+      case 3:
+        $string = 'monsterid';
+        break;
+      default:
+        $string = '';
+    }
+
+    return '?d=' . $string;
+  }
+  else {
+
+    return '';
+  }
+} // _gravatar_translate_type
+
+function _gravatar_check_required($theme_setting = '') {
+  $check_required = FALSE;
+  $user_pictures = variable_get('user_pictures', 0);
+
+  if ($user_pictures) {
+    if ($theme_setting == 'comments') {
+      if (theme_get_setting('toggle_comment_user_picture')) {
+        $check_required = TRUE;
+      }
+    }
+    elseif ($theme_setting == 'nodes') {
+      if (theme_get_setting('toggle_node_user_picture')) {
+        $check_required = TRUE;
+      }
+    }
+    else {
+      $check_required = TRUE;
+    }
+  }
+  
+  return $check_required;
+} // _gravatar_check_required

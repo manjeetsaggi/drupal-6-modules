@@ -1,0 +1,75 @@
+<?php
+// $Id: rsvp_eventconnector.module,v 1.1.2.1 2008/12/05 06:56:59 ulf1 Exp $
+
+class RsvpEventConnectorImpl extends RsvpConnectorImpl {
+
+  //returns a unix date (int) as String. (and already converted to the correct timezone).
+//  function print_unixDateAsString($unixdate)
+//  {  
+//    return $unixdate;
+//  } 
+	
+  function get_datecount($node, $field) {
+    return 1;
+  }
+	
+  //returns startdate as unix timestamp in utc
+  function get_startdate($node, $field, $pos) {
+    $eventstart = $node->event['start'];
+    $unixutc = strtotime($eventstart);
+      	
+    return $unixutc;
+  }
+
+  //startdate as string in local timezone
+  function get_startdateAsString($node, $field, $pos) {
+    
+    return $node->event['start'];    
+  }
+  
+  //returns enddate as unix timestamp in utc
+  function get_enddate($node, $field, $pos) {
+    $eventend = $node->event['end'];
+    $unixutc = strtotime($eventend);
+    $r1 = date('r', $unixutc);
+    return $unixutc;
+  }
+  
+  /*
+   * PRIVATE METHOD. Do not use outside. Return type is based on used connector.
+   * returns time zone offset according to Event API. 
+   */
+    function get_offset($node, $field, $pos) {
+    return $node->event['offset'];
+  }
+  
+  //returns the position for a particular hash, or -1 if invalid hash
+  function get_posByHash($node, $field, $hash) {
+  	//event node has only one start_date
+    return 0;
+  }
+  
+  function is_event_enabled($contenttype) {
+  	
+    $rsvp_content_types = variable_get('rsvp_content_types', array());
+    if (!isset ($rsvp_content_types['event'])) {
+      return false;
+    }
+  	
+    return event_is_enabled($contenttype);
+  }
+  
+  function isTypesAreSelectable() {
+    return false;
+  }
+  
+  //returns true if the connector supports multiple dates per field per content-type. (e.g. Repeatable dates in Date API).
+  function hasMultipleDatesPerField() {
+    return false;
+  }
+  
+}
+
+function rsvp_eventconnector_getconnector() {
+  return new RsvpEventConnectorImpl();  
+}

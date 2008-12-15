@@ -1,0 +1,133 @@
+<?php
+// $Id: rsvp_dateconnector.module,v 1.1.2.1 2008/12/05 06:56:59 ulf1 Exp $
+
+class RsvpDateConnectorImpl extends RsvpConnectorImpl {
+
+  //returns a date as int in unix form (and converted to UTC).
+  function convert_date2UTCUnix($dateAsString, $timezone, $date_type)
+  { 
+  	//1) convert input date into DateTime 
+  	$date = date_make_date($dateAsString, $timezone, $date_type);
+  	
+  	//2) convert DateTime into UTC
+    date_timezone_set($date, timezone_open('UTC')); 	
+  	
+    //3) convert DateTime into Unix
+    return intval(date_convert($date, DATE_OBJECT, DATE_UNIX));
+  }	
+
+  function get_datecount($node, $field) {
+  	$fld = $node->$field;
+  	
+  	return count($fld);
+  }
+
+  //returns startdate as unix timestamp in utc 
+  function get_startdate($node, $field, $pos) {    
+  	$fld = $node->$field;
+
+    $timezoneName_db = $this->get_offset_db($node, $field, $pos);
+  	
+    $date = $this->convert_date2UTCUnix($fld[$pos]['value'], $timezoneName_db, $fld[$pos]['date_type']);
+    return $date;
+  }
+
+  //returns startdate as string in local timezone
+  function get_startdateAsString($node, $field, $pos) {
+  	
+  	$fld = $node->$field;
+    
+    $timezoneName_db = $this->get_offset_db($node, $field, $pos);
+    //$timezoneName_target = $this->get_offset($node, $field, $pos);
+
+    //1) convert input date into DateTime 
+    $date = date_make_date($fld[$pos]['value'], $timezoneName_db, $fld[$pos]['date_type']);
+    
+    //2) convert DateTime into target timezone
+    $timezone_target = date_default_timezone();
+    
+    date_timezone_set($date, $timezone_target);     
+      
+    //3) convert DateTime into String
+    $format = date_formatter_format('default', $field);
+    $out = date_format_date($date, 'custom', $format);
+    return $out;
+  }
+  
+  //returns enddate as unix timestamp in utc
+  function get_enddate($node, $field, $pos) {
+  	$fld = $node->$field;
+  	
+  	//if no "toDate" is set, return the "StartDate" of the event instead.
+  	if (!isset($fld[$pos]['value2'])) {
+  	  return $this->get_startdate($node, $field, $pos);
+  	}
+    
+  	$timezoneName_db = $this->get_offset_db($node, $field, $pos);
+  	
+  	
+    $date = $this->convert_date2UTCUnix($fld[$pos]['value2'], $timezoneName_db, $fld[$pos]['date_type']);
+    return $date;
+  }
+  
+  //returns the position for a particular hash, or -1 if invalid hash
+  function get_posByHash($node, $field, $hash) {
+    $fld = $node->$field;
+    
+    $count = $this->get_datecount($node, $field);
+
+    for ($i = 0; $i < $count; $i++) {
+      $unixdate = $this->get_startdate($node, $field, $i);
+      if ($unixdate == $hash) {
+      	return $i;
+      }
+    }
+    return -1;
+  }
+  
+  /*
+   * PRIVATE METHOD. Do not use outside. Return type is based on used connector.
+   * returns time zone offset according to Date API. 
+   */
+  function get_offset($node, $field, $pos) {
+    $fld = $node->$field;
+    
+    return $fld[$pos]['timezone'];
+  }
+
+  /*
+   * PRIVATE METHOD. Do not use outside. Return type is based on used connector.
+   * returns time zone name as date is stored in database according to Date API. 
+   */
+  function get_offset_db($node, $field, $pos) {
+    $fld = $node->$field;
+    
+    return $fld[$pos]['timezone_db'];
+  }
+  
+  function is_event_enabled($contenttype) {
+
+    $rsvp_content_types = variable_get('rsvp_content_types', array());
+    if (!isset ($rsvp_content_types[$contenttype])) {
+      return false;
+    }
+    else {
+      return true;
+    }
+  }
+  
+  function isTypesAreSelectable() {
+    return true;
+  }
+  
+  //returns true if the connector supports multiple dates per field per content-type. (e.g. Repeatable dates in Date API).
+  function hasMultipleDatesPerField() {
+    return true;
+  }
+  
+  
+}
+
+function rsvp_dateconnector_getconnector() {
+  return new RsvpDateConnectorImpl();  
+}

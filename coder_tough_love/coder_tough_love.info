@@ -1,0 +1,13 @@
+; $Id: coder_tough_love.info,v 1.1.2.1 2008/11/19 16:26:31 morbus Exp $
+name = Coder Tough Love
+description = Supplementary Coder module to provide Morbus' style complaints.
+package = Development
+dependencies[] = coder
+core = 6.x
+
+; Information added by drupal.org packaging script on 2008-11-19
+version = "6.x-1.0"
+core = "6.x"
+project = "coder_tough_love"
+datestamp = "1227112503"
+

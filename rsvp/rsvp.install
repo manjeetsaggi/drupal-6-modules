@@ -1,0 +1,366 @@
+<?php
+// $Id: rsvp.install,v 1.6.2.1 2008/12/05 06:56:59 ulf1 Exp $ 
+
+function rsvp_install() {
+  drupal_install_schema('rsvp');
+}
+
+function rsvp_schema() {
+
+  $schema['rsvp'] = array(
+    'description' => t('RSVP contents'),
+    'fields' => array(
+      'rid' => array(
+        'description' => ('The primary identifier'),
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE
+      ),
+      'nid' => array(
+        'description' => ('The {node}.nid identifier'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+      ),
+      'uid' => array(
+        'description' => ('The {user}.uid identifier'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+      ),
+      'name' => array(
+        'description' => ('The RSVP title'),
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => ''
+      ),
+      'invite_text' => array(
+        'description' => ('RSVP body'),
+        'type' => 'text',
+      ),
+      'response_blind' => array(
+        'description' => ('Defines whether responses (result) of rsvp is visible or not, and when it becomes visible.'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+      ),
+      'attendees_visible' => array(
+        'description' => ('Defines whether attendees are visible to other users or not, and when they become visible'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+      ),
+      'list_email' => array(
+        'description' => ('TODO'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+      ),
+      'allow_invite' => array(
+        'description' => ('TODO'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+      ),
+      'timestamp' => array(
+        'description' => ('Records the last update time'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+      ),
+      'startdate' => array(
+        'description' => ('The startdate related to this invitation'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+      ),
+      'text_whoiscoming' => array(
+        'description' => ('The text that is being shown instead of the "Responses" text'),
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => 'Yes'
+      ),
+      'text_yes' => array(
+        'description' => ('The text that is being shown instead of the "Yes" text'),
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => 'Yes'
+      ),
+      'text_no' => array(
+        'description' => ('The text that is being shown instead of the "No" text'),
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => 'No'
+      ),
+      'text_maybe' => array(
+        'description' => ('The text that is being shown instead of the "Maybe" text'),
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => 'Maybe'
+      ),
+    ),
+    'primary key' => array('rid', 'nid', 'uid'),
+  );
+
+  $schema['rsvp_invite'] = array(
+    'description' => t('RSVP invitation status'),
+    'fields' => array(
+      'response' => array(
+        'description' => ('Response of the invitee'),
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => ''
+      ),
+      'rid' => array(
+        'description' => ('The {rsvp}.rid identifier'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+      ),
+      'uid' => array(
+        'description' => ('The {user}.uid identifier'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+      ),
+      'email' => array(
+        'description' => ('Invitee e-mail'),
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => ''
+      ),
+      'hash' => array(
+        'description' => ('The hash sent to the invitee with the invitation e-mail'),
+        'type' => 'varchar',
+        'length' => 255,
+        'default' => ''
+      ),
+      'invited' => array(
+        'description' => ('Whether the invitee was invited(1) or not(0)'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+      ),
+      'received' => array(
+        'description' => ('Whether the invitee has received the invitation(1) or not(0)'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+      ),
+      'timestamp' => array(
+        'description' => ('Records the last update time'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+      ),
+      'comment' => array(
+        'description' => ('Response Comment'),
+        'type' => 'text',
+      ),
+      'inviteehash' => array(
+        'description' => ('The hash of the user that invited this person. (Only set if it was not the owner of the rsvp who invited this user)'),
+        'type' => 'varchar',
+        'length' => 255,
+        'default' => ''
+      ),
+      'totalguests' => array(
+        'description' => ('The total number of guests the attendee brings'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '1'
+      ),
+    ),
+    'primary key' => array('rid', 'email', 'uid'),
+  );
+
+  // check the event module weight:
+  $event_weight = db_result(db_query("SELECT weight FROM {system} WHERE name = 'event'"));
+  // check the date module weight:
+  $date_weight = db_result(db_query("SELECT weight FROM {system} WHERE name = 'date'"));
+  // make RSVP execute after event/date:
+  db_query("UPDATE {system} SET weight = %d+1 WHERE name = 'rsvp'", max($event_weight, $date_weight));
+
+  return $schema;
+}
+
+function rsvp_uninstall() {
+  drupal_uninstall_schema('rsvp');
+
+  variable_del('rsvp_connector');
+  variable_del('rsvp_content_types');
+  variable_del('rsvp_from_address');
+}
+
+function rsvp_update_6000() {
+
+  $ret = array();
+  
+  db_add_field($ret, 'rsvp', 'startdate', array(
+        'description' => ('The startdate related to this invitation'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+      )
+  );
+
+  db_change_field($ret, 'rsvp', 'timestamp', 'timestamp', array(
+        'description' => ('Records the last update time'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+      )
+  );
+
+  db_change_field($ret, 'rsvp', 'blind', 'response_blind', array(
+        'description' => ('Defines whether responses (result) of rsvp is visible or not, and when it becomes visible.'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+      )
+  );
+  
+  db_add_field($ret, 'rsvp', 'attendees_visible', array(
+        'description' => ('Defines whether attendees are visible to other users or not, and when they become visible'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+      )
+  );
+  
+  
+  db_change_field($ret, 'rsvp_invite', 'timestamp', 'timestamp', array(
+        'description' => ('Records the last update time'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+      )
+      
+  );
+
+  db_add_field($ret, 'rsvp_invite', 'comment', array(
+        'description' => ('Response Comment'),
+        'type' => 'text',
+        )
+  );
+  
+  return $ret;
+
+}
+
+function rsvp_update_6001() {
+
+  $ret = array();
+  
+  db_add_field($ret, 'rsvp', 'text_whoiscoming', array(
+        'description' => ('The text that is being shown instead of the "Responses" text'),
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => 'Responses'
+      )
+  );
+  db_add_field($ret, 'rsvp', 'text_yes', array(
+        'description' => ('The text that is being shown instead of the "Yes" text'),
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => 'Yes'
+      )
+  );
+  db_add_field($ret, 'rsvp', 'text_no', array(
+        'description' => ('The text that is being shown instead of the "No" text'),
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => 'No'
+      )
+  );
+  db_add_field($ret, 'rsvp', 'text_maybe', array(
+        'description' => ('The text that is being shown instead of the "Maybe" text'),
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => 'Maybe'
+      )
+  );
+  db_add_field($ret, 'rsvp_invite', 'inviteehash', array(
+        'description' => ('The hash of the user that invited this person. (Only set if it was not the owner of the rsvp who invited this user)'),
+        'type' => 'varchar',
+        'length' => 255,
+        'default' => '',
+      )
+  );
+  db_add_field($ret, 'rsvp_invite', 'totalguests', array(
+        'description' => ('The total number of guests the attendee brings'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '1'
+      )
+  );
+  
+  return $ret;
+
+}
+
+
+
+/**
+ * Implementation of hook_requirements().
+ * Make sure module Event or module Date is enabled.
+ */
+function rs_vp_requi_rements($phase) {
+  $requirements = array();
+
+  $t = get_t();
+
+
+  switch ($phase) {
+    case 'runtime':
+      $event=module_exists('rsvp_eventconnector');
+      $date=module_exists('rsvp_dateconnector');
+      $error = FALSE;
+      if ($event = FALSE && $date = FALSE) {
+        $error = TRUE;
+        $severity = REQUIREMENT_ERROR;
+        $value = $t('The RSVP module requires that at least one rsvp connector module is enabled.', array('!link' => l($t('RSVP'), 'admin/build/modules')));
+      }
+      if ($error) {
+        $requirements['connector'] = array(
+          'title' => $t('RSVP requirements'),
+          'value' => $value,
+          'severity' => $severity,
+          );
+      }
+      break;
+     case 'install':
+      break;
+  }
+  return $requirements;
+}
+
