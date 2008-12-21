@@ -1,5 +1,5 @@
 Document Revision Information:
-$Id: README.txt,v 1.1.2.4 2008/11/02 03:18:17 fractile81 Exp $
+$Id: README.txt,v 1.1.2.5 2008/12/16 02:55:25 fractile81 Exp $
 
 
 Integrated Metatags
@@ -69,9 +69,10 @@ Key Features:
   - Basic support for the Token module - When defining static Metatags, you can
     enable the Token module (http://drupal.org/project/token) and utilize the
     power of that module as well!
-  - Show Metatags on listings and node pages - By default, Metatags will only be
-    displayed on full-page views of a node.  In Drupal 6, you can also set
-    Metatags to be included when a node is being rendered as a teaser.
+  - Show Metatags when nodes are displayed as a teaser (Drupal 6 ONLY) - You
+    can optionally have Metatags displayed whenever nodes are rendered as a
+    teaser.  Otherwise, both Drupal 5 and 6 versions will only show Metatags
+    on a full-page viewing of a node.
 
 
 ===============================
@@ -94,8 +95,22 @@ You can install/enable the Integrated Metatags - CCK (int_meta_cck) module to
 expose fields associated with CCK content types.  These fields will auto-
 matically show up in the dropdown listings on the configuration settings pages.
 
-There are no general-purpose configuration settings for this module.  Instead,
-you configure each content type individually from their content type page.  A
+Under adminstration settings, there is an option to change the "Integrated
+Metatags Settings".  From this page, you can configure how Metatags are
+trimmed, with specific options for the "description" and "keywords" tags.  Each
+has the option to select to trim based on word count or string length.  Select
+the desired radio button and enter a value to cap at.  To not trim at all,
+enter 0 as the value for the trimming cap.  These settings are applied to
+every Metatag this module will produce.
+
+NOTE: various websites will say different things about the maximum length
+of a Metatag, especially the description and keywords tags.  For example,
+Google will only display the first 150 characters of the description when
+displaying search results, but claims to retain more.  It has also been
+observed that search engines tended to dislike sites that have too many
+keywords in their Metatags.
+
+You configure each content type individually from their content type page.  A
 "Metatags" tab/local task will appear for each content type.  The URL for this
 will be something like admin/content/types/{type}/metatags (Drupal 5) or
 admin/content/node-type/{type}/metatags (Drupal 6).  To configure the default
@@ -118,6 +133,10 @@ Here is a list of the configuration options:
  - Inherit?:      (Content-types only) Whether to inherit the default
                   Metatags that are defined.  Note that the default settings
                   form must also be enabled.
+ - Teasers?:      DRUPAL 6 ONLY!  Check this field to have your Metatags
+                  displayed when a node is rendered as a teaser as well.
+                  Otherwise, Metatags will only be shown on the full-page
+                  viewing of a node.
  - Manual/Static: You can specify metatags that you always want displayed by
                   entering one tag per line in the form of "<name>|<value>".
                   If you have the Token module installed, you can use the

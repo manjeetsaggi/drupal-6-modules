@@ -1,6 +1,7 @@
 <?php
-// $Id: int_meta_cck.module,v 1.1.2.4 2008/09/03 02:52:39 fractile81 Exp $
+// $Id: int_meta_cck.module,v 1.1.2.5 2008/12/16 02:55:25 fractile81 Exp $
 // int_meta_cck.module - Adds Integrated Metatag functionality to CCK types and fields.
+
 /**
  * Implementation of hook_int_meta();.
  */
@@ -27,6 +28,7 @@ function int_meta_cck_int_meta($op, &$arg) {
 		} break;
 	}
 }
+
 /**
  * Keeps track of the supported fields by this module.
  */
@@ -34,11 +36,15 @@ function int_meta_cck_supported($arg) {
 	$fields = array();
 	if (!empty($arg)) {
 		$type = content_types($arg);
-		if (!empty($type)) {
+		if (!empty($type['fields'])) {
 			foreach ($type['fields'] as $name => $info) {
-				foreach (array_keys($info['columns']) as $col) {
-					$fields[] = $name . '.' . $col;
-				}
+        // Not sure if this is needed, but people mentioned a problem with
+        // removing a CCK field and it still showing up on the dropdown.
+        if ($info['widget_active']) {
+  				foreach (array_keys($info['columns']) as $col) {
+  					$fields[] = $name . '.' . $col;
+  				}
+        }
 			}
 		}
 	}

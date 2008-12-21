@@ -5,9 +5,9 @@ core = 6.x
 version = VERSION
 dependencies[] = int_meta
 dependencies[] = content
-; Information added by drupal.org packaging script on 2008-11-02
-version = "6.x-1.0-beta5"
+; Information added by drupal.org packaging script on 2008-12-16
+version = "6.x-1.0-beta6"
 core = "6.x"
 project = "int_meta"
-datestamp = "1225596311"
+datestamp = "1229397326"
 

@@ -1,5 +1,5 @@
 <?php
-// $Id: int_meta.module,v 1.1.2.7 2008/11/02 03:18:17 fractile81 Exp $
+// $Id: int_meta.module,v 1.1.2.8 2008/12/16 02:55:25 fractile81 Exp $
 // int_meta.module - Provides functionality for modules to dynamically add Metatags.
 
 // Hook Implementations ///////////////////////////////////////////////////////
@@ -27,6 +27,7 @@ function int_meta_theme() {
  */
 function int_meta_menu() {
 	$items['int_meta/ahah'] = array(
+    'type' => MENU_CALLBACK,
 		'page callback' => 'int_meta_ahah',
 		'page arguments' => array(),
 		'access arguments' => array('administer integrated metatags'),
@@ -39,6 +40,14 @@ function int_meta_menu() {
 		'page arguments' => array('int_meta_type_form'),
 		'access arguments' => array('administer integrated metatags'),
 	);
+
+  $items['admin/settings/int_meta'] = array(
+    'title' => 'Integrated Metatags Settings',
+    'description' => 'Set global settings for Integrated Metatags.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('int_meta_settings'),
+    'access arguments' => array('administer integrated metatags'),
+  );
   
 	// Create a Metatags local task for each content type
 	foreach (node_get_types('types', NULL, TRUE) as $type) {
@@ -55,6 +64,109 @@ function int_meta_menu() {
 }
 
 /**
+  * Integrated Metatags configuration form.
+  */
+function int_meta_settings() {
+  $form = array();
+  
+  $form['desc'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Description Metatag'),
+    '#description' => t('Set a word or character limit on all "description" Metatags.  To use this, you must first create a Metatag with the name of "description".'),
+    '#collapsible' => 1,
+    '#collapsed' => 0,
+  );
+
+  $form['desc']['int_meta_desc_how'] = array(
+    '#type' => 'radios',
+    '#title' => t('Cap on words or characters'),
+    '#options' => array(
+      'words' => t('Words'),
+      'chars' => t('Characters'),
+    ),
+    '#default_value' => variable_get('int_meta_desc_how', 'chars'),
+  );
+
+  $form['desc']['int_meta_desc_cap'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Enter a number to cap at'),
+    '#description' => t('Enter 0 to not have a cap.'),
+    '#default_value' => variable_get('int_meta_desc_cap', 0),
+  );
+
+  $form['keys'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Keywords Metatag'),
+    '#description' => t('Set a word or character limit on all "keywords" Metatags.  To use this, you must first create a Metatag with the name of "keywords".'),
+    '#collapsible' => 1,
+    '#collapsed' => 0,
+  );
+
+  $form['keys']['int_meta_keys_how'] = array(
+    '#type' => 'radios',
+    '#title' => t('Cap on words or characters'),
+    '#options' => array(
+      'words' => t('Words'),
+      'chars' => t('Characters'),
+    ),
+    '#default_value' => variable_get('int_meta_keys_how', 'chars'),
+  );
+
+  $form['keys']['int_meta_keys_cap'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Enter a number to cap at'),
+    '#description' => t('Enter 0 to not have a cap.'),
+    '#default_value' => variable_get('int_meta_keys_cap', 0),
+  );
+
+  $form['others'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Other Metatags'),
+    '#description' => t('Set a word or character limit on all other Metatags.  All Metatags (except "description" and "keywords") will use this cap.'),
+    '#collapsible' => 1,
+    '#collapsed' => 0,
+  );
+
+  $form['others']['int_meta_other_how'] = array(
+    '#type' => 'radios',
+    '#title' => t('Cap on words or characters'),
+    '#options' => array(
+      'words' => t('Words'),
+      'chars' => t('Characters'),
+    ),
+    '#default_value' => variable_get('int_meta_other_how', 'chars'),
+  );
+
+  $form['others']['int_meta_other_cap'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Enter a number to cap at'),
+    '#description' => t('Enter 0 to not have a cap.'),
+    '#default_value' => variable_get('int_meta_other_cap', 0),
+  );
+
+  return system_settings_form($form);
+}
+
+/**
+  * Validation handler for the settings form.
+  */
+function int_meta_settings_validate($form, &$form_state) {
+  // Verify all of the cap numbers are valid
+  $values = $form_state['values'];
+  if (!ctype_digit($values['int_meta_keys_cap']) || $values['int_meta_keys_cap'] < 0) {
+    form_set_error('int_meta_keys_cap', 'Please enter an integer greater than or equal to 0.');
+  }
+  
+  if (!ctype_digit($values['int_meta_desc_cap']) || $values['int_meta_desc_cap'] < 0) {
+    form_set_error('int_meta_desc_cap', 'Please enter an integer greater than or equal to 0.');
+  }
+  
+  if (!ctype_digit($values['int_meta_other_cap']) || $values['int_meta_other_cap'] < 0) {
+    form_set_error('int_meta_other_cap', 'Please enter an integer greater than or equal to 0.');
+  }
+}
+
+/**
  * Implementation of hook_nodeapi();.
  */
 function int_meta_nodeapi(&$node, $op, $teaser=NULL, $fullpage=NULL) {
@@ -63,37 +175,29 @@ function int_meta_nodeapi(&$node, $op, $teaser=NULL, $fullpage=NULL) {
     $info = int_meta_load_type($node->type);
     
     // Only process further if we're on a fullpage, or if teaser rendering is enabled
-    if ($fullpage || ($info->teasers && $teaser)) {
-      $show_tags = $info->status;
-      if ($info->inherit) {
-        $parent = int_meta_load_type();
-        $show_tags &= $parent->status;
+    if (($fullpage || ($info->teasers && $teaser)) && $info->status) {
+      $tags = int_meta_load_tags($node->type);
+      // Make sure not to destroy anything that might already be there
+      if (isset($node->int_meta)) {
+        $node->int_meta = array_merge($node->int_meta, $tags);
+      } else {
+        $node->int_meta = $tags;
       }
       
-      if ($show_tags) {
-        $tags = int_meta_load_tags($node->type);
-        // Make sure not to destroy anything that might already be there
-        if (isset($node->int_meta)) {
-          $node->int_meta = array_merge($node->int_meta, $tags);
-        } else {
-          $node->int_meta = $tags;
-        }
-        
-        // Allow modules to associate data with the fields
-        foreach(module_implements('int_meta') as $module) {
-          $func = $module . '_int_meta';
-          $func('load', $node);
-        }
-        
-        // Run static tags through Token
-        if (module_exists('token')) {
-          foreach ($node->int_meta as $key => $tag) {
-            if (!isset($tag->type)) {
-              $node->int_meta[$key]->name = token_replace($tag->field, 'node', $node);
-              if (!empty($tag->values)) {
-                foreach ($tag->values as $i => $value) {
-                  $node->int_meta[$key]->values[$i] = token_replace($value, 'node', $node);
-                }
+      // Allow modules to associate data with the fields
+      foreach(module_implements('int_meta') as $module) {
+        $func = $module . '_int_meta';
+        $func('load', $node);
+      }
+      
+      // Run static tags through Token
+      if (module_exists('token')) {
+        foreach ($node->int_meta as $key => $tag) {
+          if (!isset($tag->type)) {
+            $node->int_meta[$key]->name = token_replace($tag->field, 'node', $node);
+            if (!empty($tag->values)) {
+              foreach ($tag->values as $i => $value) {
+                $node->int_meta[$key]->values[$i] = token_replace($value, 'node', $node);
               }
             }
           }
@@ -146,7 +250,7 @@ function int_meta_show_tags($tag) {
 	if (is_array($tag)) {
 		// Cycle through each tag individually
 		foreach ($tag as $curr) {
-			int_meta_show_tags($curr, $empty);
+			int_meta_show_tags($curr);
 		}
 	} elseif ($tag->status) {
 		if (!isset($types[$tag->type])) {
@@ -156,14 +260,23 @@ function int_meta_show_tags($tag) {
 			if (!is_array($tag->values)) {
 				$tag->values = array($tag->values);
 			}
-			$name = !empty($tag->name) ? $tag->name : $tag->field;
-			if ($tag->combine) {
-				drupal_set_html_head('<meta name="' . check_plain($name) . '" content="' . check_plain(implode(', ', array_unique($tag->values))) . '" />');
-			} else {
-				foreach ($tag->values as $value) {
-					drupal_set_html_head('<meta name="' . check_plain($name) . '" content="' . check_plain($value) . '" />');
-				}
-			}
+      
+      // Cleanup the data so we don't accidentally break anything
+      $name = check_plain(strip_tags(!empty($tag->name) ? $tag->name : $tag->field));
+      foreach ($tag->values as $key => $value) {
+        $value = check_plain(preg_replace('/[\n\r]+/', ' ', strip_tags(trim($value))));
+        if ($tag->combine) {
+          $tag->values[$key] = $value;
+        } else {
+          $value = int_meta_trim($name, $value);
+          drupal_set_html_head('<meta name="' . $name . '" content="' . $value . '" />');
+        }
+      }
+      
+      if ($tag->combine) {
+        $value = int_meta_trim($name, implode(', ', array_unique($tag->values)));
+        drupal_set_html_head('<meta name="' . $name . '" content="' . $value . '" />');
+      }
 		}
 	}
 }
@@ -177,16 +290,20 @@ function int_meta_load_tags($type='') {
 	$ret = $args = array();
 	$info = int_meta_load_type($type);
 	$parent = NULL;
-	// Form the query to load the tags
+  
+  // Form the query to load the tags
 	$query = " FROM {int_meta_fields} WHERE ";
+  
+  $types = " type = '%s'";
+  if ($info->inherit) {
+    $parent = int_meta_load_type();
+    if ($parent->status) {
+      $types = " (type = '%s' OR type = '')";
+    }
+  }
 	
+  $query .= $types;
 	$args[] = $type;
-	if ($info->inherit) {
-		$query .= " (type = '%s' OR type = '')";
-		$parent = int_meta_load_type();
-	} else {
-		$query .= " type = '%s'";
-	}
 	
 	$query .= " ORDER BY type ASC, field ASC, name ASC";
 	$count = "SELECT COUNT(*)" . $query;
@@ -198,16 +315,17 @@ function int_meta_load_tags($type='') {
 			$ret[] = (object)$curr;
 		}
 	}
+  
 	// Add any static tags
 	if (!empty($info->static)) {
 		$ret = array_merge($ret, _int_meta_parse_static($info->static));
 	}
+  
 	// Add any inherited static tags
-	if (!is_null($parent)) {
-		if (!empty($parent->static)) {
-			$ret = array_merge($ret, _int_meta_parse_static($parent->static));
-		}
+	if (!is_null($parent) && $parent->status && !empty($parent->static)) {
+		$ret = array_merge($ret, _int_meta_parse_static($parent->static));
 	}
+  
 	return $ret;
 }
 
@@ -452,23 +570,23 @@ function int_meta_ahah() {
 	foreach ($_POST['local'] as $key => $data) {
 		if (is_numeric($key)) {
 			// Generate the tags so we can generate the new form elements
-			$tag = array(
-				'field' => check_plain($data['field']),
-				'name' => check_plain($data['name']),
-				'status' => ($key == $newest-1) ? 1 : (int)isset($data['status']),
-				'combine' => (int)isset($data['combine']),
-				'remove' => (int)isset($data['remove']),
-			);
+      $tag = new stdClass();
+      $tag->field = check_plain($data['field']);
+      $tag->name = check_plain($data['name']);
+      $tag->status = ($key == $newest-1) ? 1 : (int)isset($data['status']);
+      $tag->combine = (int)isset($data['combine']);
+      $tag->remove = (int)isset($data['remove']);
+      
 			if (in_array($data['field'] . ':' . $data['name'], $check)) {
 				if ($key == $newest - 1) {
-					$tags['new'] = (object)$tag;
+					$tags['new'] = $tag;
 					form_set_error('local][' . $key . '][name', t('The name for this field must be unique.  Please specify a different name or change the field.'));
 				} else {
-					$tags[$key] = (object)$tag;
+					$tags[$key] = $tag;
 					form_set_error('local][' . $key . '][name', t('This name has already been specified by another field for this type.  Please change or remove it or this form will not saved.'));
 				}
 			} else {
-				$tags[$key] = (object)$tag;
+				$tags[$key] = $tag;
 				$check[] = $data['field'] . ':' . $data['name'];
 			}
 			unset($cache->data['metatags']['local'][$key]);
@@ -552,14 +670,11 @@ function int_meta_type_form_validate($form, &$form_state) {
 			if (!$data['remove']) {
 				if (in_array($data['field'] . ':' . $data['name'], $check)) {
 					if ($key == $newest - 1) {
-						$tags['new'] = (object)$tag;
 						form_set_error('local][' . $key . '][name', t('The name for this field must be unique.  Please specify a different name or change the field.'));
 					} else {
-						$tags[$key] = (object)$tag;
 						form_set_error('local][' . $key . '][name', t('This name has already been specified by another field for this type.  Please change or remove it or this form will not saved.'));
 					}
 				} else {
-					$tags[$key] = (object)$tag;
 					$check[] = $data['field'] . ':' . $data['name'];
 				}
 			}
@@ -696,6 +811,7 @@ function int_meta_base_fields() {
 			'node.vid',
 			'node.uid',
 			'node.title',
+      'node.teaser',
 			'node.type',
 			'node.created',
 			'node.changed',
@@ -853,4 +969,42 @@ function int_meta_set_metatag($tag, $reset=FALSE) {
  */
 function int_meta_get_metatags($reset=TRUE) {
   return int_meta_set_metatag(NULL, $reset);
+}
+
+/**
+  * Trims up the value of a Metatag based on the name of the tag and the current settings.
+  * @param $name The name of the Metatag.
+  * @param $value The value of the Metatag to trim.
+  * @return Returns a trimmed string value.
+  */
+function int_meta_trim($name, $value) {
+  // Figure out the base name for the variables we want to use
+  switch ($name) {
+    case 'keywords': $key = 'int_meta_keys_'; break;
+    case 'description': $key = 'int_meta_desc_'; break;
+    default: $key = 'int_meta_other_';
+  }
+
+  // Trim the value down, if needed
+  $cap = variable_get($key . 'cap', 0);
+  if (!empty($value) && $cap > 0) {
+    if (variable_get($key . 'how', 'chars') == 'chars') {
+      print "chars\n";
+      // Simple substring should work just fine
+      $value = substr($value, 0, $cap);
+    } else {
+      // Get the word count and trim off any values we don't want to use
+      $words = str_word_count($value, 2);
+      $parts = array_keys($words);
+      array_splice($parts, $cap);
+      
+      // We only need to trim the value if the array counts differ
+      if (count($words) != count($parts)) {
+        $last = array_pop($parts);
+        $value = substr($value, 0, $last + strlen($words[$last]));
+      }
+    }
+  }
+  
+  return $value;
 }

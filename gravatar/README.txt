@@ -1,20 +1,72 @@
-$Id: README.txt,v 1.1.2.4 2008/11/09 00:08:21 narno Exp $
+$Id: README.txt,v 1.1.2.7 2008/12/12 21:10:25 davereid Exp $
 
-Gravatar integration for Drupal README
+CONTENTS OF THIS FILE
+---------------------
 
-* Installation * 
+ * Introduction
+ * Installation
+ * Frequently Asked Questions (FAQ)
+ * Known Issues
+ * How Can You Contribute?
 
-1. Install the module at /admin/build/modules
-2. Make sure user picture support is enabled at /admin/user/settings#edit-user-pictures-0-wrapper
-3. Enable Gravatar suport at /admin/user/gravatar
-5. Enable user pictures in comments and/or posts at /admin/build/themes/settings
-4. Check users permissions at /admin/user/permissions#module-gravatar
 
-Enjoy
+INTRODUCTION
+------------
 
-* User settings *
+Maintainer: Narno <http://drupal.org/user/141690>
+Maintainer: Dave Reid <http://drupal.org/user/53892>
+Contributer: madler <http://drupal.org/user/123779>
+Project Page: http://drupal.org/project/gravatar
 
-Each user may choose to use the Gravatar.com service, default is off.
+This module integrates the Gravatar service with Drupal user pictures.
 
-If the email field is left blank, the account email address is used.
-Alternatively, the authenticated user may enter a different address to use with the Gravatar.com service.
+
+INSTALLATION
+------------
+
+See http://drupal.org/getting-started/5/install-contrib for instructions on
+how to install or update Drupal modules.
+
+User picture support (admin/user/settings) must be enabled for Gravatar to
+work. Once Gravatar is installed and enabled, you can configure the module
+at admin/user/gravatar.
+
+You will also want to make sure user pictures are enabled for your theme at
+admin/build/themes/settings and the approprate user roles have the 'use gravatar'
+permission assigned to them at admin/user/permissions.
+
+
+FREQUENTLY ASKED QUESTIONS
+--------------------------
+
+Q: Is Gravatar support enabled by default for my users?
+A: If their user role has the 'use gravatar' permission, yes Gravatar is enabled
+   by default.
+
+Q: What if a user has a different Gravatar e-mail from their user account's
+   email?
+A: Currently, users can specify a separate Gravatar e-mail in their account
+   page (user/x/edit). This option is slated for removal as Gravatar accounts
+   can have more than one e-mail address associated with it.
+
+
+KNOWN ISSUES
+------------
+
+There are no known issues at this time.
+
+To report new bug reports, feature requests, and support requests, visit
+http://drupal.org/project/issues/gravatar.
+
+
+HOW CAN YOU CONTRIBUTE?
+---------------------
+
+- Write a review for this module at drupalmodules.com.
+  http://drupalmodules.com/module/gravatar
+
+- Help translate this module on launchpad.net.
+  https://translations.launchpad.net/drupal-gravatar
+
+- Report any bugs, feature requests, etc. in the issue tracker.
+  http://drupal.org/project/issues/gravatar
