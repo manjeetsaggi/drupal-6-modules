@@ -16,7 +16,7 @@ Installation
    If you decide to switch from one connector to the other you have to use the uninstall option to uninstall the current connector before  
    you enable the other one.
    Be careful. Uninstalling a connector will remove all existing invitation and RSVP records. Disabling and Enabling is fine though and will not remove
-   existing RSVPs.
+   existing invitations.
 
 
 Configuration
@@ -24,9 +24,9 @@ Configuration
 1) Enable permissions appropriate to your site.
      The rsvp module provides the following permissions:
 	   "administer rsvp"      - full access
-       "maintain rsvp"        - access to all rsvp's, but no permissions to modify the general rsvp settings.
-	   "rsvp on events"       - create rsvp on nodes.
-	   "rsvp on own events"   - create rsvp on own nodes.
+     "maintain rsvp"        - access to all invitations, but no permissions to modify the general rsvp settings.
+	   "rsvp on events"       - create invitations on nodes.
+	   "rsvp on own events"   - create invitations on own nodes.
 	   "rsvp newsletters subscribers"  - permission to add attendees based on existing newsletters (module simplenews is required).
 	   "rsvp system users"    - permission to add users based on available roles.
 
@@ -50,27 +50,25 @@ From the RSVP perspective there is no other configuration required. You are set 
 3) Disable Wysiwig editor for the "People you like to invite" / "Add Attendees" textarea which
    is part of the manage attendees form when creating a RSVP. The Wysiwig editor should be disabled by default(Tested with FcK).
 
-Manage RSVP's (Admins and Maintainers)
+Manage invitations (Admins and Maintainers)
 -------------------------------------
-All RSVP's of all users can be found at 
+All invitations of all users can be found at 
    Adminstrator >> Content management >> RSVP management
    
-Create RSVP's
---------------
-Go to the node you want to create an RSVP for and click on the RSVP tab.
-  If the RSVP tab is not available, 
+Create invitations
+------------------
+Go to the node you want to create an invitation for and click on the Invitation tab.
+  If the Invitation tab is not available, 
     - verify that this content type is enabled in the rsvp settings.
     - verify that the user has the right permissions ("rsvp on events" or "rsvp on own events")
+
 
 
    
 TODO/Features:
 - http://drupal.org/node/293409 : Block on the side of eventnodes with the attendees
-- http://drupal.org/node/263777/293409 : share the results of an RSVP with authenticated users => would require new "view result permission". 
-  Better would be to add roles to the RSVP that have view permission for this particluar RSVP. 
-
-- http://drupal.org/node/344324 : adding RSVP admin per event
 - http://drupal.org/node/344328 : notify admin of RSVP changes
+- http://drupal.org/node/331423 : Can RSVP and remove RSVP be exposed as Drupal Actions, so other modules like Flag could trigger this action? 
 
 - allow parameters for views
 - I would like to see a "reply/response" panel like in evite. Any Volunteers ?? Who can help here.
@@ -91,6 +89,14 @@ TODO/Features:
     * › Copy this Event
     * › Add to my Outlook Calendar
 
-
+Documentation:
+    The term R.S.V.P. comes from the French expression "répondez s'il vous plaît", meaning "please respond".
+    Terms used in the module:
+       "RSVP": The module name
+       "Invitation": The invitation generated for an event or an invitation someone receives for an event. 
+       "Invitee": A person invited to an event by adding the person to an invitation.
+       "Respondent": An invitee that responded.
+       "Attendee": A respondent that responded to attend the event.
+        
 
 

@@ -1,5 +1,5 @@
 <?php
-// $Id: rsvp.install,v 1.6.2.1 2008/12/05 06:56:59 ulf1 Exp $ 
+// $Id: rsvp.install,v 1.6.2.3 2008/12/20 08:33:10 ulf1 Exp $ 
 
 function rsvp_install() {
   drupal_install_schema('rsvp');
@@ -57,7 +57,7 @@ function rsvp_schema() {
         'default' => '0'
       ),
       'list_email' => array(
-        'description' => ('TODO'),
+        'description' => ('Defines who is allowed to send emails (none, invitee, respondent, attendee)'),
         'type' => 'int',
         'size' => 'tiny',
         'unsigned' => TRUE,
@@ -65,7 +65,7 @@ function rsvp_schema() {
         'default' => '0'
       ),
       'allow_invite' => array(
-        'description' => ('TODO'),
+        'description' => ('Defines who is allowed to invite other people (none, invitee, respondent, attendee)'),
         'type' => 'int',
         'size' => 'tiny',
         'unsigned' => TRUE,
@@ -110,6 +110,41 @@ function rsvp_schema() {
         'length' => 128,
         'default' => 'Maybe'
       ),
+      'response_view_roles' => array(
+        'description' => ('Comma seperated list of roles that have permissions to view the guest list'),
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => ''
+      ),
+      'rsvp_view_roles' => array(
+        'description' => ('Comma seperated list of roles that have permissions to view the invitation'),
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => ''
+      ),
+      'uid_moderator' => array(
+        'description' => ('The {user}.uid identifier of a possible moderator'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'default' => '0'
+      ),
+      'response_blind_node' => array(
+        'description' => ('Defines whether responses (result) of rsvp is visible on the event(node) or not, and when it becomes visible.'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+      ),
+      'reply_blind_node' => array(
+        'description' => ('Defines whether the replybox of rsvp can be seen below the event(node).'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+      ),
+      
     ),
     'primary key' => array('rid', 'nid', 'uid'),
   );
@@ -328,8 +363,64 @@ function rsvp_update_6001() {
 
 }
 
+function rsvp_update_6002() {
 
+  $ret = array();
+  
+  db_add_field($ret, 'rsvp', 'response_view_roles', array(
+        'description' => ('Comma seperated list of roles that have permissions to view the guest list'),
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => ''
+      )
+  );
+  db_add_field($ret, 'rsvp', 'uid_moderator', array(
+        'description' => ('The {user}.uid identifier of a possible moderator'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'default' => '0'
+      )
+  );
 
+  db_add_field($ret, 'rsvp', 'response_blind_node', array(
+        'description' => ('Defines whether responses (result) of rsvp is visible on the event(node) or not, and when it becomes visible.'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+      )
+  );
+  db_add_field($ret, 'rsvp', 'reply_blind_node', array(
+        'description' => ('Defines whether the replybox of rsvp can be seen below the event(node).'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+      )
+  );
+  
+  return $ret;
+
+}
+
+function rsvp_update_6003() {
+
+  $ret = array();
+  
+  db_add_field($ret, 'rsvp', 'rsvp_view_roles', array(
+        'description' => ('Comma seperated list of roles that have permissions to view the invitation'),
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => ''
+      )
+  );
+  
+  return $ret;
+
+}
+      
 /**
  * Implementation of hook_requirements().
  * Make sure module Event or module Date is enabled.

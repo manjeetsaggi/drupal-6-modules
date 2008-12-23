@@ -1,5 +1,5 @@
 <?php
-// $Id: rsvp.module,v 1.17.2.4 2008/12/10 01:21:17 ulf1 Exp $
+// $Id: rsvp.module,v 1.17.2.7 2008/12/21 07:45:23 ulf1 Exp $
 
 /**
  * @module rsvp
@@ -15,40 +15,77 @@
  * RSVP EMAIL ADDRESS USAGE
  */
 define('RSVP_EMAIL_SITEADDRESS', 0);
-define('RSVP_EMAIL_SETTINGS', 1);
-define('RSVP_EMAIL_CREATOR', 2);
+define('RSVP_EMAIL_SETTINGS',    1);
+define('RSVP_EMAIL_CREATOR',     2);
 
 /**
- * RSVP ATTENDING OPTIONS
+ * RSVP ATTENDING OPTIONS (also stored in the database)
  */
-define('RSVP_ATT_ALL',   'all');
-define('RSVP_ATT_YES',   'yes');
-define('RSVP_ATT_NO',    'no');
-define('RSVP_ATT_MAYBE', 'maybe');
-define('RSVP_ATT_NONE',  'none');
+define('RSVP_ATT_YES',    'yes');
+define('RSVP_ATT_NO',     'no');
+define('RSVP_ATT_MAYBE',  'maybe');
+define('RSVP_ATT_NONE',   'none');
+/**
+ * ADDTL. RSVP ATTENDING OPTIONS (only used in memory)
+ */
+define('RSVP_ATT_ALL',    'all');
+define('RSVP_ATT_NOTSEND','notsend');
 
 /**
  * RSVP RESPONSE OPTIONS
  */
-define('RSVP_RESPONSE_SHOW',   0);
-define('RSVP_RESPONSE_HIDE',   1);
-define('RSVP_RESPONSE_SHOWWHENREPLIED',   2);
+define('RSVP_RESPONSE_HIDE',            0);
+define('RSVP_RESPONSE_SHOW',            1);
+define('RSVP_RESPONSE_SHOWWHENREPLIED', 2);
 
 /**
- * RSVP ATTENDEE OPTIONS
+ * RSVP REPLY OPTIONS
  */
-define('RSVP_ATTENDEE_SHOW',   0);
-define('RSVP_ATTENDEE_HIDE',   1);
+define('RSVP_REPLY_HIDE', 0);
+define('RSVP_REPLY_SHOW', 1);
+
+/**
+ * RSVP ATTENDEE_VISIBLE OPTIONS
+ */
+define('RSVP_INVITEE_HIDE', 0);
+define('RSVP_INVITEE_SHOW', 1);
+define('RSVP_INVITEE_SHOWRESPONSEWHENREPLIED', 2);
+
+/**
+ * RSVP SEND OPTIONS
+ */
+define('RSVP_SEND_NONE',        0);
+define('RSVP_SEND_INVITEE',     1);
+define('RSVP_SEND_RESPONDENT',  2);
+define('RSVP_SEND_ATTENDEE',    3);
+
+/**
+ * RSVP INVITE OTHER OPTIONS
+ */
+define('RSVP_INVITE_NONE',        0);
+define('RSVP_INVITE_INVITEE',     1);
+define('RSVP_INVITE_RESPONDENT',  2);
+define('RSVP_INVITE_ATTENDEE',    3);
 
 
 /**
  * RSVP ACCESS OPTIONS
  */
-define('RSVP_ACCESS_VIEW',     0);
-define('RSVP_ACCESS_CREATE',   1);
-define('RSVP_ACCESS_EDIT',     2);
-define('RSVP_ACCESS_DELETE',   3);
+define('RSVP_ACCESS_VIEW',   'v');
+define('RSVP_ACCESS_CREATE', 'c');
+define('RSVP_ACCESS_EDIT',   'e');
+define('RSVP_ACCESS_DELETE', 'd');
 
+
+/**
+ * RSVP PERMISSIONS
+ */
+define('RSVP_PERM_ADMIN',       'administer rsvp');
+define('RSVP_PERM_MAINTAIN',    'maintain rsvp');
+define('RSVP_PERM_ONEVENTS',    'rsvp on events');
+define('RSVP_PERM_ONOWNEVENTS', 'rsvp on own events');
+define('RSVP_PERM_NEWSLETTER',  'rsvp newsletters subscribers');
+define('RSVP_PERM_SYSTEMUSERS', 'rsvp system users');
 
 /**
  * @defgroup rsvp_core core functions for rsvp.
@@ -95,7 +132,7 @@ function rsvp_theme() {
     ),
     'rsvp' => array(
       'file' => 'rsvp.theme',
-      'arguments' => array('rsvp' => NULL, 'invite' => NULL, 'content' => NULL),
+      'arguments' => array('rsvp' => NULL, 'name' => NULL, 'content' => NULL),
     ),
     'rsvp_invite_action' => array(
       'file' => 'rsvp.theme',
@@ -125,20 +162,16 @@ function rsvp_theme() {
       'file' => 'rsvp.theme',
       'arguments' => array('header' => NULL,
                            'whoiscoming' => NULL,
-                           'answer_block_notsent' => NULL,
-                           'answer_block_yes' => NULL,
-                           'answer_block_no' => NULL,
-                           'answer_block_maybe' => NULL,
-                           'answer_block_noreply' => NULL,
+                           'answer_blocks' => NULL,
                            'footer' => NULL),
     ),
     'rsvp_attendees_header' => array(
       'file' => 'rsvp.theme',
-      'arguments' => array('rsvp' => NULL, 'uhash' => NULL),
+      'arguments' => array('connector' => NULL, 'rsvp' => NULL, 'invite' => NULL),
     ),
     'rsvp_attendees_whoiscoming' => array(
       'file' => 'rsvp.theme',
-      'arguments' => array('whoiscomingtext' => NULL, 'totalsarray' => NULL, 'currentdate' => NULL),
+      'arguments' => array('whoiscomingtext' => NULL, 'totalsarray' => NULL, 'currentdate' => NULL, 'are_responses_visible' => NULL),
     ),
     'rsvp_attendees_answer_block' => array(
       'file' => 'rsvp.theme',
@@ -154,7 +187,7 @@ function rsvp_theme() {
     ),
     'rsvp_attendees_answer_body_item' => array(
       'file' => 'rsvp.theme',
-      'arguments' => array('item' => NULL, 'ismoderator' => NULL, 'currentuser' => NULL),
+      'arguments' => array('item' => NULL, 'ismoderator' => NULL, 'currentuser' => NULL, 'nameonly' => NULL),
     ),
     'rsvp_attendees_footer' => array(
       'file' => 'rsvp.theme',
@@ -175,33 +208,30 @@ function rsvp_help($path, $arg) {
     	global $user;
       $output = '<p>'. t('The RSVP module lets users invite people by email to events and track a list of people who will be attending.    The RSVP module requires either the event module or the date module because it is necessary to specify a content type to invite people to first.') .'</p>';
       $output .= '<p>'. t('The RSVP module also lets users invite users subscribed to newsletters, which requires !simplenews installed, as well as invite other registered users.', array('!simplenews' => l(t('Simplenews module'), 'http://drupal.org/project/simplenews'))) .'</p>';
-      $output .= '<p>'. t('The RSVP page shows a <em>RSVP</em> tab in the content type page and in <em>my account</em> page. There are confirmation screens for creating and editing RSVPs. Email addresses which are input for RSVP have input validation.  RSVP also creates an invitation url by hash value access so that users can click a URL and be taken directly to their invitation. For each RSVP there are view, edit, manage, and send tabs. Users can manage attendees through the manage attendees tab. Users can also send attendees a message through the send message tab.') .'</p>';
+      $output .= '<p>'. t('The RSVP page shows a <em>Invitation</em> tab in the content type page and in <em>my account</em> page. There are confirmation screens for creating and editing invitations. Email addresses which are input for invitations have input validation.  RSVP also creates an invitation url by hash value access so that invitees can click a URL and be taken directly to their invitation. For each invitation there are view, edit, manage, and send tabs. Users can manage attendees through the manage attendees tab. Users can also send attendees a message through the send message tab.') .'</p>';
       $output .= t('<p>You can:</p>
 <ul>
 <li>Enable the RSVP module at !admin-modules.</li>
-<li>Create an RSVP for an event by clicking the <strong>Create RSVP</strong> link in the RSVP tab in your content type.</li>
-<li>View your invitations at !rsvp.</li>
-<li>View your RSVPs at !rsvp-manage.</li>
-<li>View, edit, and invite more attendees for each RSVP.</li>
-<li>Manage all RSVPs at !rsvp-content.</li>
-', array('!admin-modules' => l(t('administer &gt;&gt; modules'), 'admin/build/modules'), 
-         '!rsvp' => l(t('Your invitation tab'), 'user/'. $user->uid .'/rsvp'), 
-         '!rsvp-manage' => l(t('your RSVPs tab'), 'user/'. $user->uid .'/rsvp/manage'), 
-         '!rsvp-content' => l(t('Administer &gt;&gt; Content management &gt;&gt; RSVP management'),'admin/content/rsvp')) ) .'</ul>';
+<li>Create an invitation by clicking the <strong>Create invitation</strong> link in the Invitation tab when displying your event.</li>
+<li>View your invitations in your !rsvp-user.</li>
+<li>View, edit, and invite more attendees for each invitation.</li>
+<li>Manage all invitations at !rsvp-content.</li>
+', array('!admin-modules' => l(t('Administer >> modules'), 'admin/build/modules'), 
+         '!rsvp-user' => l(t('user profile'), 'user/'. $user->uid .'/rsvp'), 
+         '!rsvp-content' => l(t('Administer >> Content management >> RSVP management'),'admin/content/rsvp')) ) .'</ul>';
       
       $output .= '<p>'. t('For more information please read the configuration and customization handbook <a href="!rsvp">RSVP page</a>.', array('!rsvp' => url('http://www.drupal.org/handbook/modules/rsvp/', array('external' => TRUE)))) .'</p>';
       return $output;
     case 'admin/modules#description' :
-      return t('Provides rsvp functionality for node types enabled in the event system.');
+      return t('Provides rsvp functionality for node types enabled in the rsvp system.');
     case 'rsvp/'. arg(1) .'/message' :
-      return t('You can send a message to the attendees of this rsvp here.');
+      return t('You can send a message to the attendees of this invitation here.');
     case 'rsvp/'. arg(1) .'/attendees' :
-      return t('You can add attendees, remove attendees, or view the status of an attendee\'s invitation here.');
+      return t('You can add more persons to the invitation, remove invitees, or view the status of an invitees\'s invitation here.');
     case 'rsvp' :
-    case 'rsvp/invites' :
       global $user;
       if (!$user->uid) {
-        return t('You must %login or %register in order to manage your invitations to rsvp events from this site. Otherwise, please use the link provided in your email to reply. If the link does not work, contact the sender of the invitation to see if the event has been deleted.', array('%login' => l('login', 'user'), '%register' => l('create a user account', 'user/register')));
+        return t('You must %login or %register in order to manage your invitations from this site. Otherwise, please use the link provided in your email to reply. If the link does not work, contact the sender of the invitation to see if the event has been deleted.', array('%login' => l('login', 'user'), '%register' => l('create a user account', 'user/register')));
       }
   }
 }
@@ -212,7 +242,7 @@ function rsvp_help($path, $arg) {
  * @ingroup rsvp_core
  */
 function rsvp_perm() {
-  return array("administer rsvp", "maintain rsvp", "rsvp on events", "rsvp on own events", "rsvp newsletters subscribers", "rsvp system users");
+  return array(RSVP_PERM_ADMIN, RSVP_PERM_MAINTAIN, RSVP_PERM_ONEVENTS, RSVP_PERM_ONOWNEVENTS, RSVP_PERM_NEWSLETTER, RSVP_PERM_SYSTEMUSERS);
 }
 
 /**
@@ -241,7 +271,7 @@ function rsvp_menu() {
     'description' => 'Set up RSVP related options.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('rsvp_admin_settings_general'),
-    'access arguments' => array('administer rsvp'),
+    'access arguments' => array(RSVP_PERM_ADMIN),
     'description' => 'Configure general RSVPs settings.',
   );
   
@@ -250,9 +280,9 @@ function rsvp_menu() {
     'type' => MENU_DEFAULT_LOCAL_TASK,
     'page callback' => 'drupal_get_form',
     'page arguments' => array('rsvp_admin_settings_general'),
-    'access arguments' => array('administer rsvp'),
+    'access arguments' => array(RSVP_PERM_ADMIN),
     'weight' => -10,
-    'description' => 'Manage RSVPs.',
+    'description' => 'Configure general RSVPs settings.',
   );
 
   $items['admin/settings/rsvp/types'] = array(
@@ -263,7 +293,7 @@ function rsvp_menu() {
     'access callback' => 'rsvp_admin_type_access',
     'access arguments' => array($connector),
     'weight' => -9,
-    'description' => 'Manage associations with content types that you want to use with rsvp.',
+    'description' => 'Manage associations with content types that you want to use within invitations.',
   );
 
   $items['admin/settings/rsvp/types/list'] = array(
@@ -274,7 +304,7 @@ function rsvp_menu() {
     'access callback' => 'rsvp_admin_type_access',
     'access arguments' => array($connector),
     'weight' => -8,
-    'description' => 'Manage associations with content types that you want to use with rsvp.',
+    'description' => 'Manage associations with content types that you want to use within invitations.',
   );
   
   $items['admin/settings/rsvp/types/add'] = array(
@@ -285,7 +315,7 @@ function rsvp_menu() {
     'access callback' => 'rsvp_admin_type_access',
     'access arguments' => array($connector),
     'weight' => -7,
-    'description' => 'Add a association with a content type that you want to use with rsvp.',  
+    'description' => 'Add a association with a content type that you want to use within invitations.',  
   );
   
   $items['admin/settings/rsvp/types/add/%'] = array(
@@ -310,49 +340,29 @@ function rsvp_menu() {
   $items['admin/content/rsvp'] = array(
     'title' => 'RSVP management',
     'type' => MENU_NORMAL_ITEM,
-    'description' => 'Manage all RSVPs.',
+    'description' => 'Manage all invitations.',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('rsvp_manage_form', NULL, NULL, true),
-    'access arguments' => array('maintain rsvp'),
-    'description' => 'Manage RSVPs.',
+    'page arguments' => array('rsvp_overview_rsvp_form', NULL, NULL),
+    'access callback' => 'rsvp_overview_rsvp_form_access',
+    'access arguments' => array($connector, NULL, NULL),
+    'description' => 'Manage all invitations.',
   );
   
   
   // user account tabs
   $items['user/%user/rsvp'] = array(
-    'title' => 'RSVP',
+    'title' => 'Invitations',
     'type' => MENU_LOCAL_TASK,
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('rsvp_view_invites', 1, NULL),
-    'access callback' => 'rsvp_user_user_rsvp_access',
-    'access arguments' => array($connector, 1, RSVP_ACCESS_VIEW, false),
+    'page arguments' => array('rsvp_overview_form', NULL, 1),
+    'access callback' => 'rsvp_overview_form_access',
+    'access arguments' => array($connector, 1, NULL),
   );
-    
-  $items['user/%user/rsvp/invites'] = array(
-    'title' => 'Your invitations',
-    'type' => MENU_DEFAULT_LOCAL_TASK,
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('rsvp_view_invites', 1, NULL),
-    'access callback' => 'rsvp_invite_by_user_access',
-    'access arguments' => array($connector, 1, RSVP_ACCESS_VIEW, false),
-    'weight' => '0',
-  );
-
-  $items['user/%user/rsvp/manage'] = array(
-    'title' => 'Your RSVPs',
-    'type' => MENU_LOCAL_TASK,
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('rsvp_manage_form', NULL, 1, false),
-    'access callback' => 'rsvp_rsvp_by_user_access',
-    'access arguments' => array($connector, 1, RSVP_ACCESS_VIEW, false),
-    'weight' => '1',
-  );
-      
   drupal_set_html_head(_rsvp_html_head());
     
   // email response path
   $items['rsvp/email/%rsvp_hash/remove'] = array(
-    'title' => 'Remove attendee from invite',
+    'title' => 'Remove attendee from invitation',
     'type' => MENU_CALLBACK,
     'page callback' => 'drupal_get_form',
     'page arguments' => array('rsvp_invite_remove_attendee_form', 2),
@@ -370,14 +380,16 @@ function rsvp_menu() {
     'type' => MENU_NORMAL_ITEM,
     'page callback' => 'drupal_get_form',
     'page arguments' => array('rsvp_invite_view_form', 2, NULL),
-    'access arguments' => array('access content'),
-  );
+    'access callback' => 'rsvp_invite_view_form_access',
+    'access arguments' => array($connector, NULL, 2),
+    );
   $items['rsvp/email/%rsvp_hash/view'] = array(
     'title' => 'View invitation',
     'type' => MENU_DEFAULT_LOCAL_TASK,
     'page callback' => 'drupal_get_form',
     'page arguments' => array('rsvp_invite_view_form', 2, NULL),
-    'access arguments' => array('access content'),
+    'access callback' => 'rsvp_invite_view_form_access',
+    'access arguments' => array($connector, NULL, 2),
     'weight' => 0,
   );
   $items['rsvp/email/%rsvp_hash/attendees'] = array(
@@ -385,7 +397,7 @@ function rsvp_menu() {
     'type' => MENU_LOCAL_TASK,
     'page callback' => 'drupal_get_form',
     'page arguments' => array('rsvp_attendee_hash_form', 2),
-    'access callback' => 'rsvp_user_attendees_view_access',
+    'access callback' => 'rsvp_attendee_hash_form_access',
     'access arguments' => array($connector, 2),
     'weight' => 1,
   );
@@ -402,47 +414,27 @@ function rsvp_menu() {
     'type' => MENU_CALLBACK,
     'page callback' => 'drupal_get_form',
     'page arguments' => array('rsvp_csv_hash_form', NULL, 2),
-    'access callback' => 'rsvp_csv_hash_access',
-    'access arguments' => array(2),
+    'access callback' => 'rsvp_csv_hash_form_access',
+    'access arguments' => array($connector, NULL, 2),
   );
   
   
-//    $rid = arg(3);
   $items['node/%node/rsvp'] = array(
-    'title' => 'RSVP',
+    'title' => 'Invitations',
     'type' => MENU_LOCAL_TASK,
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('rsvp_view_invites', NULL, 1),
-    'access callback' => 'rsvp_node_node_rsvp_access',
-    'access arguments' => array($connector, 1, RSVP_ACCESS_VIEW, false),
+    'page arguments' => array('rsvp_overview_form', 1, NULL),
+    'access callback' => 'rsvp_overview_form_access',
+    'access arguments' => array($connector, NULL, 1),
     'weight' => 3,
   );
-  $items['node/%node/rsvp/invites'] = array(
-    'title' => 'Your invitations',
-    'type' => MENU_DEFAULT_LOCAL_TASK,
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('rsvp_view_invites', NULL, 1),
-    'access callback' => 'rsvp_invite_by_node_access',
-    'access arguments' => array($connector, 1, RSVP_ACCESS_VIEW, false),
-    'weight' => '0',
-  );
-  $items['node/%node/rsvp/manage'] = array(
-    'title' => 'Your RSVPs',
-    'type' => MENU_LOCAL_TASK,
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('rsvp_manage_form', 1, NULL, false),
-    'access callback' => 'rsvp_rsvp_by_node_access',
-    'access arguments' => array($connector, 1, RSVP_ACCESS_VIEW, false),
-    'weight' => '1',
-  );
-  
   $items['node/%node/rsvp/create'] = array(
-    'title' => 'Create RSVP',
+    'title' => 'Create invitation',
     'type' => MENU_CALLBACK,
     'page callback' => 'drupal_get_form',
     'page arguments' => array('rsvp_addedit_form', 1, NULL),
-    'access callback' => 'rsvp_rsvp_by_node_access',
-    'access arguments' => array($connector, 1, RSVP_ACCESS_CREATE, false),
+    'access callback' => 'rsvp_addedit_form_access',
+    'access arguments' => array($connector, NULL, 1, RSVP_ACCESS_CREATE),
   );
 
   // rsvp management tabs
@@ -451,8 +443,8 @@ function rsvp_menu() {
     'type' => MENU_NORMAL_ITEM,
     'page callback' => 'drupal_get_form',
     'page arguments' => array('rsvp_invite_view_form', NULL, 1),
-    'access callback' => 'rsvp_rsvp_by_rsvp_access',
-    'access arguments' => array($connector, 1, RSVP_ACCESS_VIEW, true),
+    'access callback' => 'rsvp_invite_view_form_access',
+    'access arguments' => array($connector, 1, NULL),
     'weight' => '0',
   );
   $items['rsvp/%rsvp/view'] = array(
@@ -460,8 +452,8 @@ function rsvp_menu() {
     'type' => MENU_DEFAULT_LOCAL_TASK,
     'page callback' => 'drupal_get_form',
     'page arguments' => array('rsvp_invite_view_form', NULL, 1),
-    'access callback' => 'rsvp_rsvp_by_rsvp_access',
-    'access arguments' => array($connector, 1, RSVP_ACCESS_VIEW, true),
+    'access callback' => 'rsvp_invite_view_form_access',
+    'access arguments' => array($connector, 1, NULL),
     'weight' => '0',
   );
   $items['rsvp/%rsvp/edit'] = array(
@@ -469,49 +461,49 @@ function rsvp_menu() {
     'type' => MENU_LOCAL_TASK,
     'page callback' => 'drupal_get_form',
     'page arguments' => array('rsvp_addedit_form', NULL, 1),
-    'access callback' => 'rsvp_rsvp_by_rsvp_access',
-    'access arguments' => array($connector, 1, RSVP_ACCESS_EDIT, true),
+    'access callback' => 'rsvp_addedit_form_access',
+    'access arguments' => array($connector, 1, NULL, RSVP_ACCESS_EDIT),
     'weight' => '1',
   );
   $items['rsvp/%rsvp/attendees'] = array(
     'title' => 'Manage attendees',
     'type' => MENU_LOCAL_TASK,
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('rsvp_attendee_form', 1, ''),
-    'access callback' => 'rsvp_rsvp_by_rsvp_access',
-    'access arguments' => array($connector, 1, RSVP_ACCESS_VIEW, true),
+    'page arguments' => array('rsvp_attendee_form', 1, NULL, NULL),
+    'access callback' => 'rsvp_attendee_form_access',
+    'access arguments' => array($connector, 1, NULL),
     'weight' => '2',
   );
   $items['rsvp/%rsvp/attendees/send'] = array(
-    'title' => 'Send invites',
+    'title' => 'Send invitation email',
     'type' => MENU_CALLBACK,
     'page callback' => 'drupal_get_form',
     'page arguments' => array('rsvp_attendees_send_invites_form', 1),
-    'access callback' => 'rsvp_rsvp_by_rsvp_access',
-    'access arguments' => array($connector, 1, RSVP_ACCESS_EDIT, true),
+    'access callback' => 'rsvp_attendees_send_invites_form_access',
+    'access arguments' => array($connector, 1),
     'weight' => '2',
   );
   $items['rsvp/%rsvp/attendees/csv'] = array(
     'type' => MENU_CALLBACK,
     'page callback' => 'drupal_get_form',
     'page arguments' => array('rsvp_csv_hash_form', 1, NULL),
-    'access callback' => 'rsvp_user_attendees_csv_access',
-    'access arguments' => array(1, NULL),
+    'access callback' => 'rsvp_csv_hash_form_access',
+    'access arguments' => array($connector, 1, NULL),
   );
   $items['rsvp/%rsvp/attendees/simplenews/%'] = array(
     'type' => MENU_CALLBACK,
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('rsvp_attendees_simplenews_form', 1, 4),
-    'access callback' => 'rsvp_rsvp_by_rsvp_access',
-    'access arguments' => array($connector, 1, RSVP_ACCESS_EDIT, true, 'rsvp newsletters subscribers'),
+    'page arguments' => array('rsvp_attendees_add_simplenews_form', 1, 4),
+    'access callback' => '_rsvp_rsvp_by_invite_access',
+    'access arguments' => array($connector, 1, NULL, RSVP_ACCESS_EDIT, RSVP_PERM_NEWSLETTER),
     'weight' => '2',
   );
   $items['rsvp/%rsvp/attendees/role/%'] = array(
     'type' => MENU_CALLBACK,
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('rsvp_attendees_users_form', 1, 4),
-    'access callback' => 'rsvp_rsvp_by_rsvp_access',
-    'access arguments' => array($connector, 1, RSVP_ACCESS_EDIT, true, 'rsvp system users'),
+    'page arguments' => array('rsvp_attendees_add_roles_form', 1, 4),
+    'access callback' => '_rsvp_rsvp_by_invite_access',
+    'access arguments' => array($connector, 1, NULL, RSVP_ACCESS_EDIT, RSVP_PERM_SYSTEMUSERS),
     'weight' => '2',
   );
   $items['rsvp/%rsvp/message'] = array(
@@ -519,19 +511,19 @@ function rsvp_menu() {
     'type' => MENU_LOCAL_TASK,
     'page callback' => 'drupal_get_form',
     'page arguments' => array('rsvp_message_form', 1),
-    'access callback' => 'rsvp_rsvp_by_rsvp_access',
-    'access arguments' => array($connector, 1, RSVP_ACCESS_EDIT, true),
+    'access callback' => '_rsvp_rsvp_by_invite_access',
+    'access arguments' => array($connector, 1, NULL, RSVP_ACCESS_EDIT),
     'weight' => '3',
   );
   $items['rsvp/%rsvp/delete'] = array(
-    'title' => 'Delete RSVP',
+    'title' => 'Delete invitation',
     'type' => MENU_CALLBACK,
     'page callback' => 'drupal_get_form',
     'page arguments' => array('rsvp_delete_form', 1),
-    'access callback' => 'rsvp_rsvp_by_rsvp_access',
-    'access arguments' => array($connector, 1, RSVP_ACCESS_DELETE, true),
+    'access callback' => '_rsvp_rsvp_by_invite_access',
+    'access arguments' => array($connector, 1, NULL, RSVP_ACCESS_DELETE),
   );
-
+  
   return $items;
 }
 
@@ -551,11 +543,13 @@ function rsvp_link($type, $node = NULL, $teaser = FALSE) {
     $connector = new RsvpConnector();
   	
     global $user;
+    
     $print_startdate = false;
     
   	// node links
     $field = _rsvp_getField($node->type);
 
+    //first collect all invitations for the node/user 
     $num_invites = db_result(_rsvp_get_node_invites($node->nid, $user->uid, true));
     if ($num_invites > 1) {
       $print_startdate = true;	
@@ -570,7 +564,7 @@ function rsvp_link($type, $node = NULL, $teaser = FALSE) {
         else {
           $startdate = 'UNKNOWN STARTDATE:' . $invite->startdate; 
         }
-        $text = 'View invitation';
+        $text = 'Reply to invitation';
         if ($print_startdate == true) {
           $text .= '(' . $startdate . ')'; 	
         }
@@ -578,7 +572,35 @@ function rsvp_link($type, $node = NULL, $teaser = FALSE) {
                                       'href' => 'rsvp/email/'. $invite->hash . '/view',
                                      );
     }
+    
+    //In a second step collect all invitations for the node that the user has view permissions to.
+    $rsvps = _rsvp_get_rsvps($node->nid, NULL, NULL);
+	  while ($rsvp = db_fetch_object($rsvps)) {	  	
+      $perm_view = _rsvp_rsvp_by_invite_access($connector, $rsvp, NULL, RSVP_ACCESS_EDIT, NULL);
+      if (!$perm_view) 
+        $perm_view = _rsvp_rsvp_by_invite_access($connector, $rsvp, NULL, RSVP_ACCESS_VIEW, NULL);
+    
+      if ($perm_view == true) {  
+      
+        $pos = $connector->get_posByHash($node, $field, $rsvp->startdate /*derived by query*/);
+        if ($pos >= 0) {
+          $startdate = $connector->get_startdateAsString($node, $field, $pos);
+        }
+        else {
+          $startdate = 'UNKNOWN STARTDATE:' . $rsvp->startdate; 
+        }
+
+        $text = 'View invitation';
+        if ($print_startdate == true) {
+          $text .= '(' . $startdate . ')';  
+        }
+        $links['rsvp_rsvp_' . $rsvp->rid] = array('title' => t($text), 
+                                        'href' => 'rsvp/'. $rsvp->rid . '/view',
+                                       );
+      }
+	  }
   }
+
   
   return $links;
 }
@@ -605,6 +627,8 @@ function rsvp_nodeapi(&$node, $op) {
   }
 }
 
+
+
 /**
 * Retrieves an rsvp from the database and is doing some basic checks
   If node is null, exclude node specific tests.
@@ -617,19 +641,19 @@ function rsvp_nodeapi(&$node, $op) {
 function rsvp_load_and_test($rid, $node = NULL) {
 
   if (is_null($rid) || !is_numeric($rid)) {
-    drupal_set_message(t('Rsvp %rid does not exist.', array('%rid' => $rid)), 'error');
+    drupal_set_message(t('Invitation %rid does not exist.', array('%rid' => $rid)), 'error');
     return false;
   }
 
   $rsvp = rsvp_load($rid);
 
   if ($rsvp == false) { 
-    drupal_set_message(t('Rsvp %rid does not exist.', array('%rid' => $rid)), 'error');
+    drupal_set_message(t('Invitation %rid does not exist.', array('%rid' => $rid)), 'error');
     return false;
   }
   
   if (!is_null($node) && $node->nid != $rsvp->nid) { 
-    drupal_set_message(t('Rsvp %rid does not belong to Node %node.', array('%rid' => $rid, '%node' => $nid)), 'error');
+    drupal_set_message(t('Invitation %rid does not belong to Node %node.', array('%rid' => $rid, '%node' => $nid)), 'error');
     return false;
   }
   
@@ -637,6 +661,7 @@ function rsvp_load_and_test($rid, $node = NULL) {
 }
   
 /**
+* hook_load
 * Retrieves an rsvp from the database.
 *
 * @ingroup rsvp_functions
@@ -648,6 +673,7 @@ function rsvp_load($rid) {
 }
 
 /**
+* hook_load
 * Retrieves an invitation from the database based on a hash.
 *
 * @ingroup rsvp_functions
@@ -660,7 +686,7 @@ function rsvp_hash_load($hash) {
 
   // check if the invitation exists
   if (!$invite->rid) {
-  	return false;
+    return false;
   }
   
   return $invite;
@@ -671,33 +697,37 @@ function rsvp_hash_load($hash) {
 *
 * @ingroup rsvp
 * @param $node The node object you want to manage the rsvp instances for, or all nodes.
-* @param $usr The user. If NULL show rsvps for the loged in user.
-* @param $allUsers Boolean If true show rsvps for all users.
+* @param $usr The user. If NULL show rsvps for the logged in user.
 * @return themed rsvp manage response.
 *
 * This form is being called from three places:
-* - Through User account (user/%uid/rsvp/manage): A user displays all his own generated rsvps
-*       params: NULL, $user, false
+* - Through rsvp_overview_form (user/%uid/rsvp): The current user wants to displays all Invitations of a particular user that he is entitled to
+*       params: NULL, $user
 * 
-* - Through Nodes (node/%node/rsvp): A User selects a node and then clicks the RSVP tab if visible
-*       params: $node, NULL, false
+* - Through rsvp_overview_form (node/%node/rsvp): A User selects a node and then clicks the "Invitation" tab if visible
+*       params: $node, NULL
 * 
 * - The RSVP management page (admin/content/rsvp): A maintainer displays all generated rsvps
-*       params: NULL, NULL, true 
-*      
-* 
+*       params: NULL, NULL
 * 
 */
-function rsvp_manage_form(&$form_state, $node = NULL, $usr = NULL, $allUsers = false) {
-  
-  if (is_null($usr)) {
-    global $user;
-    $usr = $user;
-  }
+function rsvp_overview_rsvp_form(&$form_state, $node = NULL, $usr = NULL) {
 
+  $allNodes = (is_null($node));
+	$allUsers = (is_null($usr) && ($allNodes == true));
+
+	if ($allUsers == true) {
+		_rsvp_session_parent('admin/content/rsvp');
+	} 
+	else if ($allNodes == true) {
+    _rsvp_session_parent('user/'. $usr->uid .'/rsvp');
+	}
+	else {
+    _rsvp_session_parent('node/'. $node->nid .'/rsvp');
+  }
+	
   $form = array();
   
-  $allNodes = (is_null($node));
   $allExpired = true;  //are all dates for a node are expired?
   
   $connector = new RsvpConnector();
@@ -706,12 +736,10 @@ function rsvp_manage_form(&$form_state, $node = NULL, $usr = NULL, $allUsers = f
   $header = array();
   
   if ($allNodes == true) {
-    $header[] = array('data' => t('Node'), 'field' => 'title');
+    $header[] = array('data' => t('Event'), 'field' => 'title');
   }
   $header[] = array('data' => t('Title'), 'field' => 'name', 'sort' => 'asc', 'width' => '20%');
-  if ($allUsers == true) {
-    $header[] = t('User');
-  }
+  $header[] = t('Owner');
   
   $header[] = t('Startdate');
   $header[] = t('Inv.');
@@ -719,66 +747,61 @@ function rsvp_manage_form(&$form_state, $node = NULL, $usr = NULL, $allUsers = f
   $header[] = t('No');
   $header[] = t('Maybe');
   $header[] = t('No resp.');
-  $header[] = array('data' => t('Operations'), 'colspan' => 3);
+  $header[] = array('data' => t('Operations'), 'colspan' => 4);
 
 
   //check if there is at least one date that has not been expired. 
   if (!$allNodes) {
-    //debug $end_dates = array();
-    $field = _rsvp_getField($node->type);
-//TODO: do we need this check?
-//US    if (rsvp_rsvp_by_node_access($connector, $node, RSVP_ACCESS_VIEW, false)) {
-        $count = $connector->get_datecount($node, $field);
-        //iterate through all specified enddates (in case of repeating dates)
-        $time = time();
-        //debug $end_dates[] = array('current time stamp' => $time, 'current time readable' => date('r', $time) );
-        for ($i = 0; $i < $count; $i++) {
-          $t2 = $connector->get_enddate($node, $field, $i);
-          //debug $end_dates[] = array('field' => $field, 'stamp' => $t2, 'readable' => date('r', $t2) );
-          
-          if ($t2 > $time) {
-            $allExpired = false;
-            break;
-          }
-        }
-        //debug var_dump($allExpired, $end_dates);
-        
-//US    }
+    $allExpired = _rsvp_is_expired($node);
   }
 
   //fill array with rsvps
   $rows = array();
-  $rsvps = _rsvp_get_rsvps(is_null($node) ? NULL : $node->nid, (($allUsers == true) ? NULL : $usr->uid), tablesort_sql($header));
+  
+  //load rsvp always for all users. We later have to check if we have edit/view or no rights.
+  $rsvps = _rsvp_get_rsvps(($allNodes == true) ? NULL : $node->nid, NULL, tablesort_sql($header));
 
   while ($rsvp = db_fetch_object($rsvps)) {
     $field = NULL;
     if ($allNodes) {
         $node = node_load($rsvp->nid);
     }
-    if ($allUsers) {
-        $usr = user_load($rsvp->uid);
+    $_owner = user_load($rsvp->uid);
+    if ($rsvp->uid_moderator != 0) {
+      $_co_owner = user_load($rsvp->uid_moderator);
+    	$co_owner_link = ' / ' . l($_co_owner->name, 'user/'. $_co_owner->uid, array('attributes' => array('title' => 'View moderator')));
+    }
+    else {
+    	$co_owner_link = '';
     }
     
-    
-    $field = _rsvp_getField($node->type);
-    
-    $row = array();
-    ($allNodes == true) ? $row[] = l($node->title, 'node/'. $rsvp->nid, array('attributes' => array('title' => 'View node'))) : '';
-    $row[] = l($rsvp->name, 'rsvp/'. $rsvp->rid .'/view', array('attributes' => array('title' => 'View RSVP')));
-    ($allUsers == true) ? $row[] = l($usr->name, 'user/'. $rsvp->uid, array('attributes' => array('title' => 'View User'))) : '';
-    
-    $pos = $connector->get_posByHash($node, $field, $rsvp->startdate);
-    $row[] = $connector->get_startdateAsString($node, $field, $pos);
-    // add statistics
-    $row[] = db_result(_rsvp_get_attendees($rsvp->rid, RSVP_ATT_ALL, TRUE));
-    $row[] = db_result(_rsvp_get_attendees($rsvp->rid, RSVP_ATT_YES, TRUE));
-    $row[] = db_result(_rsvp_get_attendees($rsvp->rid, RSVP_ATT_NO, TRUE));
-    $row[] = db_result(_rsvp_get_attendees($rsvp->rid, RSVP_ATT_MAYBE, TRUE));
-    $row[] = db_result(_rsvp_get_attendees($rsvp->rid, RSVP_ATT_NONE, TRUE));
-    $row[] = l(t('Edit'), 'rsvp/'. $rsvp->rid .'/edit', array('attributes' => array('title' => 'Edit RSVP')));
-    $row[] = l(t('Manage attendees'), 'rsvp/'. $rsvp->rid .'/attendees', array('attributes' => array('title' => 'Invite more people to attend your rsvp')));
-    $row[] = l(t('Send message'), 'rsvp/'. $rsvp->rid .'/message', array('attributes' => array('title' => 'Send people you invited a message')));
-    $rows[] = $row;
+    $perm_view = $perm_edit = _rsvp_rsvp_by_invite_access($connector, $rsvp, NULL, RSVP_ACCESS_EDIT, NULL);
+    if (!$perm_edit) 
+      $perm_view = _rsvp_rsvp_by_invite_access($connector, $rsvp, NULL, RSVP_ACCESS_VIEW, NULL);
+
+    if (($perm_view == true) || ($perm_edit == true)) {  
+	    $field = _rsvp_getField($node->type);
+	    
+	    $row = array();
+	    ($allNodes == true) ? $row[] = l($node->title, 'node/'. $rsvp->nid, array('attributes' => array('title' => 'View node'))) : '';
+	    $row[] = l($rsvp->name, 'rsvp/'. $rsvp->rid .'/view', array('attributes' => array('title' => 'View invitation')));
+	
+	    $row[] = l($_owner->name, 'user/'. $rsvp->uid, array('attributes' => array('title' => 'View owner'))) . $co_owner_link;
+	    
+	    $pos = $connector->get_posByHash($node, $field, $rsvp->startdate);
+	    $row[] = $connector->get_startdateAsString($node, $field, $pos);
+	    // add statistics
+	    $row[] = db_result(_rsvp_get_attendees($rsvp->rid, RSVP_ATT_ALL, TRUE));
+	    $row[] = db_result(_rsvp_get_attendees($rsvp->rid, RSVP_ATT_YES, TRUE));
+	    $row[] = db_result(_rsvp_get_attendees($rsvp->rid, RSVP_ATT_NO, TRUE));
+	    $row[] = db_result(_rsvp_get_attendees($rsvp->rid, RSVP_ATT_MAYBE, TRUE));
+	    $row[] = db_result(_rsvp_get_attendees($rsvp->rid, RSVP_ATT_NONE, TRUE));
+	    $row[] = ($perm_view == true) ? l(t('View'), 'rsvp/'. $rsvp->rid .'/view', array('attributes' => array('title' => 'View invitation'))) : '';
+	    $row[] = ($perm_edit == true) ? l(t('Edit'), 'rsvp/'. $rsvp->rid .'/edit', array('attributes' => array('title' => 'Edit invitation'))) : '';
+	    $row[] = ($perm_edit == true) ? l(t('Manage attendees'), 'rsvp/'. $rsvp->rid .'/attendees', array('attributes' => array('title' => 'Invite more people to attend your event'))) : '';
+	    $row[] = ($perm_edit == true) ? l(t('Send message'), 'rsvp/'. $rsvp->rid .'/message', array('attributes' => array('title' => 'Send people you invited a message'))) : '';
+	    $rows[] = $row;
+    }
   }
   
   if ($pager = theme('pager', NULL, 10, 0)) {
@@ -792,55 +815,108 @@ function rsvp_manage_form(&$form_state, $node = NULL, $usr = NULL, $allUsers = f
   $header_text = NULL;
   $notfound_text = NULL;
   if ($allUsers == true) {
-    $header_text = 'All RSVPs of all users';
-    $notfound_text = 'No RSVPs. available';
+    $header_text = 'All invitations for all users';
+    $notfound_text = 'No invitations available.';
   }
   else if ($allNodes == true) {
-    $header_text =  'Your RSVPs';
-    $notfound_text = 'You don\'t have created any RSVPs.';
+    $header_text =  'Available invitations';
+    $notfound_text = 'No invitations available.';
     drupal_set_title(check_plain($usr->name));
     drupal_set_breadcrumb(array(l(t('Home'), NULL), l('My account', 'user/'. $usr->uid)));
   }
   else {
-    $header_text = 'Your RSVPs for this event';
-    $notfound_text = 'You don\'t have created any RSVPs for this event.';
+    $header_text = 'Invitations for this event';
+    $notfound_text = 'There are no invitations available for this event.';
     drupal_set_title(check_plain($node->title));
     drupal_set_breadcrumb(array(l(t('Home'), NULL), l($node->title, 'node/'. $node->nid)));
   }
   
-  $form['title'][] = array('#value' => '<br /><div><h3>' . t($header_text) . '</h3><br /></div>');
+  $form['rsvp_overview_rsvp_form'] = array(
+    '#type' => 'fieldset',
+  );
+  
+  $form['rsvp_overview_rsvp_form']['title'] = array('#value' => '<br /><div><h3>' . t($header_text) . '</h3><br /></div>');
 
   
   //display the rsvps or an appropriate message.
   if (!$rows) {
-    $form['not_found'] = array('#value' => '<p>'. t($notfound_text) .'</p>');
+    $form['rsvp_overview_rsvp_form']['not_found'] = array('#value' => '<p>'. t($notfound_text) .'</p>');
   }
   else {
     $table = theme('table', $header, $rows);
-    $form['table'] = array('#value' => $table);
+    $form['rsvp_overview_rsvp_form']['table'] = array('#value' => $table);
   }
 
   //display if the user is allowed to create an rsvp for an event.
   $content = NULL; 
   if ($allNodes == false) {
   	if ($allExpired == true) {
-      $content = t('This event has expired, invitations can only be sent to events <br />that have not expired yet.');
+      $content = t('This event has expired. Invitations can only be created for events <br />that have not expired yet.');
   	}
   	else {
-      $content = l(t('Create RSVP'), 'node/'. $node->nid .'/rsvp/create');
+  		if (_rsvp_rsvp_by_node_access($connector, $node, RSVP_ACCESS_CREATE))
+        $content = l(t('Create invitation'), 'node/'. $node->nid .'/rsvp/create');
   	}
   	
   }
   else {
-    $content = t('(To create an RSVP, select and view an !event, then select tab "RSVP" and click on "Create RSVP").', 
+    $content = t('(To create an invitation, select and view an !event, then select tab "Invitation" and click on "Create invitation").', 
                     array('!event'=> l(t('event'), 'tracker'))
                );
   	
   }
-  $form['content_message'] = array('#value' => '<p>'. $content .'</p>');      
+  $form['rsvp_overview_rsvp_form']['content_message'] = array('#value' => '<p>'. $content .'</p>');      
   
  
   return $form;
+}
+
+/*
+ * Access function to determine if current user is allowed to see rsvp_overview_rsvp_form
+ *
+ * @param $usr The user object you want to check for or NULL.
+ * @param $node The node object you want to check for or NULL.
+ * @return true or false.
+ *  
+ *      could be user, admin or moderator, anonymous.
+ *
+ * Used for menus 
+ * - Through rsvp_overview_form (user/%uid/rsvp): A user displays all invitations he is entitled to
+ *       params: NULL, $user
+ * 
+ * - Through rsvp_overview_form (node/%node/rsvp): A User selects a node and then clicks the "Invitation" tab if visible
+ *       params: $node, NULL
+ * 
+ * - The RSVP management page (admin/content/rsvp): A maintainer displays all generated invitations
+ *       params: NULL, NULL
+ *  
+ */
+function rsvp_overview_rsvp_form_access($connector, $node, $usr) {
+  
+  if (user_is_anonymous())
+    return false;
+	
+	$display = false;
+	if (!is_null($usr) && is_null($node)) {
+		//TODO missing parameter
+    //if (_rsvp_rsvp_by_user_access($connector, $usr, RSVP_ACCESS_VIEW) == true)
+      $display = true;
+	}
+  else if (is_null($usr) && !is_null($node)) {
+    if (!$connector->is_event_enabled($node->type))
+      return false;
+  	
+  	//checking for RSVP_ACCESS_VIEW takes too long. So assume we can see it, and then print a message if no RSVPs are available
+  	//if (/*(_rsvp_rsvp_by_node_access($connector, $node, RSVP_ACCESS_VIEW) == true)*/true ||
+    //TODO missing parameter
+  	//(_rsvp_rsvp_by_node_access($connector, $node, RSVP_ACCESS_CREATE) == true))
+  	  $display = true;
+  }
+  else if (is_null($usr) && is_null($node)) {
+    $display = user_access(RSVP_PERM_MAINTAIN);
+  }
+  
+	return $display;
 }
 
 /**
@@ -849,10 +925,10 @@ function rsvp_manage_form(&$form_state, $node = NULL, $usr = NULL, $allUsers = f
 * @ingroup rsvp_functions
 * @param $attendees either an array or a string with line delimited email addresses.
 * @param $rsvp The rsvp instance.
-* @param $uhash String The hash of the user that sets the attendees, or '' if the rsvp owner adds the attendees.
+* @param $invite The invite object of the user who sets the attendees, or NULL if the rsvp owner sets the attendees.
 * @return array with failed emailaddresses
 */
-function rsvp_set_invites($attendees, $rsvp, $uhash) {
+function rsvp_set_invites($rsvp, $invite, $attendees) {
   $emails = array();
   // convert to array
   $attendees = explode("\r\n", $attendees);
@@ -860,6 +936,9 @@ function rsvp_set_invites($attendees, $rsvp, $uhash) {
   $attendees = array_unique($attendees);
 
   $rid = $rsvp->rid;
+  
+  $owner_hash = (!is_null($invite)) ? $invite->hash : '';
+  
   
   foreach ($attendees as $key => $value) {
 
@@ -880,12 +959,12 @@ function rsvp_set_invites($attendees, $rsvp, $uhash) {
         if ($usr === FALSE) {
           // no user found: carry on dealing with the string as an e-mail address
           if (valid_email_address($string)) {
-          	$invite = _rsvp_attendee_exists($rid, $string);
+          	$invite = _rsvp_attendee_exists_by_email($rid, $string);
             if (!$invite) {
               // if this e-mail is not in the attendee list,
               // add it
               $hash = md5($rid . $string . time());
-              if (db_query('INSERT INTO {rsvp_invite} (rid, inviteehash, email, hash, timestamp, response, comment, totalguests) VALUES (%d, \'%s\', \'%s\', \'%s\', %d, \'%s\', \'%s\', %d)', $rid, $uhash, $string, $hash, time(), 'none', '', 1)) {
+              if (db_query('INSERT INTO {rsvp_invite} (rid, inviteehash, email, hash, timestamp, response, comment, totalguests) VALUES (%d, \'%s\', \'%s\', \'%s\', %d, \'%s\', \'%s\', %d)', $rid, $owner_hash, $string, $hash, time(), 'none', '', 1)) {
                 $invite_hash = $hash;
                 $list_key = 'success_add';
               }
@@ -907,16 +986,16 @@ function rsvp_set_invites($attendees, $rsvp, $uhash) {
       if ($usr != FALSE) {
         // a valid drupal user was found, make sure his/her e-mail isn't already
         // in the attendees list
-        $invite = _rsvp_attendee_exists($rid, $usr->mail);
+        $invite = _rsvp_attendee_exists_by_uid($rid, $usr->uid);
       	if (!$invite) {
           $hash = md5($rid . $string . time());
-          if (db_query('INSERT INTO {rsvp_invite} (rid, uid, inviteehash, email, hash, timestamp, response, comment, totalguests) VALUES (%d, %d, \'%s\', \'%s\', \'%s\', %d, \'%s\', \'%s\', %d)', $rid, $usr->uid, $uhash, $usr->mail, $hash, time(), 'none', '', 1)) {
+          if (db_query('INSERT INTO {rsvp_invite} (rid, uid, inviteehash, email, hash, timestamp, response, comment, totalguests) VALUES (%d, %d, \'%s\', \'%s\', \'%s\', %d, \'%s\', \'%s\', %d)', $rid, $usr->uid, $owner_hash, $usr->mail, $hash, time(), 'none', '', 1)) {
             $invite_hash = $hash;
             $list_key = 'success_add';
           }          
         }
         else {
-          // the e-mail is already in the attendee list
+          // the uid is already in the attendee list
           $invite_hash = $invite->hash;
           $list_key = 'existing';
         }
@@ -935,42 +1014,50 @@ function rsvp_set_invites($attendees, $rsvp, $uhash) {
   return $emails;
 }
 
-
 /**
-* Handles the rsvp invites requests.
+* Shows a management screen with all the users created invititations and events he has been invited to.
 *
 * @ingroup rsvp
 * @param $usr A user. Shows invitations for a particular user or NULL. 
-* @param $node A node. Shows invitations for the logged in user for a particular node or NULL.
+* @param $node A node. Shows invitations for the current user for a particular node or NULL.
 * @return themed rsvp invites list view response.
+*
+* This form is being called from three places:
+* - Through User account (user/%uid/rsvp): A user displays all invitations he is invited to and 
+*   all rsvps he is entitled to
+*       params: NULL, $usr
+* 
+* - Through Nodes (node/%node/rsvp): A User selects a node and then clicks the RSVP tab if visible.
+*   to displays all invitations for this node he is invited to and all rsvps he is entitled to
+*       params: $node, NULL
+* 
 */
-function rsvp_view_invites(&$form_state, $usr, $node) {
-
+function rsvp_overview_form(&$form_state, $node, $usr) {
   $connector = new RsvpConnector();
 
-  $displays_for_user = !is_null($usr);
+  $displays_for_user = NULL;
+  $_user = NULL;
+  $_node = NULL;
   
-  if ($displays_for_user == false) {
-  	//implies that $node must be valid.
-  	global $user;
-  	$usr = $user;
+  if (is_null($usr)) {
+    //implies that $node must be valid.
+  	$displays_for_user = false;
+    global $user;
+    $_user = $user;
+    $_node = $node;
+  }
+  else {
+    $displays_for_user = true;
+    $_user = $usr;
+    $_node = NULL;
   }
   
   $form = array();
   $title = '';
 
-  // Set the breadcrumb trail.
-  if ($displays_for_user == true) {
-    drupal_set_breadcrumb(array(l(t('Home'), NULL), l('My account', 'user/'. $usr->uid)));
-    drupal_set_title(check_plain($usr->name));
-  }
-  else {
-    drupal_set_breadcrumb(array(l(t('Home'), NULL), l($node->title, 'node/'. $node->nid)));
-    drupal_set_title(check_plain($node->title));  	
-  }
   
   //when we list invitations only for a particular node, $node is set. Otherwise $node is NULL.
-  $invites = _rsvp_get_invites($usr->uid, $node->nid);
+  $invites = _rsvp_get_invites($_user->uid, $_node->nid);
 
   $nid2inviteslist = array();
   while ($invite = db_fetch_object($invites)) {
@@ -980,40 +1067,66 @@ function rsvp_view_invites(&$form_state, $usr, $node) {
   foreach ($nid2inviteslist as $nid => $inviteslist) {
     $links = array();
     if ($displays_for_user == true) {
-  	  $node = node_load($nid);
+  	  $_node = node_load($nid);
     }
 
-    if ($node) {
-      $field = _rsvp_getField($node->type);
+    if ($_node) {
+      $field = _rsvp_getField($_node->type);
       foreach ($inviteslist as $invite) {
     	$rsvp = rsvp_load($invite->rid);
-        $pos = $connector->get_posByHash($node, $field, $rsvp->startdate);
+        $pos = $connector->get_posByHash($_node, $field, $rsvp->startdate);
         if ($pos >= 0) {
-          $startdate = $connector->get_startdateAsString($node, $field, $pos);
+          $startdate = $connector->get_startdateAsString($_node, $field, $pos);
         }
         else {
           $startdate = 'UNKNOWN STARTDATE:' . $rsvp->startdate;	
         }
         $links[] = l($invite->name . ' (' . $startdate . ')', "rsvp/email/". $invite->hash . "/view", array('attributes' => array('title' => t('View invitation'))));
       }   
-    	
-      $title = t('For: ') . l($node->title, 'node/'. $node->nid, array('attributes' => array('title' => t('View this node/event'))));        
+      if ($displays_for_user == true) {
+        $title = t('For event: ') . l($_node->title, 'node/'. $_node->nid, array('attributes' => array('title' => t('View this node/event'))));
+      }
+      else {
+        $title = NULL;	        
+      }
     }
     else {
       // node has been deleted
-      $title = t('Deleted event(s):');
+      $title = t('Deleted events:');
       foreach ($inviteslist as $invite) {
         $links[] = l($invite->name, "rsvp/email/". $invite->hash. "/view", array('attributes' => array('title' => t('View invitation'))));
       }   
       
     }
     
-    $itemlist = theme('item_list', $links, $title);
-    $form['item_list_'.$nid] = array('#value' => $itemlist);
-    
+    $itemlist .= theme('item_list', $links, $title);
   }
   
+  //after collecting the data, print all information in the right order to the screen.
+  // Set the breadcrumb trail.
+  if ($displays_for_user == true) {
+    $header_text =  'Invitations that you have received';
+    drupal_set_breadcrumb(array(l(t('Home'), NULL), l('My account', 'user/'. $_user->uid)));
+    drupal_set_title(check_plain($_user->name));
+  }
+  else {
+    $header_text = 'Invitations that you have received for this event';
+    drupal_set_breadcrumb(array(l(t('Home'), NULL), l($_node->title, 'node/'. $_node->nid)));
+    drupal_set_title(check_plain($_node->title));   
+  }
   
+  //display invitation box only if we have to display invitations.
+  if (count($nid2inviteslist) > 0) {
+  
+    $form['rsvp_overview_form'] = array(
+      '#type' => 'fieldset',
+    );
+  
+    $form['rsvp_overview_form']['title'] = array('#value' => '<br /><div><h3>' . t($header_text) . '</h3><br /><br /></div>');
+  
+    $form['rsvp_overview_form']['item_lists'] = array('#value' => $itemlist);
+    
+/*  
   if (count($nid2inviteslist) == 0) {
     if ($displays_for_user == true) {
     	$output = '<p>'. t('You have not been invited to any events yet.') .'</p>';
@@ -1022,17 +1135,69 @@ function rsvp_view_invites(&$form_state, $usr, $node) {
       $output = '<p>'. t('You have not been invited to this event.') .'</p>';
     }
     	
-    	$form['content'] = array( '#value' => $output );      
+    $form['rsvp_overview_form']['content'] = array( '#value' => $output );      
+  }
+*/
   }
 
+  if (rsvp_overview_rsvp_form_access($connector, $node, $usr) == true)
+    $form = array_merge_recursive($form, rsvp_overview_rsvp_form($form_state, $node, $usr));
+  
   return $form;
 }
+
+/*
+ * Access function to determine if current user is required to see the "Invitations" tab and the 
+ * rsvp_overview_form form (Shows a management screen with all the users created invititations and events he has been invited to.)
+ * 
+ * @param $usr The user object you want to check for or NULL.
+ * @param $node The node object you want to check for or NULL.
+ * 
+ * @return true or false.
+ *  
+ * returns true if current user is allowed to see the "invitation" part and the rsvp_overview_rsvp_form.
+ *      could be user, admin or moderator, anonymous.
+ *
+ * Used for menus 
+ *   - user/%user/rsvp
+ *   - node/%node/rsvp
+ */
+function rsvp_overview_form_access($connector, $usr, $node) {
+
+	/*In order to determine if a user needs to see the "Invitations" tab we basically have to execute the same
+	code like in rsvp_overview_form to find out if we print anything on the screen at all.*/
+	$_user = NULL;
+  $_node = NULL;
+  
+  if (is_null($usr)) {
+    //implies that $node must be valid.
+    global $user;
+    $_user = $user;
+    $_node = $node;
+
+    if (!$connector->is_event_enabled($node->type))
+      return false;
+    
+  }
+  else {
+    $_user = $usr;
+    $_node = NULL;
+  }
+
+  //If we list invitations for a particular node, $node is set. Otherwise $node is NULL.
+  $num_invitations = db_result(_rsvp_get_invites($_user->uid, $_node->nid, true));
+	
+	return ($num_invitations > 0) ||
+           rsvp_overview_rsvp_form_access($connector, $node, $usr);
+}
+
 
 
 
 /**
 * Handles the rsvp single invite requests.
-*
+* rsvp_invite_view_form consists of two sub components: invitation and guest list
+* 
 * !Attention!: If someone accesses this page by rsvp/email/hash, the user is 
 * still considered "anonymous" and the default access checks would fail.
 *
@@ -1041,28 +1206,28 @@ function rsvp_view_invites(&$form_state, $usr, $node) {
 * @param $rsvp The invite object to display.
 * @return themed rsvp invite view response.
 *
-* This methid can be called by 
-* - rsvp/email/%rsvp_hash  : $invite is set and $rsvp is NULL  (user access)
-* - rsvp/%rsvp/view        : $invite is NULL and $rsvp is set (owner or moderator access)
+* This method can be called by 
+* - rsvp/email/%rsvp_hash/view  : $invite is set and $rsvp is NULL  (regular invitee access)
+* - rsvp/%rsvp/view             : $invite is NULL and $rsvp is set (owner, co-owner, moderator access or users with specific role)
 * 
 */
 function rsvp_invite_view_form(&$form_state, $invite, $rsvp) {
-  
-  $is_anonymous = user_is_anonymous();
-  $is_moderator = ($rsvp != NULL); //implies that $invite is NULL for moderators
-    	
-  global $user;
 
   $form = array();
-  
   $connector = new RsvpConnector();
 
   if (is_null($rsvp)) {
     $rsvp = rsvp_load($invite->rid);
   }
-  
+
+  $is_moderator = _rsvp_rsvp_by_invite_access($connector, $rsvp, $invite, RSVP_ACCESS_EDIT);
+	
+//US  $is_anonymous = user_is_anonymous();
+//US  $is_moderator = !is_null($rsvp); //implies that $invite is NULL for moderators
+//US  global $user;
+
   $node = node_load($rsvp->nid);
-  $field = _rsvp_getField($node->type);
+
   // check if the event has been deleted
   if (!$node->nid) {
     drupal_set_message(t('The invitation you are trying to view belongs to a node that has been deleted.'));
@@ -1073,29 +1238,26 @@ function rsvp_invite_view_form(&$form_state, $invite, $rsvp) {
   // Set the breadcrumb trail.
   if ($is_moderator) {
     drupal_set_breadcrumb(array(l(t('Home'), NULL), l($node->title, 'node/'. $node->nid . '/rsvp')));
-    drupal_set_title(t('RSVP: !name', array( '!name' => $rsvp->name)));
   }
   else {
     drupal_set_breadcrumb(array(l(t('Home'), NULL), l($node->title, 'node/'. $node->nid)));
-    drupal_set_title(t('Invitation: !name', array( '!name' => $rsvp->name)));
-      }
-  
+  }
+  drupal_set_title(t('Invitation: !name', array( '!name' => $rsvp->name)));
+      
   // This isn't here by mistake: I think we need to log the user action
   // even if the event has expired.
-  if ((!$is_moderator) && ($invite->invited != 1)) {
+  if (($invite != NULL) && (!$is_moderator) && ($invite->invited != 1)) {
     db_query('UPDATE {rsvp_invite} SET invited = 1, received = 1 WHERE hash = \'%s\'', $invite->hash);
   }
   
-  // show the invitation, $invite could potentially be NULL
+  // show the invitation ($invite can potentially be NULL).
   $form = array_merge_recursive($form, rsvp_view_form($form_state, $rsvp, $node, $invite));
   
-  if (!$is_moderator) {
+  if (($invite != NULL) && (!$is_moderator)) {
   
     // check if the event has expired
-    $pos = $connector->get_posByHash($node, $field, $rsvp->startdate);
-    if (time() > $connector->get_enddate($node, $field, $pos)) {
-      drupal_set_message(t('You can no longer respond to this invitation since the event has expired.'));
-      return $form;
+    if (_rsvp_is_expired($node, $rsvp)) {
+    	drupal_set_message(t('You can no longer respond to this invitation since the event has expired.'));
     }
     else {
     
@@ -1107,64 +1269,102 @@ function rsvp_invite_view_form(&$form_state, $invite, $rsvp) {
         );
       }
     
-      if (rsvp_user_attendees_viral_access($connector, $invite)) {
+      if (rsvp_add_attendees_form_access($connector, $rsvp, $invite)) {
         $form['rsvp_invite_view'][] = array(
-          '#value' => '<h3>' . t('You may also !add attendees to this invite.', array('!add' => l(t('add'), 'rsvp/email/'. $invite->hash .'/attendees'))) . '</h3>',
+          '#value' => '<h3>' . t('You may also !add people to this invitation.', array('!add' => l(t('add'), 'rsvp/email/'. $invite->hash .'/attendees'))) . '</h3>',
         );
 
       }
     }
   }
-  $uhash = NULL;
-  if (!$is_moderator) {
-    $uhash = $invite->hash;	
-  }
-  $form = array_merge_recursive($form, rsvp_show_attendees_users_form($form_state, $rsvp, $uhash));
+
+  $owner_invite = (!$is_moderator) ? $invite : NULL;
+  
+  $form = array_merge_recursive($form, rsvp_show_attendees_form($form_state, $rsvp, $owner_invite));
     
 
   return $form;
 }
 
+/*
+ * Access function to determine if the current user (passed by invite or rsvp) is allowed to 
+ * access rsvp_invite_view_form. rsvp_invite_view_form consists of two sub components: invitation and guest list
+ *  Should be possible for all users with the right permissions
+ *  - owner, co-moderator, moderator, admin ($rsvp
+ *  - for invitees or respondents or attendees
+ *  - for other users if thay part of a role that has view permissions for invitation or guest list 
+ * 
+ * @param $rsvp The rsvp object you want to check or NULL.
+ * @param $invite The invitation object you want to check or NULL.
+ * @return true or false.
+ *
+ * - rsvp/email/%rsvp_hash/view  : $invite is set and $rsvp is NULL  (regular invitee access)
+ * - rsvp/%rsvp/view             : $invite is NULL and $rsvp is set (owner, co-owner, moderator access or users with specific role)
+
+ *  
+ */
+function rsvp_invite_view_form_access($connector, $rsvp, $invite) {
+
+  if (is_null($rsvp)) {
+    $rsvp = rsvp_load($invite->rid);
+    if ($rsvp == false)
+      return false;
+  }
+	
+  if (_rsvp_rsvp_by_invite_access($connector, $rsvp, $invite, RSVP_ACCESS_EDIT) == true)
+    return true;
+  
+  if (_rsvp_rsvp_by_invite_access($connector, $rsvp, $invite, RSVP_ACCESS_VIEW) == true)
+    return true;
+    
+  return false;
+}
+
 
 /**
-* Displays an html formatted rsvp
-*
+* Displays an html formatted Invitation if user has the permissions
+* 
+* This method is beeing called from rsvp_invite_view_form and has the following combination of parameters.
+* - rsvp/email/%rsvp_hash/view  : $invite is set (regular invitee access)
+* - rsvp/%rsvp/view             : $invite is NULL  (owner, co-owner, moderator access or users with specific role)
+* 
 * @ingroup rsvp_view
 * @param $node The node object to display.
 * @param $rsvp The rsvp object to display.
-* @param $invite The invite object to display. If NULL it is an indication that it is called through the moderator view.
+* @param $invite The invite object to display or NULL
 * @return html formatted view of the requested rsvp instance.
 */
-function rsvp_view_form(&$form_state, $rsvp, $node = NULL, $invite = NULL) {
+
+function rsvp_view_form(&$form_state, $rsvp, $node, $invite = NULL) {
     
   $form = array();
-
-  if (is_null($node)) {
-    $node = node_load($rsvp->nid); 
+  
+  $connector = new RsvpConnector();
+  $is_invitation_visible = _rsvp_visible_invitation_access($connector, $rsvp, $invite);  
+  
+  if ($is_invitation_visible == true) {
+	  $field = _rsvp_getField($node->type);
+	  $connector = new RsvpConnector();
+	  $pos = $connector->get_posByHash($node, $field, $rsvp->startdate);
+	  $startdate = $connector->get_startdateAsString($node, $field, $pos);
+	  
+	  $salutation = NULL;
+	
+	  $content = theme('rsvp_event', $node, $startdate);
+	  $content .= check_markup($rsvp->invite_text);
+	  
+	  if (!is_null($invite)) { 
+	    $name = _rsvp_getAttendeeEmail($invite);
+	  }
+	  else {
+	  	$name = NULL;
+	  }
+	  
+	  $output = theme('rsvp', $rsvp, $name, $content);
+	  
+	  $form['rsvp_view']['output'] = array('#value' => $output);
   }
   
-  $field = _rsvp_getField($node->type);
-  $connector = new RsvpConnector();
-  $pos = $connector->get_posByHash($node, $field, $rsvp->startdate);
-  $startdate = $connector->get_startdateAsString($node, $field, $pos);
-
-  //$form['rsvp_view']['header'] = array(
-  //  '#value' => '<h1>' . $rsvp->name . '</h1>',  
-  //);
-  
-  $salutation = NULL;
-  $content = theme('rsvp_event', $node, $startdate);
-
-//  if (user_is_anonymous()) {  
-//    $content .= theme('rsvp_event_anonymous');
-//  }
-  $content .= $rsvp->invite_text;
-  
-  
-  $output = theme('rsvp', $rsvp, $invite, $content);
-  
-  $form['rsvp_view']['output'] = array('#value' => $output);
-
   return $form;
 }
 
@@ -1173,19 +1373,22 @@ function rsvp_view_form(&$form_state, $rsvp, $node = NULL, $invite = NULL) {
 *
 * @ingroup rsvp_view
 * @param $rsvp The rsvp instance.
-* @param $uhash The hash of the user who enters the method or NULL.
+* @param $invite The invite instance of the user who enters the method or NULL.
 * @return html formatted view of the requested invite instance.
 */
-function rsvp_show_attendees_users_form(&$form_state, $rsvp, $uhash) {
+function rsvp_show_attendees_form(&$form_state, $rsvp, $invite) {
 
   $form = array();
-    
-  $are_responses_visible = rsvp_visible_responses_access($rsvp->rid, $uhash);  
-  $are_attendees_visible = rsvp_visible_attendees_access($rsvp->rid);
-  $is_moderator = (_rsvp_is_owner($rsvp->rid) || user_access('administer rsvp') || user_access('maintain rsvp'));
+  $connector = new RsvpConnector();
   
-  if ($are_responses_visible) {
-    $answer_block_notsent = NULL;
+  $is_guestlist_visible = _rsvp_visible_guestlist_access($connector, $rsvp, $invite);  
+  $are_attendees_visible = _rsvp_visible_attendees_access($connector, $rsvp, $invite);
+  $are_responses_visible = _rsvp_visible_responses_access($connector, $rsvp, $invite);
+  $is_moderator = _rsvp_rsvp_by_invite_access($connector, $rsvp, $invite, RSVP_ACCESS_EDIT);
+
+  if ($is_guestlist_visible) {
+    $answer_block_all = NULL;
+  	$answer_block_notsent = NULL;
   	$answer_block_yes = NULL;
     $answer_block_no = NULL;
     $answer_block_maybe = NULL;
@@ -1198,10 +1401,10 @@ function rsvp_show_attendees_users_form(&$form_state, $rsvp, $uhash) {
   	
   	//generate header in anycase
     $now = gmdate('D, d M Y H:i:s') .' GMT';
-    $boil = rsvp_user_attendees_csv_access($rsvp, $uhash); 
-    
-    $header1 = theme('rsvp_attendees_header', $rsvp, $uhash);
-    $whoiscoming = theme('rsvp_attendees_whoiscoming', $rsvp->text_whoiscoming, $totals, $now);
+    $boil = rsvp_csv_hash_form_access($connector, $rsvp, $invite); 
+
+    $header1 = theme('rsvp_attendees_header', $connector, $rsvp, $invite);
+    $whoiscoming = theme('rsvp_attendees_whoiscoming', $rsvp->text_whoiscoming, $totals, $now, $are_responses_visible);
   	
   	
     if (!$are_attendees_visible) {
@@ -1229,23 +1432,32 @@ function rsvp_show_attendees_users_form(&$form_state, $rsvp, $uhash) {
         $element['attendee'] = $attendee;
         $element['name'] = _rsvp_getAttendeeEmail($attendee, false);
         $element['href'] = $href;
+
+        //add element to "all" list
+        $responses[RSVP_ATT_ALL][] = theme('rsvp_attendees_answer_body_item', $element, $is_moderator, $currentuser, true);
         
         if (!$attendee->invited) {
-          $responses['RSVP_NOT_SEND'][] = theme('rsvp_attendees_answer_body_item', $element, $is_moderator, $currentuser);
+          $responses[RSVP_ATT_NOTSEND][] = theme('rsvp_attendees_answer_body_item', $element, $is_moderator, $currentuser, true);
         }
 
-        $currentuser = ($attendee->hash == $uhash);
+        $currentuser = ($attendee->hash == $invite->hash);
         //add element to the correct array (RSVP_ATT_YES, RSVP_ATT_NO, ...)
-        $responses[$attendee->response][] = theme('rsvp_attendees_answer_body_item', $element, $is_moderator, $currentuser); 
+        $responses[$attendee->response][] = theme('rsvp_attendees_answer_body_item', $element, $is_moderator, $currentuser, false); 
       }
 
-      if ($is_moderator && $responses['RSVP_NOT_SEND']) {
-        $title = t('No invitation sent') .' ['. l(t('Send invites'), 'rsvp/'. $rsvp->rid .'/attendees/send', array('attributes' => array('title' => t('Send invititations to uninvited users')))) .']';
-      	$answer_header_notsent =  theme('rsvp_attendees_answer_header', 'not.gif', $title, count($responses['RSVP_NOT_SEND']), 'rsvp_notsent');
-      	$answer_body_notsent = theme('rsvp_attendees_answer_body', $responses['RSVP_NOT_SEND']);
+      if ($is_moderator && $responses[RSVP_ATT_NOTSEND]) {
+        $title = t('No invitation sent') .' ['. l(t('Send invitation'), 'rsvp/'. $rsvp->rid .'/attendees/send', array('attributes' => array('title' => t('Send invititations to uninvited users')))) .']';
+      	$answer_header_notsent =  theme('rsvp_attendees_answer_header', 'not.gif', $title, count($responses[RSVP_ATT_NOTSEND]), 'rsvp_notsent');
+      	$answer_body_notsent = theme('rsvp_attendees_answer_body', $responses[RSVP_ATT_NOTSEND]);
         $answer_block_notsent = theme('rsvp_attendees_answer_block', $answer_header_notsent, $answer_body_notsent);
       }
 
+      if ($responses[RSVP_ATT_ALL]) {
+        $answer_header_all =  theme('rsvp_attendees_answer_header', 'not.gif', t('ALL '), count($responses[RSVP_ATT_ALL]), 'rsvp_all');
+        $answer_body_all = theme('rsvp_attendees_answer_body', $responses[RSVP_ATT_ALL]);
+        $answer_block_all = theme('rsvp_attendees_answer_block', $answer_header_all, $answer_body_all);
+      }
+      
       if ($responses[RSVP_ATT_YES]) {
         $answer_header_yes =  theme('rsvp_attendees_answer_header', 'yes.gif', check_plain($rsvp->text_yes), count($responses[RSVP_ATT_YES]), 'rsvp_yes');
         $answer_body_yes = theme('rsvp_attendees_answer_body', $responses[RSVP_ATT_YES]);
@@ -1278,32 +1490,28 @@ function rsvp_show_attendees_users_form(&$form_state, $rsvp, $uhash) {
       $content = '<br>' . theme('rsvp_event_anonymous');
     }
     
-    
-    $content .= theme('rsvp_attendees_outertable', $header1, 
-                                                  $whoiscoming, 
-                                                  $answer_block_notsent, 
-                                                  $answer_block_yes, 
-                                                  $answer_block_no, 
-                                                  $answer_block_maybe, 
-                                                  $answer_block_noreply, 
-                                                  $footer1);
-
-  
-    $form['rsvp_show_attendees_users']['content'] = array(
+    if ($are_responses_visible == true) {
+      $answer_blocks = array ($answer_block_notsent, $answer_block_yes, $answer_block_no, $answer_block_maybe, $answer_block_noreply);
+    }
+    else {
+      $answer_blocks = array ($answer_block_all);
+    }
+      
+    $content .= theme('rsvp_attendees_outertable', $header1, $whoiscoming, $answer_blocks, $footer1);
+    $form['rsvp_show_attendees']['content'] = array(
         '#value' => $content,
       );
     
   }
   else {
-  	if ($rsvp->response_blind == RSVP_RESPONSE_SHOWWHENREPLIED) {
-      $form['rsvp_show_attendees_users']['responses4'] = array(
+    //other users (allowed by role permission) then the invitee are not suppose to see this message.
+  	if (($invite != NULL) && ($rsvp->response_blind == RSVP_RESPONSE_SHOWWHENREPLIED)) {
+      $form['rsvp_show_attendees']['responses4'] = array(
         '#value' => 'Responses by other attendees will be visible as soon as you reply.',  
       );
     }
-    
   }
  
-    
   return $form;
 }
 
@@ -1356,58 +1564,119 @@ function rsvp_invite_status_attendee_form(&$form_state, $invite) {
 * @return html formatted rsvp attendee edit form.
 */
 function rsvp_attendee_hash_form(&$form_state, $invite ) {
+
+	_rsvp_check_invite($invite, true);
 	
   $rsvp = rsvp_load($invite->rid);
+  
+  if ($rsvp == false) {
+    drupal_set_message(t('The invitation you requested has been deleted.'));
+    drupal_goto();
+  }  
+  
   $node = node_load($rsvp->nid);
 	
-  if (!$node->nid) {
+  if ($node == false) {
     drupal_set_message(t('The invitation you requested belongs to a node that has been deleted.'));
     drupal_goto();
   }  
 	
-  return rsvp_attendee_form($form_state, $rsvp, $invite->hash, $node);
+  return rsvp_attendee_form($form_state, $rsvp, $invite, $node);
 }
 
+/*
+ * Access function to determine if the current user (determined by invite) is allowed to see rsvp_attendee_hash_form
+ * Should only be visible for users with permissions 
+ *  - owner, co-moderator, moderator, admin and 
+ *  - for invitees or respondents or attendees if viral invitation is enabled
+ *  * 
+ * @param $invite The invitation object you want to check.
+ * @return true or false.
+ *  
+ * returns true if an invitee is allowed to invite more users
+ * Useful to determine if the "Attendee" tab has to be enabled or not.
+ */
+
+function rsvp_attendee_hash_form_access($connector, $invite) {
+
+  $rsvp = rsvp_load($invite->rid);
+  if ($rsvp == false)
+    return false;
+
+  return rsvp_attendee_form_access($connector, $rsvp, $invite);
+}
+
+
 /**
-* Displays the rsvp attendee editing form
+* Displays the invitation attendee editing form. 
+* Should only be visible for users with permissions 
+*  - owner, co-moderator, moderator, admin and 
+*  - for invitees or respondents or attendees if viral invitation is enabled
 *
 * @ingroup rsvp_form
 * @param $rsvp The rsvp object to edit.
-* @param $uhash String The hash of the user that sets the attendees, or '' if the rsvp owner adds the attendees.
-* @param $node The node object to edit.
+* @param $invite The invite of the user that sets the attendees, or NULL if the rsvp owner is accessing the attendees form.
+* @param $node The node object to edit, or NULL
+* 
 * @return html formatted rsvp attendee edit form.
 */
-function rsvp_attendee_form(&$form_state, $rsvp, $uhash, $node = NULL) {
+function rsvp_attendee_form(&$form_state, $rsvp, $invite, $node) {
   
-  $form = array();
+	
+	$form = array();
   
   if (is_null($node)) {
     $node = node_load($rsvp->nid);
   }
-
+    
   $connector = new RsvpConnector();
   
   // Set the breadcrumb trail.
   drupal_set_breadcrumb(array(l(t('Home'), NULL), l($node->title, 'node/'. $node->nid . '/rsvp')));
-  drupal_set_title(check_plain('RSVP: ' . $rsvp->name));
+  drupal_set_title(check_plain('Invitation: ' . $rsvp->name));
   
-  if (rsvp_rsvp_by_rsvp_access($connector, $rsvp, RSVP_ACCESS_EDIT, true, 'rsvp newsletters subscribers') == true) {
-    $form = array_merge_recursive($form, rsvp_list_simplenews_form($form_state, $rsvp));
+  if (_rsvp_is_expired($node, $rsvp) == true) {
+    drupal_set_message(t('You can not add more people because the event has expired.'));
   }
-  if (rsvp_rsvp_by_rsvp_access($connector, $rsvp, RSVP_ACCESS_EDIT, true, 'rsvp system users') == true) {
-    $form = array_merge_recursive($form, rsvp_list_roles_form($form_state, $rsvp));
-  }
+  else {
+  	
+	  if (_rsvp_rsvp_by_invite_access($connector, $rsvp, $invite, RSVP_ACCESS_EDIT, RSVP_PERM_NEWSLETTER) == true) {
+	    $form = array_merge_recursive($form, rsvp_list_simplenews_form($form_state, $rsvp));
+	  }
+	  if (_rsvp_rsvp_by_invite_access($connector, $rsvp, $invite, RSVP_ACCESS_EDIT, RSVP_PERM_SYSTEMUSERS) == true) {
+	    $form = array_merge_recursive($form, rsvp_list_roles_form($form_state, $rsvp));
+	  }
 
-  if (rsvp_rsvp_by_rsvp_access($connector, $rsvp, RSVP_ACCESS_EDIT, true) || _rsvp_is_invite_viral($rsvp->rid)) {
-    $form = array_merge_recursive($form, rsvp_add_attendees_form($form_state, $rsvp, $uhash));
+	  if (rsvp_add_attendees_form_access($connector, $rsvp, NULL)) {
+	    $form = array_merge_recursive($form, rsvp_add_attendees_form($form_state, $rsvp, $invite));
+	  }
   }
+    
+  $form = array_merge_recursive($form, rsvp_show_attendees_form($form_state, $rsvp, $invite));
   
-  //$form = array_merge_recursive($form, rsvp_show_attendees_form($form_state, $rsvp));
-  $form = array_merge_recursive($form, rsvp_show_attendees_users_form($form_state, $rsvp, $uhash));
-  
-  //$form_state['redirect'] = 'node/'. $node->nid .'/rsvp';
+  //do not redirect 
   
   return $form;
+}
+
+/*
+ * Access function to determine if the current user (passed by invite or rsvp) is allowed to 
+ * access rsvp_attendee_form
+ *  Should only be visible for users with permissions 
+ *  - owner, co-moderator, moderator, admin and 
+ *  - for invitees or respondents or attendees if viral invitation is enabled
+ * 
+ * @param $rsvp The rsvp object you want to check.
+ * @param $invite The invitation object you want to check.
+ * @return true or false.
+ *  
+ */
+function rsvp_attendee_form_access($connector, $rsvp, $invite) {
+	
+  if (_rsvp_rsvp_by_invite_access($connector, $rsvp, $invite, RSVP_ACCESS_EDIT) == true)
+    return true;
+
+  return (_rsvp_is_invitation_viral($rsvp, $invite));
 }
 
 
@@ -1417,10 +1686,10 @@ function rsvp_attendee_form(&$form_state, $rsvp, $uhash, $node = NULL) {
 *
 * @ingroup rsvp_form
 * @param $rsvp The rsvp object to edit.
-* @param $uhash String The hash of the user that sets the attendees, or '' if the rsvp owner adds the attendees.
+* @param $invite The invite object of the user who sets the attendees, or NULL if the rsvp owner adds the attendees.
 * @return html formatted rsvp attendee edit form.
 */
-function rsvp_add_attendees_form(&$form_state, $rsvp, $uhash) {
+function rsvp_add_attendees_form(&$form_state, $rsvp, $invite) {
 
   $form = array();
 
@@ -1443,12 +1712,12 @@ function rsvp_add_attendees_form(&$form_state, $rsvp, $uhash) {
       '#value' => t('Add'),
       '#submit' => array('rsvp_add_attendees_form_submit'),
       '#validate' => array('rsvp_add_attendees_form_validate'),
-      '#description' => t('Adds persons to the list of attendees.'),
+      '#description' => t('Add persons to the list of attendees.'),
   );
 
   
-  $form['rsvp_add_attendees']['rid'] = array('#type' => 'value', '#value' => $rsvp->rid);
-  $form['rsvp_add_attendees']['uhash'] = array('#type' => 'value', '#value' => $uhash);
+  $form['rsvp_add_attendees']['rsvp'] = array('#type' => 'value', '#value' => $rsvp);
+  $form['rsvp_add_attendees']['invite'] = array('#type' => 'value', '#value' => $invite);
   
   return $form;
 }
@@ -1463,14 +1732,52 @@ function rsvp_add_attendees_form_validate($form, &$form_state) {
 function rsvp_add_attendees_form_submit($form, &$form_state) {
 
   $attendee_list = $form_state['values']['recipients'];
-  $rid = $form_state['values']['rid'];
-  $uhash = $form_state['values']['uhash'];
+  $rsvp = $form_state['values']['rsvp'];
+  $invite = $form_state['values']['invite'];
 
-  $send_immediatly = !rsvp_visible_responses_access($rid, $uhash);
-  $rsvp = rsvp_load($rid);
+  $connector = new RsvpConnector();
+  
+  $send_immediatly = !_rsvp_visible_guestlist_access($connector, $rsvp, $invite);
 
-  _rsvp_add_attendees($rsvp, $attendee_list, $send_immediatly, $uhash);
+  _rsvp_add_attendees($rsvp, $invite, $attendee_list, $send_immediatly);
 }
+
+/*
+ * Access function to determine if the current user (passed by invite or rsvp) is allowed to 
+ * access rsvp_add_attendees_form
+ * 
+ * @param $rsvp The rsvp object you want to check. If NULL, we use the invite object and load the rsvp
+ * @param $invite The invitation object you want to check.
+ * @return true or false.
+ *  
+ */
+function rsvp_add_attendees_form_access($connector, $rsvp, $invite) {
+
+  $rsvp = _rsvp_check_rsvp($rsvp);
+
+  if ($rsvp == NULL) {
+		$invite = _rsvp_check_invite($invite);
+    if ($invite == NULL)
+      return false;
+		
+		$rsvp = rsvp_load($invite->rid);
+    $rsvp = _rsvp_check_rsvp($rsvp);
+		if ($rsvp == false)
+      return false;
+  }
+	
+	//is admin, moderator, owner or co-owner?
+  if (_rsvp_rsvp_by_invite_access($connector, $rsvp, $invite, RSVP_ACCESS_EDIT) == true)
+    return true;
+
+  //is regular user and the invitation is viral?
+  if (_rsvp_rsvp_by_invite_access($connector, $rsvp, $invite, RSVP_ACCESS_VIEW) && _rsvp_is_invitation_viral($rsvp, $invite))
+	  return true;
+	  
+	return false;
+}
+
+
 
 
 /**
@@ -1478,16 +1785,15 @@ function rsvp_add_attendees_form_submit($form, &$form_state) {
 *
 * @ingroup rsvp_functions
 * @param $rsvp The rsvp instance.
+* @param $invite The invitation object of the user who sets the attendees, or NULL if the rsvp owner adds the attendees.
 * @param $attendee_list Either an array or a string with line delimited email addresses.
 * @param $send_rsvp Boolean Also send the invitations or just add the attendees to the database.
-* @param $uhash String The hash of the user that sets the attendees, or '' if the rsvp owner adds the attendees.
 */
-
-function _rsvp_add_attendees($rsvp, $attendee_list, $send_rsvp, $uhash = '') {
+function _rsvp_add_attendees($rsvp, $invite, $attendee_list, $send_rsvp) {
 
   $content = '';
   // attempt to add the list of e-mails
-  $emails = rsvp_set_invites(trim($attendee_list), $rsvp, $uhash);
+  $emails = rsvp_set_invites($rsvp, $invite, trim($attendee_list));
   $status = array();
   
   if ($send_rsvp == true) {
@@ -1511,14 +1817,14 @@ function rsvp_invite_remove_attendee_form(&$form_state, $invite) {
   
   // Set the breadcrumb trail.
   drupal_set_breadcrumb(array(l(t('Home'), NULL), l($rsvp->name, 'rsvp/'. $rsvp->rid . '/attendees')));
-  drupal_set_title(check_plain('RSVP: ' . $rsvp->name));
+  drupal_set_title(check_plain('Invitation: ' . $rsvp->name));
   
   $form['hash'] = array('#type' => 'value', '#value' => $invite->hash);
   
   return confirm_form($form, 
     t('Are you sure you want to remove attendee ') . theme('placeholder', _rsvp_getAttendeeEmail($invite)) . '?',
     'rsvp/'. $rsvp->rid .'/attendees',
-    t('Removing an attendee will delete their responses and remove their access to their invitations to this RSVP.'),
+    t('Removing an attendee will delete their responses and remove their access to this invitation!'),
     t('Remove Attendee'), 
     t('Cancel')
   );
@@ -1527,10 +1833,10 @@ function rsvp_invite_remove_attendee_form(&$form_state, $invite) {
 function rsvp_invite_remove_attendee_form_submit($form, &$form_state) {
 
   if ($form_state['values']['confirm']) {
-	$invite = _rsvp_get_invite_by_hash($form_state['values']['hash']);
+	  $invite = _rsvp_get_invite_by_hash($form_state['values']['hash']);
     $rsvp = rsvp_load($invite->rid);
     $name = _rsvp_getAttendeeEmail($invite);
-    drupal_set_message(t('The attendee !name has been removed.', array('!name' => theme('placeholder', $name))));
+    drupal_set_message(t('Attendee !name has been removed from invitation.', array('!name' => theme('placeholder', $name))));
     _rsvp_remove_attendee($form_state['values']['hash']);
     
   }
@@ -1681,6 +1987,21 @@ function rsvp_csv_hash_form(&$form_state, $rsvp, $invite) {
   
 }
 
+/*
+ * Access function to determine if the current user is allowed to export attendees to CSV
+ * 
+ * @param $rsvp The rsvp object you want to check or NULL.
+ * @param $invite The invite object of the user that does the check or NULL.
+ * @return true or false.
+ *  
+ */
+function rsvp_csv_hash_form_access($connector, $rsvp, $invite) {
+  return (_rsvp_visible_guestlist_access($connector, $rsvp, $invite) && 
+          _rsvp_visible_attendees_access($connector, $rsvp, $invite));
+    
+}
+
+
 /**
  * Callback to send invitations to users already
  * in the invitation list.
@@ -1698,6 +2019,19 @@ function rsvp_attendees_send_invites_form(&$form_state, $rsvp) {
   
   drupal_goto('rsvp/'. $rsvp->rid .'/attendees');
 }
+
+/*
+ * Access function to determine if the current user is allowed to call callback rsvp_attendees_send_invites_form
+ * 
+ * @param $rsvp The rsvp object you want to check or NULL.
+ * @return true or false.
+ */
+function rsvp_attendees_send_invites_form_access($connector, $rsvp) {
+  
+	return (_rsvp_rsvp_by_invite_access($connector, $rsvp, NULL, RSVP_ACCESS_EDIT));
+    
+}
+
 
 /**
 * Displays the rsvp send list message form.
@@ -1740,13 +2074,13 @@ function rsvp_message_form(&$form_state, $rsvp, $node = NULL, $invite = NULL) {
   
   // Set the breadcrumb trail.
   drupal_set_breadcrumb(array(l(t('Home'), NULL), l($node->title, 'node/'. $node->nid . '/rsvp')));
-  drupal_set_title(check_plain('RSVP: ' . $rsvp->name));
+  drupal_set_title(check_plain('Invitation: ' . $rsvp->name));
   
   $form['rsvp_message']['status'] =  array(
     '#type' => 'select',
     '#title' => t('Message audience'),
     '#default_value' => RSVP_ATT_ALL,
-    '#options' => array(RSVP_ATT_ALL => t('Entire RSVP List'), RSVP_ATT_YES => t('Attending'), RSVP_ATT_NO =>  t('Not attending'), RSVP_ATT_MAYBE =>  t('Might attend'), RSVP_ATT_NONE =>  t('No reply')),
+    '#options' => array(RSVP_ATT_ALL => t('Entire guest list'), RSVP_ATT_YES => t('Attending'), RSVP_ATT_NO =>  t('Not attending'), RSVP_ATT_MAYBE =>  t('Might attend'), RSVP_ATT_NONE =>  t('No reply')),
   );
   $form['rsvp_message']['subject'] = array(
     '#type' => 'textfield',
@@ -1779,7 +2113,7 @@ function rsvp_message_form(&$form_state, $rsvp, $node = NULL, $invite = NULL) {
   $attendees_count = db_result(_rsvp_get_attendees($rsvp->rid, RSVP_ATT_ALL, TRUE));
   
   if (!$attendees_count) {
-    drupal_set_message(t('No invitees in this RSVP.'));
+    drupal_set_message(t('This invitation contains no attendees.'));
     $form['rsvp_message']['submit']['#disabled'] = TRUE;
   }
 
@@ -1899,8 +2233,26 @@ function rsvp_create(&$form_state) {
   $fields[] = 'startdate';
   $vals[] = $form_state['values']['startdate'];
   $markers[] = "%d";
+
+  $mod_usr = user_load(array('name' => $form_state['values']['moderator_name']));
+  if ($mod_usr != false) {
+    $fields[] = 'uid_moderator';
+    $vals[] = $mod_usr->uid;
+    $markers[] = "%d";
+  }
+
   
-  foreach (array('name', 'invite_text', 'response_blind', 'attendees_visible', 'list_email', 'allow_invite', 'nid', 'text_whoiscoming', 'text_yes', 'text_no', 'text_maybe') as $key) {
+  $fields[] = 'response_view_roles';
+  //array_diff removes all '0' values from the returned selection 
+  $vals[] = implode(";", array_diff($form_state['values']['response_view_roles'], array('0')));
+  $markers[] = "'%s'";
+
+  $fields[] = 'rsvp_view_roles';
+  //array_diff removes all '0' values from the returned selection 
+  $vals[] = implode(";", array_diff($form_state['values']['rsvp_view_roles'], array('0')));
+  $markers[] = "'%s'";
+  
+  foreach (array('name', 'invite_text', 'response_blind', 'response_blind_node', 'reply_blind_node', 'attendees_visible', 'list_email', 'allow_invite', 'nid', 'text_whoiscoming', 'text_yes', 'text_no', 'text_maybe') as $key) {
     $fields[] = $key;
     $vals[] = $form_state['values'][$key];
     $markers[] = "'%s'";
@@ -1913,7 +2265,7 @@ function rsvp_create(&$form_state) {
     return $rid;
   }
   else {
-    drupal_set_message(t('There was an error creating the RSVP. Please try again'), 'error');
+    drupal_set_message(t('There was an error creating the invitation. Please try again'), 'error');
     return FALSE;
   }
 }
@@ -1938,8 +2290,22 @@ function rsvp_update(&$form_state) {
 
   $fields[] = 'startdate = %d';
   $vals[] = $form_state['values']['startdate'];
+
+  $mod_usr = user_load(array('name' => $form_state['values']['moderator_name']));
+  if ($mod_usr != false) {
+    $fields[] = 'uid_moderator = %d';
+    $vals[] = $mod_usr->uid;
+  }
+
+  $fields[] = 'response_view_roles = \'%s\'';
+  //array_diff removes all '0' values from the returned selection 
+  $vals[] = implode(";", array_diff($form_state['values']['response_view_roles'], array('0')));
+
+  $fields[] = 'rsvp_view_roles = \'%s\'';
+  //array_diff removes all '0' values from the returned selection 
+  $vals[] = implode(";", array_diff($form_state['values']['rsvp_view_roles'], array('0')));
   
-  foreach (array('name', 'invite_text', 'response_blind', 'attendees_visible', 'list_email', 'allow_invite', 'text_whoiscoming', 'text_yes', 'text_no', 'text_maybe') as $key) {
+  foreach (array('name', 'invite_text', 'response_blind', 'response_blind_node', 'reply_blind_node', 'attendees_visible', 'list_email', 'allow_invite', 'text_whoiscoming', 'text_yes', 'text_no', 'text_maybe') as $key) {
     $fields[] = $key ." = '%s'";
     $vals[] = $form_state['values'][$key];
   }
@@ -1949,11 +2315,11 @@ function rsvp_update(&$form_state) {
   $sql = 'UPDATE {rsvp} SET '. implode(', ', $fields) .' WHERE rid = %d';
 
   if (db_query($sql, $vals)) {
-    drupal_set_message(t('RSVP updated.'));
+    drupal_set_message(t('Invitation updated.'));
     return TRUE;
   }
   else {
-    drupal_set_message(t('There was an error updating the RSVP.'), 'error');
+    drupal_set_message(t('There was an error updating the invitation.'), 'error');
     return FALSE;
   }
 }
@@ -1964,6 +2330,7 @@ function rsvp_update(&$form_state) {
 * @ingroup rsvp_form
 * @param $node The node we want to edit/create the rsvp on.
 * @param $rsvp The rsvp instance to edit.
+*  
 * @return html formatted rsvp edit form.
 *
 * Either $node or $rsvp must be set.
@@ -1975,13 +2342,21 @@ function rsvp_addedit_form(&$form_state, $node = NULL, $rsvp = NULL) {
     //node must be set at this point, which means we add, rather then edit.
   	$operation = 'add';
     
-  	drupal_set_title(t('Create RSVP for node "%title"', array('%title' => $node->title)));
+  	drupal_set_title(t('Create invitation for node "%title"', array('%title' => $node->title)));
     $rsvp = new stdClass();
     $rsvp->name = $node->title;
-    $rsvp->text_yes = 'Attend';
-    $rsvp->text_no = 'Attend not';
-    $rsvp->text_maybe = 'Undecided';
-    $rsvp->text_whoiscoming = 'Responses';
+    $rsvp->text_yes = t('Attend');
+    $rsvp->text_no = t('Attend not');
+    $rsvp->text_maybe = t('Undecided');
+    $rsvp->text_whoiscoming = t('Responses');
+    $rsvp->response_blind = RSVP_RESPONSE_SHOW;
+    $rsvp->response_blind_node = RSVP_RESPONSE_HIDE;
+    $rsvp->attendees_visible = RSVP_INVITEE_HIDE;
+    $rsvp->response_view_roles = '';
+    $rsvp->rsvp_view_roles = '';
+    $rsvp->reply_blind_node = RSVP_REPLY_HIDE;
+    $rsvp->list_email = RSVP_SEND_NONE;
+    $rsvp->allow_invite = RSVP_INVITE_NONE;
   }
   else {
     //rsvp is set. load node for rsvp if not available.     
@@ -1991,7 +2366,7 @@ function rsvp_addedit_form(&$form_state, $node = NULL, $rsvp = NULL) {
       $node = node_load($rsvp->nid); 
     }
     
-  	drupal_set_title(check_plain('RSVP: ' . $rsvp->name));
+  	drupal_set_title(check_plain('Invitation: ' . $rsvp->name));
   }
   
   // Set the breadcrumb trail.
@@ -2001,18 +2376,23 @@ function rsvp_addedit_form(&$form_state, $node = NULL, $rsvp = NULL) {
   $fields = array();
   
   $connector = new RsvpConnector();
-  
-  
+
+  $role_query_result = db_query("SELECT rid,name FROM {role} order by name");
+  $role_options = array();
+  while ($role = db_fetch_object($role_query_result)) {
+    $role_options[$role->rid] = $role->name;
+  }
   
   $field = _rsvp_getField($node->type);
   
   $form['name'] = array(
     '#type' => 'textfield',
-    '#title' => t('RSVP Title'),
+    '#title' => t('Title'),
     '#default_value' => check_plain($rsvp->name),
+    '#required' => TRUE,
     '#size' => 80,
     '#maxlength' => 128,
-    '#description' => t('This is the title of your RSVP. Default is the node title.'),
+    '#description' => t('This is the title of your Invitation. Default is the node title.'),
   );
 
   if ($connector->hasMultipleDatesPerField()) {
@@ -2042,88 +2422,156 @@ function rsvp_addedit_form(&$form_state, $node = NULL, $rsvp = NULL) {
       '#required' => TRUE,
       '#options' => array_map('check_plain', $fields),
       '#default_value' => check_plain(isset($rsvp->startdate) ? $rsvp->startdate : 0),
-      '#description' => t('Select one of the available start dates to be used as rsvp start date.'),
+      '#description' => t('Select one of the available start dates to be used as invitation start date.'),
     );
   }
   
   $form['invite_text'] = array(
     '#type' => 'textarea',
-    '#title' => t('RSVP Message'),
+    '#title' => t('Message'),
     '#default_value' => check_markup(!empty($rsvp->invite_text) ? $rsvp->invite_text : ' ' ),
     '#cols' => 60,
     '#rows' => 10,
     '#description' => t('This text will be sent to the people you invite.')
   );
   
-  $form['text_whoiscoming'] = array(
+
+  $moderator_user = user_load($rsvp->uid_moderator);
+  $form['moderator_name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Moderator permissions'),
+    '#size' => 30,
+    '#maxlength' => 30,
+    '#autocomplete_path' => 'user/autocomplete',
+    '#default_value' => $moderator_user->name,
+    '#description' => t('Grant moderator rights to an additional user to manage your invitation.')
+  );
+
+  $form['rsvp_view_roles'] = array (
+    '#type' => 'checkboxes',
+    '#title' => t('Invitation view permissions'),
+    '#options' => $role_options,
+    '#description' => t('Select which roles should have permissions to view the invitation besides the invitees.'),
+    '#default_value' => explode(';', $rsvp->rsvp_view_roles),
+  );
+  
+  $form['rsvp_field_2'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Guest list options'),
+  );
+
+  $response_blind = array(RSVP_RESPONSE_SHOW => t('Show guest list'), RSVP_RESPONSE_HIDE => t('Hide guest list'), RSVP_RESPONSE_SHOWWHENREPLIED => t('Hide guest list until replied'));  
+  $form['rsvp_field_2']['response_blind'] = array(
+    '#type' => 'select',
+    '#title' => t('Display guest list'),
+    '#options' => array_map('check_plain', $response_blind),
+    '#default_value' => (isset($rsvp->response_blind) ? $rsvp->response_blind : RSVP_RESPONSE_SHOW),
+    '#description' => t('Select when invitees are allowed to see the guest list.'),
+  );
+
+  $attendees_visible = array(RSVP_INVITEE_SHOW => t('Show invitees'), RSVP_INVITEE_SHOWRESPONSEWHENREPLIED => t('Show invitees but hide their responses until replied'), RSVP_INVITEE_HIDE => t('Hide invitees'));  
+  $form['rsvp_field_2']['attendees_visible'] = array(
+    '#type' => 'select',
+    '#title' => t('Detail level'),
+    '#options' => array_map('check_plain', $attendees_visible),
+    '#default_value' => (isset($rsvp->attendees_visible) ? $rsvp->attendees_visible : RSVP_INVITEE_HIDE),
+    '#description' => t('Select which detail level invitees are allowed to see of the guest list. Field "Display guest list" has precedence.'),
+  );
+
+  $response_blind_node = array(RSVP_RESPONSE_SHOW => t('Show'), RSVP_RESPONSE_HIDE => t('Hide'));  
+  $form['rsvp_field_2']['response_blind_node'] = array(
+    '#type' => 'select',
+    '#title' => t('Display guest list inside event/node'),
+    '#options' => array_map('check_plain', $response_blind_node),
+    '#default_value' => (isset($rsvp->response_blind_node) ? $rsvp->response_blind_node : RSVP_RESPONSE_HIDE),
+    '#description' => t('NOT WORKING YET. Select when invitees are allowed to see the guest list below each event(node). Field "Display guest list" and "Detail level" has precedence.'),
+  );
+  
+  $form['rsvp_field_2']['response_view_roles'] = array (
+    '#type' => 'checkboxes',
+    '#title' => t('Guest list view permissions'),
+    '#options' => $role_options,
+    '#description' => t('Select which roles should have permissions to view the guest list besides the invitees.'),
+    '#default_value' => explode(';', $rsvp->response_view_roles),
+  );
+
+  $form['rsvp_field_2']['text_whoiscoming'] = array(
     '#type' => 'textfield',
     '#title' => t('Responses'),
     '#default_value' => check_plain($rsvp->text_whoiscoming),
+    '#required' => TRUE,
     '#size' => 80,
     '#maxlength' => 128,
-    '#description' => t('This is the header text shown for the list of attendees.'),
+    '#description' => t('The header text shown for the guest list.'),
   );
-  $form['text_yes'] = array(
+  $form['rsvp_field_2']['text_yes'] = array(
     '#type' => 'textfield',
     '#title' => t('Yes'),
     '#default_value' => check_plain($rsvp->text_yes),
+    '#required' => TRUE,
     '#size' => 80,
     '#maxlength' => 128,
-    '#description' => t('This is the text shown for invitees that will attend.'),
+    '#description' => t('Text shown in the guest list for invitees that will attend.'),
   );
-  $form['text_no'] = array(
+  $form['rsvp_field_2']['text_no'] = array(
     '#type' => 'textfield',
     '#title' => t('No'),
     '#default_value' => check_plain($rsvp->text_no),
+    '#required' => TRUE,
     '#size' => 80,
     '#maxlength' => 128,
-    '#description' => t('This is the text shown for invitees that will not attend.'),
+    '#description' => t('Text shown in the guest list for invitees that will not attend.'),
   );
-  $form['text_maybe'] = array(
+  $form['rsvp_field_2']['text_maybe'] = array(
     '#type' => 'textfield',
     '#title' => t('Maybe'),
     '#default_value' => check_plain($rsvp->text_maybe),
+    '#required' => TRUE,
     '#size' => 80,
     '#maxlength' => 128,
-    '#description' => t('This is the text shown for invitees that might attend.'),
+    '#description' => t('Text shown in the guest list for invitees that might attend.'),
   );
   
-  $response_blind = array(RSVP_RESPONSE_SHOW => t('Show responses'), RSVP_RESPONSE_HIDE => t('Hide responses always'), RSVP_RESPONSE_SHOWWHENREPLIED => t('Hide responses until replied'));  
-  $form['response_blind'] = array(
-    '#type' => 'select',
-    '#title' => t('Show responses'),
-    '#required' => TRUE,
-    '#options' => array_map('check_plain', $response_blind),
-    '#default_value' => (isset($rsvp->response_blind) ? $rsvp->response_blind : RSVP_RESPONSE_SHOW),
-    '#description' => t('Prevent attendees from seeing any response information.'),
-  );
-  $attendees_visible = array(RSVP_ATTENDEE_SHOW => t('Show attendee names'), RSVP_ATTENDEE_HIDE => t('Hide attendee names'));  
-  $form['attendees_visible'] = array(
-    '#type' => 'select',
-    '#title' => t('Show attendees'),
-    '#required' => TRUE,
-    '#options' => array_map('check_plain', $attendees_visible),
-    '#default_value' => (isset($rsvp->attendees_visible) ? $rsvp->attendees_visible : RSVP_ATTENDEE_HIDE),
-    '#description' => t('Prevent attendees from seeing who else is on the invitation list. Field "Show responses" has precedence.'),
+  $form['rsvp_field_3'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Invitee options'),
   );
   
-  $form['list_email'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Allow to send messages to attendees'),
-    '#return_value' => 1,
-    '#default_value' => $rsvp->list_email,
-    '#description' => t('Allow attendees to send messages to the people invited to your RSVP.')
+  $response_send = array(RSVP_SEND_NONE => t('No'), RSVP_SEND_INVITEE => t('Invitees'), RSVP_SEND_RESPONDENT => t('Respondents'), RSVP_SEND_ATTENDEE => t('Attendees'));  
+  $form['rsvp_field_3']['list_email'] = array(
+    '#type' => 'select',
+    '#title' => t('Send messages'),
+    '#options' => array_map('check_plain', $response_send),
+    '#default_value' => (isset($rsvp->list_email) ? $rsvp->list_email : RSVP_SEND_NONE),
+    '#description' => t('Select which persons are allowed to send messages to other invited people')
   );
-  $form['allow_invite'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Allow attendee invites'),
-    '#return_value' => 1,
-    '#default_value' => $rsvp->allow_invite,
-    '#description' => t('Allow attendees to invite more people to the event')
+  
+  $response_invite = array(RSVP_INVITE_NONE => t('No'), RSVP_INVITE_INVITEE => t('Invitees'), RSVP_INVITE_RESPONDENT => t('Respondents'), RSVP_INVITE_ATTENDEE => t('Attendees'));  
+    $form['rsvp_field_3']['allow_invite'] = array(
+    '#type' => 'select',
+    '#title' => t('Invite others'),
+    '#options' => array_map('check_plain', $response_invite),
+    '#default_value' => (isset($rsvp->allow_invite) ? $rsvp->allow_invite : RSVP_INVITE_NONE),
+    '#description' => t('Select which persons are allowed to invite more people to the event.')
   );
-  $form['rid'] = array('#type' => 'value', '#value' => $rsvp->rid);
-  $form['nid'] = array('#type' => 'value', '#value' => $node->nid);
 
+  $form['rsvp_field_4'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Reply options'),
+  );
+
+  $reply_blind_node = array(RSVP_REPLY_SHOW => t('Show'), RSVP_REPLY_HIDE => t('Hide'));  
+  $form['rsvp_field_4']['reply_blind_node'] = array(
+    '#type' => 'select',
+    '#title' => t('Display reply box inside event/node'),
+    '#options' => array_map('check_plain', $reply_blind_node),
+    '#default_value' => (isset($rsvp->reply_blind_node) ? $rsvp->reply_blind_node : RSVP_REPLY_HIDE),
+    '#description' => t('NOT WORKING YET. Select if invitees are allowed to see the reply box below each event/node.'),
+  );
+  
+  $form['nid'] = array('#type' => 'value', '#value' => $node->nid);
+  $form['rid'] = array('#type' => 'value', '#value' => $rsvp->rid);
+  
   $form['update'] = array(
     '#type' => 'submit',
     '#value' => t('Submit'),
@@ -2136,6 +2584,7 @@ function rsvp_addedit_form(&$form_state, $node = NULL, $rsvp = NULL) {
         '#name' => 'op'
         );
   }
+  
   return $form;
 }
 
@@ -2147,21 +2596,10 @@ function rsvp_addedit_form(&$form_state, $node = NULL, $rsvp = NULL) {
 */
 function rsvp_addedit_form_submit($form, &$form_state) {
   
-  $nid = $form_state['values']['nid'];
   $rid = $form_state['values']['rid'];
-  $op = $form_state['values']['op'];
+  $op  = $form_state['values']['op'];
   
-  if (!is_numeric($nid)) { 
-    drupal_set_message(t('Node %node is not a valid type.', array('%node' => $nid)), 'error');
-    $form_state['redirect'] = 'node/'. $nid .'/rsvp';
-    return;
-  }
-  
-  if (!is_null($rid) && !is_numeric($rid)) { 
-    drupal_set_message(t('Rsvp %rid is not a valid type.', array('%rid' => $rid)), 'error');
-    $form_state['redirect'] = 'node/'. $nid .'/rsvp';
-    return;
-  }
+  //set initial redirection based on where we came from.
   
   if ($op == t('Delete')) {
     $form_state['redirect'] = 'rsvp/'. $rid .'/delete';
@@ -2174,16 +2612,43 @@ function rsvp_addedit_form_submit($form, &$form_state) {
     else {
       $rid = rsvp_create($form_state); 
       if ($rid != false) {
-        drupal_set_message(t('New RSVP has been created successfully. Continue adding attendees.'));
+        drupal_set_message(t('New invitation has been created successfully. Continue adding attendees...'));
         $form_state['redirect'] = 'rsvp/'. $rid .'/attendees';
         return;
       }
     }
-    
-    $form_state['redirect'] = 'node/'. $nid . '/rsvp';
-    return;
   }
+  
+  $form_state['redirect'] = _rsvp_session_parent(NULL, false);
+  
+  return;
 }
+
+/*
+ * Access function to determine if the current user (passed by invite or rsvp) is allowed to 
+ * access rsvp_add_attendees_form
+ * 
+ * @param $rsvp The rsvp object you want to check or NULL.
+ * @param $node The node object you want to check or NULL.
+ * @param $access The access type we want to check for the user on the node object. 
+ *            (RSVP_ACCESS_VIEW,RSVP_ACCESS_EDIT,RSVP_ACCESS_CREATE,RSVP_ACCESS_DELETE)  
+
+ * @return true or false.
+ *  
+ */
+function rsvp_addedit_form_access($connector, $rsvp, $node, $access) {
+  
+	if (!is_null($rsvp)) {
+    return _rsvp_rsvp_by_invite_access($connector, $rsvp, NULL, $access);
+		
+	} 
+	else if (!is_null($node)) {
+    return _rsvp_rsvp_by_node_access($connector, $node, $access);
+	}
+	
+	return false;
+}
+
 
 
 
@@ -2197,7 +2662,7 @@ function rsvp_addedit_form_submit($form, &$form_state) {
 function rsvp_delete($rid) {
 
   if (is_null($rid) || !is_numeric($rid)) { 
-    drupal_set_message(t('Rsvp %rid is not a valid type.', array('%rid' => $rid)), 'error');
+    drupal_set_message(t('Invitation %rid is not a valid type.', array('%rid' => $rid)), 'error');
     return RSVP_ERROR_DELETE_RSVP;
   }
     
@@ -2227,10 +2692,9 @@ function rsvp_delete_form(&$form_state, $rsvp) {
   $form = array();
 
   $form['rid'] = array('#type' => 'value', '#value' => $rsvp->rid);
-  $form['nid'] = array('#type' => 'value', '#value' => $rsvp->nid);
-
+  
   return confirm_form($form,
-      t('Are you sure you want to delete RSVP %name?', array('%name' => $rsvp->name)),
+      t('Are you sure you want to delete invitation %name?', array('%name' => $rsvp->name)),
       'rsvp/' . $rsvp->rid . '/edit',
       t('This action cannot be undone.'),
       t('Delete'), 
@@ -2247,16 +2711,17 @@ function rsvp_delete_form_submit($form, &$form_state) {
   if ($form_state['values']['confirm']) {
     switch (rsvp_delete($form_state['values']['rid'])) {
       case RSVP_DELETED:
-        drupal_set_message(t('RSVP deleted.'));
+        drupal_set_message(t('invitation deleted.'));
         break;
       case RSVP_ERROR_DELETE_USER_RECORDS:
-        drupal_set_message(t('There was an error removing the RSVP user records'), 'error');
+        drupal_set_message(t('There was an error removing the invitation user records'), 'error');
         break;
       case RSVP_ERROR_DELETE_RSVP:
-        drupal_set_message(t('There was an error removing the RSVP'), 'error');
+        drupal_set_message(t('There was an error removing the invitation'), 'error');
         break;
     }
-    $form_state['redirect'] = 'node/'. $form_state['values']['nid'] .'/rsvp';
+
+    $form_state['redirect'] = _rsvp_session_parent(NULL, false);
   }
 }
 
@@ -2396,8 +2861,7 @@ function rsvp_list_simplenews_form(&$form_state, $rsvp) {
     foreach (taxonomy_get_tree(variable_get('simplenews_vid', '')) as $term) {
       $rows[] = array(
         $term->name,
-        l(t('Add'), 'rsvp/'. $rsvp->rid .'/attendees/simplenews/'. $term->tid /*, 
-        array('attributes' => array('onclick' => "$.get($(this).attr('href'), function(data){ $('#edit-invite-list').val(data); }); return false;"))*/),
+        l(t('Add'), 'rsvp/'. $rsvp->rid .'/attendees/simplenews/'. $term->tid),
       );
     }
 
@@ -2438,8 +2902,7 @@ function rsvp_list_roles_form(&$form_state, $rsvp) {
   foreach (user_roles(TRUE) as $rid => $role) {
     $rows[] = array(
       $role,
-      l(t('Add'), 'rsvp/'. $rsvp->rid .'/attendees/role/'. $rid, 
-      array('onclick' => "$.get($(this).attr('href'), function(data){ $('#edit-invite-list').val(data); }); return false;")),
+      l(t('Add'), 'rsvp/'. $rsvp->rid .'/attendees/role/'. $rid),
     );
   }
   if ($pager = theme('pager', NULL, 10, 0)) {
@@ -2458,28 +2921,25 @@ function rsvp_list_roles_form(&$form_state, $rsvp) {
 
 
 /**
- * Returns a list of newsletter subscribers.
+ * Adding a list of newsletter subscribers as invitees to the $rsvp.
  *
- * @param $rsvp The rsvp object.
+ * @param $rsvp The rsvp object you want to add the newsletter invitees to.
  * @param $nlid int The newsletter ID.
  * @return string list of subscribers.
  */
-function rsvp_attendees_simplenews_form(&$form_state, $rsvp, $nlid) {
+function rsvp_attendees_add_simplenews_form(&$form_state, $rsvp, $nlid) {
 
-  $form = array();
-	
   if (is_numeric($nlid)) {
     $subs = "";
     $query = db_query('SELECT DISTINCT s.mail FROM {simplenews_subscriptions} s INNER JOIN simplenews_snid_tid t ON s.snid = t.snid WHERE t.tid = %d ORDER BY mail ASC', $nlid);
     while ($sub = db_fetch_object($query)) {
       $subs .= $sub->mail ."\r\n";
     }
-    _rsvp_add_attendees($rsvp, $subs, false, '');
+    _rsvp_add_attendees($rsvp, NULL, $subs, false);
   }
   
   drupal_goto('rsvp/'. $rsvp->rid .'/attendees');
   
-  return $form;
 }
 
 
@@ -2509,7 +2969,7 @@ function rsvp_admin_settings_general(&$form_state) {
     '#type' => 'fieldset',
     '#title' => t('Sender information'),
     '#collapsible' => FALSE,
-    '#description' => t('Default sender address that will be used for rsvp-invite and rsvp-message emails.'),
+    '#description' => t('Default sender address that will be used for sending every email by rsvp.'),
   );
 
   $form['rsvp_admin_settings_general']['pick_from_address'] =  array(
@@ -2688,11 +3148,11 @@ function rsvp_admin_settings_types_delete(&$form_state, $contenttype = NULL) {
   $ct = content_types($contenttype);
   
   $form['notice'] = array(
-    '#value' => '<p><strong>'. t('Note: All RSVP using this content type will be lost.') .'</strong></p>',
+    '#value' => '<p><strong>'. t('Note: All invitations using this content type will be lost.') .'</strong></p>',
   );
 
   return confirm_form($form,
-    t('Are you sure you want to delete the RSVP association with %type?', array('%type' => $ct['name'])),
+    t('Are you sure you want to delete the association of the RSVP module with %type?', array('%type' => $ct['name'])),
     'admin/settings/rsvp/types',
     t('This action cannot be undone.'),
     t('Delete'),
@@ -2703,7 +3163,7 @@ function rsvp_admin_settings_types_delete(&$form_state, $contenttype = NULL) {
 function rsvp_admin_settings_types_delete_submit($form, &$form_state) {
   if ($form_state['values']['confirm']) {
 
-//    TODO: remove RSVPs related to this field from the db 
+//    TODO: remove Invitations related to this field from the db 
   	
   	$contenttype = $form_state['values']['contenttype'];
 
@@ -2808,15 +3268,13 @@ function rsvp_admin_settings_types_add_field_submit($form, &$form_state) {
 
 
 /**
- * Returns a list of users in a specific role.
+ * Appends a list of users of a specific role to the selected rsvp.
  *
  * @param $rsvp The rsvp object.
  * @param $roleid int The role ID.
  * @return string list of users.
  */
-function rsvp_attendees_users_form(&$form_state, $rsvp, $roleid) {
-
-  $form	= array();
+function rsvp_attendees_add_roles_form(&$form_state, $rsvp, $roleid) {
 
   if (is_numeric($roleid)) {
     $subs = "";
@@ -2831,28 +3289,25 @@ function rsvp_attendees_users_form(&$form_state, $rsvp, $roleid) {
     while ($u = db_fetch_object($query)) {
       $subs .= $u->name ."\r\n";
     }
-    _rsvp_add_attendees($rsvp, $subs, false, '');
+    _rsvp_add_attendees($rsvp, NULL, $subs, false);
   }
   
   drupal_goto('rsvp/'. $rsvp->rid .'/attendees');
-  
-  return $form;
+
 }
 
 
 
 /**
-* Returns the rsvps that a user is the owner of.
+* Returns the rsvps that a user is the owner or co_maintainer of.
 *
 * @ingroup rsvp_functions
-* @param $nid The nid of the node.Can be one, array or NULL which means all nodes of the user.
-* @param $uid The uid of the user.Can be a user or NULL which means rsvp for all users.
+* @param $nid The nid of the node.Can be one, array of nodes or NULL which means all nodes of the user.
+* @param $uid The uid of the user.Can be a user, array of users or NULL which means rsvp for all users.
 * @return dbresultset of rsvps.
 */
 function _rsvp_get_rsvps($nid = NULL, $uid = NULL, $tablesort = ' ORDER BY nid') {
 
-  global $user;
-  $session_uid = $user->uid;
   $query = 'SELECT r.*, n.title FROM {rsvp} r INNER JOIN {node} n ON r.nid = n.nid '; //r.uid = %d';
 	
   if (!is_null($uid) || !is_null($nid)) {
@@ -2871,20 +3326,29 @@ function _rsvp_get_rsvps($nid = NULL, $uid = NULL, $tablesort = ' ORDER BY nid')
   }
   
   if (!is_null($uid)) {
-  	  if (!is_null($nid)) {
-        $query .= 'AND ';
-  	  }
-    $query .= 'r.uid = %d';
+    if (!is_null($nid)) {
+      $query .= 'AND ';
+    }
+
+    //load if uid is owner or co_moderator.
+    if (is_array($uid)) {
+      $query .= '( r.uid IN (%s) ';
+      $query .= ' OR r.uid_moderator IN (%s) )';
+      $uid = implode(', ', $uid);
+    }
+    elseif (is_numeric($uid)) {
+      $query .= '( r.uid = %d ';
+      $query .= ' OR r.uid_moderator = %d )';
+    }
   }
-  
   
   $query .= $tablesort;
   
   if (is_null($nid)) {
-    return db_query($query, $uid); 	
+    return db_query($query, $uid, $uid); 	
   }
   else {
-    return db_query($query, $nid, $uid);
+    return db_query($query, $nid, $uid, $uid);
   }
   
 }
@@ -2897,7 +3361,7 @@ function _rsvp_get_rsvps($nid = NULL, $uid = NULL, $tablesort = ' ORDER BY nid')
 * @param $uid The uid of the user. If Null, use logged in user
 * @param $nid The nodeid we want to query for. If Null, select for nodes
 * @param $count returns only the total number of invitations for a particular uid/nid.
-* @return array of event nids.
+* @return array of events or integer if count=true.
 */
 function _rsvp_get_invites($uid = NULL, $nid = NULL, $count = false) {
   if (!$uid) {
@@ -2938,10 +3402,10 @@ function _rsvp_get_invite_by_rid($rid, $uid = NULL) {
 *
 * @ingroup rsvp_functions
 * @param $hash The hash value of the invite.
-* @return dbresultset of the requested invite.
+* @return dbresultset of the requested invite or false.
 */
 function _rsvp_get_invite_by_hash($hash) {
-  return db_fetch_object(db_query('SELECT * FROM {rsvp} r LEFT JOIN {rsvp_invite} u ON r.rid = u.rid WHERE u.hash = \'%s\'', $hash));
+  return db_fetch_object(db_query('SELECT * FROM {rsvp} r LEFT JOIN {rsvp_invite} u ON r.rid = u.rid WHERE u.hash = \'%s\'', $hash)); 
 }
 
 /**
@@ -2997,6 +3461,7 @@ function _rsvp_attendance_totals($rid) {
   foreach ($responses as $response) {
     $total = db_fetch_object(db_query('SELECT count(*) as total FROM {rsvp_invite} WHERE rid = %d AND response = \'%s\'', $rid, $response));
     $totals[$response] = $total->total;
+    $totals[RSVP_ATT_ALL] += $total->total;
   }
   return $totals;
 }
@@ -3013,17 +3478,28 @@ function _rsvp_remove_attendee($hash) {
 }
 
 /**
-* Checks if an email address already exists for an rsvp and returns it.
+* Checks if an invitation for a user (by email address) already exists for an rsvp and returns it.
 *
 * @ingroup rsvp_functions
 * @param $rid The id of the rsvp.
 * @param $email The email to check for.
 * @return boolean false if the email not exists for the rsvp, or the $invitation object.
 */
-function _rsvp_attendee_exists($rid, $email) {
+function _rsvp_attendee_exists_by_email($rid, $email) {
   return db_fetch_object(db_query('SELECT * FROM {rsvp_invite} WHERE rid = %d AND email = \'%s\'', $rid, $email));
 }
 
+/**
+* Checks if an invitation for a user (by user id) already exists for an rsvp and returns it.
+* *
+* @ingroup rsvp_functions
+* @param $rid The id of the rsvp.
+* @param $uid The user uid to check for.
+* @return boolean false if the email not exists for the rsvp, or the $invitation object.
+*/
+function _rsvp_attendee_exists_by_uid($rid, $uid) {
+  return db_fetch_object(db_query('SELECT * FROM {rsvp_invite} WHERE rid = %d AND uid = %d', $rid, $uid));
+}
 
 /**
 * Checks to see if a user has been invited to an event.
@@ -3064,20 +3540,6 @@ function _rsvp_is_response_blind($rid) {
   $status = db_fetch_object(db_query('SELECT response_blind FROM {rsvp} WHERE rid = %d', $rid));
 
   return $status->response_blind;
-}
-
-/**
-* Checks to see if attendees are visible to other attendees.
-*
-* @ingroup rsvp_functions
-* @param $rid The rid of the rsvp.
-* @return Int. 0:Show attendees, 1:Hide attendees always, 2:Hide attendees until replied 
-*/
-
-function _rsvp_is_attendees_visible($rid) {
-  $status = db_fetch_object(db_query('SELECT attendees_visible FROM {rsvp} WHERE rid = %d', $rid));
-
-  return $status->attendees_visible;
 }
 
 /**
@@ -3139,29 +3601,28 @@ function _rsvp_has_rsvps($nid, $uid = NULL) {
 }
 
 /**
-* Checks to see if an rsvp has enabled attendee invite sending.
+* Checks to see if a user (represented by invite) can invite other users.
 *
 * @ingroup rsvp_functions.
-* @param $rid The id of the rsvp.
-* @return boolean. True if rsvp allows attendee invite sending.
+* @param $rsvp The rsvp object.
+* @param $invite The invite object.
+* @return boolean. True if user is allowed inviting other persons.
 */
-function _rsvp_is_invite_viral($rid) {
-  $viral = db_fetch_object(db_query('SELECT allow_invite FROM {rsvp} WHERE rid = %d', $rid));
-
-  return $viral->allow_invite;
-}
-
-/**
-* Checks to see if an rsvp has enabled attendee list message sending.
-*
-* @ingroup rsvp_functions.
-* @param $rid The id of the rsvp.
-* @return boolean. True if rsvp allows attendee list message sending.
-*/
-function _rsvp_is_invite_message_enabled($rid) {
-  $enabled = db_fetch_object(db_query('SELECT list_email FROM {rsvp} WHERE rid = %d', $rid));
-
-  return $enabled->list_email;
+function _rsvp_is_invitation_viral($rsvp, $invite) {
+	
+	switch($rsvp->allow_invite) {
+    case RSVP_INVITE_NONE:
+      return false;
+    case RSVP_INVITE_INVITEE:
+      return false;
+	  case RSVP_INVITE_RESPONDENT:
+      return  ($invite->response != RSVP_ATT_NONE);
+	  case RSVP_INVITE_ATTENDEE:
+      return  ($invite->response == RSVP_ATT_YES);
+	  default:
+      return false;
+	}
+	
 }
 
 /**
@@ -3205,36 +3666,6 @@ function _rsvp_html_head() {
   drupal_add_css(drupal_get_path('module', 'rsvp') .'/rsvp.css');
 }
 
-
-
-/*
- * Access function to determine if the current user is allowed to work with a particular RSVP.
- *
- * @param $rsvp The rsvp object you want to check.
- * @param $access The access type we want to check for the user on the rsvp object. (RSVP_ACCESS_VIEW,RSVP_ACCESS_CREATE,RSVP_ACCESS_DELETE)  
- * @param $checkmoderator Boolean, Do we want to check for moderator rights as well?
- * @param $addtlparam String, check for an additional permission.
- * @return true or false.
-
- * returns true if the current user is allowed to access the $rsvp in terms of rsvp privilegues. 
- *     could be user, admin, moderator or anonymous
- */
-
-function rsvp_rsvp_by_rsvp_access($connector, $rsvp, $access, $checkmoderator, $addtlparam = NULL) {
-
-
-  if (is_null($rsvp))
-    return false;
-
-  $node = node_load($rsvp->nid);
-  
-  if (!isset($node))
-    return false;
-
-  return rsvp_rsvp_by_node_access($connector, $node, $access, $checkmoderator, $addtlparam);
-}
-
-
 /*
  * Access function for the admin/settings section to determine if the logged-in user 
  * 1) has admin permissions and 
@@ -3249,177 +3680,89 @@ function rsvp_admin_type_access($connector) {
   if (!$connector->isTypesAreSelectable())
     return false;
       
-    return (user_access('administer rsvp'));
+  return (user_access(RSVP_PERM_ADMIN));
 }
 
+
 /*
- * Access function to determine if the current user is allowed to export attendees to CSV
+ * Internal access function to determine if user of an invitation is allowed to access a particular invitation
  * 
- * @param $rsvp The rsvp object you want to check.
- * @param $uhash String The hash of the user that does the check or NULL.
+ * @param $rsvp The rsvp object you want to check for.
+ * @param $invite The invite object you want to check for. If NULL check for current user (which is then not the invitee).
+ * @param $access The access type we want to check for the user on the rsvp object.
+ * (RSVP_ACCESS_VIEW, RSVP_ACCESS_VIEW, RSVP_ACCESS_CREATE, RSVP_ACCESS_DELETE)  
+ * @param $addtlparam String, check for an additional permission.
+ *
  * @return true or false.
  *  
+ * returns true if the person is allowed to access the invitation. 
+ *     could be user, invitee, owner, admin, moderator or co-moderator
+ *
  */
-function rsvp_user_attendees_csv_access($rsvp, $uhash = NULL) {
-  return (rsvp_visible_responses_access($rsvp->rid, $uhash) && 
-          rsvp_visible_attendees_access($rsvp->rid));
-		
-}
+function _rsvp_rsvp_by_invite_access($connector, $rsvp, $invite, $access, $addtlparam = NULL) {
+	
+	$usr = NULL;
 
-/*
- * Access function to determine if the user (determined by invite) is allowed to export attendees to CSV
- * 
- * @param $invite The invitation object you want to check, or NULL.
- * @return true or false.
- *  
- */
-function rsvp_csv_hash_access($invite) {
-  return (rsvp_visible_responses_access($invite->rid, $invite->hash) && 
-          rsvp_visible_attendees_access($invite->rid));
-        
-}
+	if (is_null($invite)) {
+    if (!user_is_anonymous()) {
+      global $user;
+      $usr = $user;
+    }
+  }
+  else {
+    if ($invite->uid) {
+  	  $usr = user_load($invite->uid);
+  	  $usr = ($usr == false) ? NULL : $usr;
+    }	
+  }
+  
+  $is_owner = false;
+  $is_moderator = false;
+  $is_co_moderator = false;
+  $role_view = false;
+  $addtlperm = true;
 
-/*
- * general access function to determine if the logged-in user is allowed to invite more users
- * 
- * @param $invite The invitation object you want to check.
- * @return true or false.
- */
-function rsvp_user_attendees_viral_access($connector, $invite) {
-
-  if (!_rsvp_is_invite_viral($invite->rid))
-    return false;
+  if (!is_null($addtlparam)) {  
+    $addtlperm = user_access($addtlparam);
+  }
+  
+  $access_view = true;
+  //check for role settings only if we are not the invitee.
+  if (is_null($invite)) { 
+    $access_view = (_rsvp_is_rsvp_view_roles($rsvp, $usr) || 
+                  _rsvp_is_response_view_roles($rsvp, $usr));
+  }
+  
+  if (!is_null($usr)) {
+    $is_owner = ($rsvp->uid == $usr->uid);
+    $is_co_moderator = ($rsvp->uid_moderator != 0) ? ($rsvp->uid_moderator == $usr->uid) : false;
+    $is_moderator = user_access(RSVP_PERM_MAINTAIN);    
+  }
+  
+  switch($access) {
+    case RSVP_ACCESS_CREATE:
+      //use _rsvp_rsvp_by_node_access when creating a rsvp.
+      return false;
+    case RSVP_ACCESS_DELETE:
+    case RSVP_ACCESS_EDIT:
+      return ( (  $is_moderator || $is_owner || $is_co_moderator ) 
+               && $addtlperm && user_access('access content'));
       
-  return (user_access('access content'));
-}
-
-/*
- * Access function to determine if the user (determined by invite) is allowed to see the attendee page
- * 
- * @param $invite The invitation object you want to check.
- * @return true or false.
- *  
- * returns true if an invitee is allowed to invite more users
- * or if the user is allowed to see results about other attendees.
- * Useful to determine if the "Attendee" tab has to be enabled or not.
- */
-function rsvp_user_attendees_view_access($connector, $invite) {
-
-  return (_rsvp_is_invite_viral($invite->rid)
-            || rsvp_visible_responses_access($invite->rid, $invite->hash));
-}
-
-/*
- * Access function to determine if the current user is allowed to see the "Your RSVP" tab 
- * 
- * @param $usr The passed user object you want to check for.
- * @param $access The access type we want to check for the user on the rsvp object. (RSVP_ACCESS_VIEW,RSVP_ACCESS_CREATE,RSVP_ACCESS_DELETE)  
- * @param $checkmoderator Boolean, Do we want to check for moderator rights as well?
- * * 
- * @return true or false.
- *  
- * returns true if the current user is allowed to see the "Your RSVP" tab. Is true when 
- *  -he is allowed to see RSVPs of that user)
- *     could be user, admin or moderator, but not anonymous
- *
- * Used for the menu user/%user/rsvp/manage
- */
-function rsvp_rsvp_by_user_access($connector, $usr, $access, $checkmoderator) {
-
-  global $user;
-	
-  if (user_is_anonymous())
-    return false;  
-	
-  $moderator = true;
-  $isowner = false;
-
-  if ($checkmoderator == true) {
-    $moderator = (user_access('administer rsvp') || 
-                  user_access('maintain rsvp'));
-  }
-  
-  $isowner = ($usr->uid == $user->uid);
-  
-  switch($access) {
-    case RSVP_ACCESS_CREATE:
-    case RSVP_ACCESS_DELETE:
-    case RSVP_ACCESS_EDIT:
     case RSVP_ACCESS_VIEW:
+      return ( (  $is_moderator || $is_owner || $is_co_moderator || $access_view ) 
+               && $addtlperm && user_access('access content'));
+        
     default:
-      $rsvp_count = _rsvp_get_rsvps_by_uid($usr->uid);
-      return (($moderator || $isowner) && ($rsvp_count > 0) && user_access('access content'));
+      return false;
   }
+  	
 }
 
-/*
- * Access function to determine if the current user is allowed to see the "Your Invitation" tab 
- * 
- * @param $usr The user object you want to check for.
- * @param $access The access type we want to check for the user on the rsvp object. (RSVP_ACCESS_VIEW,RSVP_ACCESS_CREATE,RSVP_ACCESS_DELETE)  
- * @param $checkmoderator Boolean, Do we want to check for moderator rights as well?
- * @return true or false.
- *  
- * returns true if current user is allowed to see the "Your Invitation" tab. Is true when 
- *  => he is allowed to see at least one invitations belonging to that user.
- *     could be user, admin or moderator, but not anonymous
- * 
- *
- * Used for the menu user/%user/rsvp/invites
- */
-function rsvp_invite_by_user_access($connector, $usr, $access, $checkmoderator) {
-
-  global $user;
-  
-  if (user_is_anonymous())
-    return false;  
-  
-  $moderator = true;
-  $isowner = false;
-
-  if ($checkmoderator == true) {
-    $moderator = (user_access('administer rsvp') || 
-                  user_access('maintain rsvp'));
-  }
-  
-  $isowner = ($usr->uid == $user->uid);
-  
-  switch($access) {
-    case RSVP_ACCESS_CREATE:
-    case RSVP_ACCESS_DELETE:
-    case RSVP_ACCESS_EDIT:
-    case RSVP_ACCESS_VIEW:
-    default:
-      $invites_count = db_result(_rsvp_get_invites($usr->uid, NULL, true));
-    	return (($moderator || $isowner) && ($invites_count > 0) && user_access('access content'));
-  }
-}
-
-/*
- * Access function to determine if current user is allowed to see the "RSVP" tab 
- * 
- * @param $user The user object you want to check for.
- * @param $access The access type we want to check for the user on the rsvp object. (RSVP_ACCESS_VIEW,RSVP_ACCESS_CREATE,RSVP_ACCESS_DELETE)  
- * @param $checkmoderator Boolean, Do we want to check for moderator rights as well?
- * @return true or false.
- *  
- * returns true if current user is allowed to see the "Your Invitation" tab or the "Your RSVP" tab.
- *      could be user, admin or moderator, but not anonymous
- *
- * Used for the menu user/%user/rsvp
- */
-function rsvp_user_user_rsvp_access($connector, $user, $access, $checkmoderator) {
-
-	return rsvp_invite_by_user_access($connector, $user, $access, $checkmoderator) ||
-	         rsvp_rsvp_by_user_access($connector, $user, $access, $checkmoderator);
-}
-
-
-/* Access function to determine if the current user is allowed to access the current rsvp passed as node
+/* Interal access function to determine if the current user is allowed to access the current rsvp passed as node
  * 
  * @param $node The passed node object you want to check for.
- * @param $access The access type we want to check for the user on the rsvp object. (RSVP_ACCESS_VIEW,RSVP_ACCESS_CREATE,RSVP_ACCESS_DELETE)  
- * @param $checkmoderator Boolean, Do we want to check for moderator rights as well?
+ * @param $access The access type we want to check for the user on the node object. 
+ *            (RSVP_ACCESS_VIEW,RSVP_ACCESS_EDIT,RSVP_ACCESS_CREATE,RSVP_ACCESS_DELETE)  
  * @param $addtlparam String, check for an additional permission.
  * @return true or false.
  *  
@@ -3427,121 +3770,44 @@ function rsvp_user_user_rsvp_access($connector, $user, $access, $checkmoderator)
  *   Is true when he is allowed to see RSVPs for that node 
  *     could be user, admin, moderator or anonymous
  *
- * Used for menu node/%node/rsvp/manage
- * Access function to determine if the current user is allowed to see the "Your RSVP" tab for a particluar node 
+ * With this method you can find out if the current user is
+ *   - allowed to create a rsvp on the node
+ *   - can view rsvps on a particular node (non event nodes return false)
  */
-function rsvp_rsvp_by_node_access($connector, $node, $access, $checkmoderator, $addtlparam = NULL) {
+
+function _rsvp_rsvp_by_node_access($connector, $node, $access, $addtlparam = NULL) {
 	
   global $user;
 
-  $addtlaccess = true;
-  $moderator = true;
-  $isowner = false;
+  $is_owner = false;
+  $is_moderator = false;
+  $addtlperm = true;
   
   if (!$connector->is_event_enabled($node->type))
     return false;
     
   if (!is_null($addtlparam)) {  
-    $addtlaccess = user_access($addtlparam);
+    $addtlperm = user_access($addtlparam);
   }
-      
-  if ($checkmoderator == true) {
-    $moderator = (user_access('administer rsvp') || 
-                  user_access('maintain rsvp'));
-  }
-  
-  $isowner = ($node->uid == $user->uid);
+
+  $is_moderator = user_access(RSVP_PERM_MAINTAIN);    
+  $is_owner = ($node->uid == $user->uid);
   
   switch($access) {
   	case RSVP_ACCESS_CREATE:
-    case RSVP_ACCESS_DELETE:
-      return (($moderator || 
-              user_access('rsvp on events') || 
-              (user_access('rsvp on own events') && $isowner)) 
-            && $addtlaccess );
-    case RSVP_ACCESS_EDIT:
-      return (($moderator || $isowner) 
-            && $addtlaccess );
-            
+      return (($is_moderator || 
+              user_access(RSVP_PERM_ONEVENTS) || 
+              (user_access(RSVP_PERM_ONOWNEVENTS) && $is_owner)) 
+            && $addtlperm );
     case RSVP_ACCESS_VIEW:
+    case RSVP_ACCESS_DELETE:
+    case RSVP_ACCESS_EDIT:
   	default:
-      return (($moderator || $isowner) 
-            && $addtlaccess );
+      return false;
             
   }
   
 }
-
-/*
- * Access function to determine if the current user is allowed to see the invitation. "Your Invitation" tab for a particluar node 
- * 
- * @param $node The passed node object you want to check for.
- * @param $access The access type we want to check for the user on the rsvp object. (RSVP_ACCESS_VIEW,RSVP_ACCESS_CREATE,RSVP_ACCESS_DELETE)  
- * @param $checkmoderator Boolean, Do we want to check for moderator rights as well?
- * @return true or false.
- *  
- * returns true if the current user is allowed to see the "Your Invitation" tab for node $node. Is true when 
- *  => he is allowed to see at least one invitations belonging to that node.
- *     can be user, or anonymous, but not moderator nor admin.
- * 
- *
- * Used for the menu node/%node/rsvp/invites
- *
- */
-function rsvp_invite_by_node_access($connector, $node, $access, $checkmoderator) {
-
-  global $user;
-
-  $moderator = true;
-  $isowner = false;
-  
-  
-  if (!$connector->is_event_enabled($node->type))
-    return false;
-
-  if ($checkmoderator == true) {
-    $moderator = (user_access('administer rsvp') || 
-                  user_access('maintain rsvp'));
-  }
-  
-  $isowner = ($node->uid == $user->uid);
-    
-  switch($access) {
-    case RSVP_ACCESS_CREATE:
-    case RSVP_ACCESS_DELETE:
-      return ($moderator || $isowner ); 
-    case RSVP_ACCESS_EDIT:
-    case RSVP_ACCESS_VIEW:
-    default:
-      $num_invites = db_result(_rsvp_get_node_invites($node->nid, $user->uid, true));
-    	return ($moderator || $isowner 
-            && ($num_invites > 0 ) );
-            
-  }
-          
-
-}
-
-/*
- * Access function to determine if current user is allowed to see the "RSVP" tab for a particluar node 
- * 
- * @param $node The passed node object you want to check for.
- * @param $access The access type we want to check for the user on the rsvp object. (RSVP_ACCESS_VIEW,RSVP_ACCESS_CREATE,RSVP_ACCESS_DELETE)  
- * @param $checkmoderator Boolean, Do we want to check for moderator rights as well?
- * @return true or false.
- *  
- * returns true if a user is allowed to see the "Your Invitation" tab or the "Your RSVP" tab.
- *     could be user, admin, moderator or anonymous
- *
- * Used for the menu user/%user/rsvp
- */
-function rsvp_node_node_rsvp_access($connector, $node, $access, $checkmoderator) {
-
-  return rsvp_invite_by_node_access($connector, $node, $access, $checkmoderator) ||
-           rsvp_rsvp_by_node_access($connector, $node, $access, $checkmoderator);
-}
-
-
 
 /*
  * Access function to determine if the current user is allowed to send messages to other user.
@@ -3551,92 +3817,247 @@ function rsvp_node_node_rsvp_access($connector, $node, $access, $checkmoderator)
  */
 function rsvp_hash_sendmessage_access($connector, $invite) {
 
-
-  $is_moderator = (_rsvp_is_owner($invite->rid) || user_access('administer rsvp') || user_access('maintain rsvp'));
-  
   $rsvp = rsvp_load($invite->rid);
-
+	if ($rsvp == false)
+	  return false;
+	  
   //1) check first if user has potentially permissions to access the rsvp.
-  if (rsvp_rsvp_by_rsvp_access($connector, $rsvp, RSVP_ACCESS_VIEW, true))
-  {
-	  //2) check if we can send message
-    if ($is_moderator || _rsvp_is_invite_message_enabled($invite->rid))
-      return true;
+//TODO is RSVP_ACCESS_EDIT here correct?
+	$perm_edit = _rsvp_rsvp_by_invite_access($connector, $rsvp, $invite, RSVP_ACCESS_EDIT);
+  if ($perm_edit == true) {
+    //2) check if we are allowed to send a message
+    switch($rsvp->list_email) {
+    	case RSVP_SEND_NONE:
+    		return false;
+      case RSVP_SEND_INVITEE:
+      	return true;
+      case RSVP_SEND_RESPONDENT:
+        return  ($invite->response != RSVP_ATT_NONE);
+      case RSVP_SEND_ATTENDEE:
+        return  ($invite->response == RSVP_ATT_YES);
+      default:
+      	return false;  
+    }
   }
   
   return false;
  
 }
 
+/*
+ * Internal access function to determine if the current user (eventually known only by its email hash) 
+ * is allowed to see the attendees by name or not.
+ * It is possible that the caller is not beeing logged in at the time we call this method => $invite is NULL.
+ *  * 
+ * @param $rsvp The Rsvp object you want to check or NULL
+ * @param $invite The invite object of the user who enters the method or NULL.
+ * @return true or false.
+ *
+ */
+
+function _rsvp_visible_attendees_access($connector, $rsvp, $invite) {
+
+  if (is_null($rsvp)) {
+    if (is_null($invite))
+      return false;
+    
+    $rsvp = rsvp_load($invite->rid);
+    if ($rsvp == false)
+      return false;
+  }
+		  
+  $perm_edit = _rsvp_rsvp_by_invite_access($connector, $rsvp, $invite, RSVP_ACCESS_EDIT);
+  if ($perm_edit == true)
+    return true;
+
+  $perm_view = _rsvp_rsvp_by_invite_access($connector, $rsvp, $invite, RSVP_ACCESS_VIEW);
+  if ($perm_view == false)
+    return false;
+
+  $attendees_visible = $rsvp->attendees_visible;
+  if (($attendees_visible == RSVP_INVITEE_SHOW) ||
+     ($attendees_visible == RSVP_INVITEE_SHOWRESPONSEWHENREPLIED)) {
+     return true;
+  }
+    
+  return false;
+}
 
 /*
- * Access function to determine if the logged-in user is allowed to see the attendees by name or not.
- * 
- * @param $rid Int The Rsvp Id you want to check
+ * Internal access function to determine if the accessor (eventually known only by its email hash) 
+ * is allowed to see the responses made by other invitees or just sees their names.
+ * It is possible that the caller is not beeing logged in at the time we call this method => $invite is NULL.
+ *  * 
+ * @param $rsvp The Rsvp object you want to check or NULL
+ * @param $invite The invite object of the user who enters the method or NULL.
  * @return true or false.
  *  
  */
-function rsvp_visible_attendees_access($rid) {
 
-  $attendees_visible = _rsvp_is_attendees_visible($rid);
-  $owner = _rsvp_is_owner($rid);
+function _rsvp_visible_responses_access($connector, $rsvp, $invite) {
 
-  if ($owner || user_access('administer rsvp') || user_access('maintain rsvp')) {
-    return true;
+  if (is_null($rsvp)) {
+    if (is_null($invite))
+      return false;
+    
+    $rsvp = rsvp_load($invite->rid);
+    if ($rsvp == false)
+      return false;
   }
-      
-  if ($attendees_visible == 1)
-    return false;
-    
-  return (user_access('access content'));
-}
-
-/*
- * Access function to determine if the accessor (eventually known only by its email hash) is allowed to see responses 
- * to a rsvp or not.
- * It is possible that the caller is not beeing logged in at the time we call this method.
- * 
- * @param $rid Int The Rsvp Id you want to check
- * @param $uhash The hash of the user who enters the method or NULL.
- * 
- * @return true or false.
- *
- *   
- */
-function rsvp_visible_responses_access($rid, $uhash = NULL) {
-
-  $invitation = false;
-
-  // if we have a hash, retrive invitation by hash. If hash is null, try to find invitation for the current user.
-  if (is_null($uhash))
-    $invitation = _rsvp_get_invite_by_rid($rid);
-  else
-    $invitation = _rsvp_get_invite_by_hash($uhash);
   
-  $rsvp = rsvp_load($rid);
-  if ($rsvp == false)
-    return false;
-  
-  $response_blind = $rsvp->response_blind;
-  $owner = _rsvp_is_owner($rid);
-
-  if ($owner || user_access('administer rsvp') || user_access('maintain rsvp')) {
-    return true;
-  }
-    
-  if ($response_blind == RSVP_RESPONSE_HIDE)
+  $is_attendee_visible = _rsvp_visible_attendees_access($connector, $rsvp, $invite);
+  if ($is_attendee_visible == false)
     return false;
     
-  if ($response_blind == RSVP_RESPONSE_SHOWWHENREPLIED) {
-  	//check that user has already answered?
-    if (($invitation == false) || ($invitation->response == RSVP_ATT_NONE)) {
+  //handle special case for RSVP_INVITEE_SHOWRESPONSEWHENREPLIED
+  $attendees_visible = $rsvp->attendees_visible;
+  if ($attendees_visible == RSVP_INVITEE_SHOWRESPONSEWHENREPLIED) {
+    if ((is_null($invite)) || ($invite == false) || ($invite->response == RSVP_ATT_NONE)) {
       return false;
     }
   }
-    
-  return (user_access('access content'));
+  
+  return true;
 }
 
+/*
+ * Internal access function to determine if the current user(eventually known only by its email hash) is allowed to see the invitation itself
+ * to a rsvp or not.
+ * It is possible that the caller is not beeing logged in at the time we call this method => $invite is NULL.
+ * 
+ * @param $rsvp The Rsvp object you want to check or NULL
+ * @param $invite The invite object of the user who enters the method or NULL.
+ * 
+ * @return true or false.
+ *
+ */
+function _rsvp_visible_invitation_access($connector, $rsvp, $invite) {
+
+  if (is_null($rsvp)) {
+    if (is_null($invite))
+      return false;
+    
+    $rsvp = rsvp_load($invite->rid);
+    if ($rsvp == false)
+      return false;
+  }
+
+  $perm_edit = _rsvp_rsvp_by_invite_access($connector, $rsvp, $invite, RSVP_ACCESS_EDIT);
+  if ($perm_edit == true)
+    return true;
+  
+  $perm_view = _rsvp_rsvp_by_invite_access($connector, $rsvp, $invite, RSVP_ACCESS_VIEW);
+  if ($perm_view == false)
+    return false;
+    
+    
+  if (is_null($invite)) {
+  	//check role permission only if we are not accessing it by hash => we are not the invitee($invitee = NULL)
+    if (_rsvp_is_rsvp_view_roles($rsvp, NULL) == true)
+      return true;  
+  }
+  else {
+  	//if we are the invitee, allow access
+  	return true;
+  }
+    
+
+  
+  return false;
+}
+
+
+/*
+ * Internal access function to determine if the accessor (eventually known only by its email hash) is allowed to see responses 
+ * to a rsvp or not.
+ * It is possible that the caller is not beeing logged in at the time we call this method => $invite is NULL.
+ * 
+ * @param $rsvp The Rsvp object you want to check or NULL
+ * @param $invite The invite object of the user who enters the method or NULL.
+ * 
+ * @return true or false.
+ *
+ */
+function _rsvp_visible_guestlist_access($connector, $rsvp, $invite) {
+
+	if (is_null($rsvp)) {
+    if (is_null($invite))
+      return false;
+		
+    $rsvp = rsvp_load($invite->rid);
+    if ($rsvp == false)
+      return false;
+	}
+  
+  $perm_edit = _rsvp_rsvp_by_invite_access($connector, $rsvp, $invite, RSVP_ACCESS_EDIT);
+  if ($perm_edit == true)
+    return true;
+  
+  $perm_view = _rsvp_rsvp_by_invite_access($connector, $rsvp, $invite, RSVP_ACCESS_VIEW);
+  if ($perm_view == false)
+    return false;
+	
+    
+  if (is_null($invite)) {
+    //check role permission only if we are not accessing it by hash => we are not the invitee($invitee = NULL)
+    if (_rsvp_is_response_view_roles($rsvp, NULL) == true)
+      return true;  
+  }
+	
+  //for invitees, check RSVP_RESPONSE_SHOWWHENREPLIED extra
+  $response_blind = $rsvp->response_blind;
+  if ($response_blind == RSVP_RESPONSE_SHOW)
+    return true;
+  else if ($response_blind == RSVP_RESPONSE_SHOWWHENREPLIED) {
+    //handle special case for RSVP_RESPONSE_SHOWWHENREPLIED
+    if ((!is_null($invite)) && ($invite != false) && ($invite->response != RSVP_ATT_NONE)) {
+      return true;
+    }
+  }
+
+  
+  return false;
+}
+
+/*
+ * Plausabiliy check if an invitation is a valid object
+ * 
+ * @param $invite The invitation object 
+ * @param $die Boolean, if true send us back with a proper message. If false, return NULL.
+ *  * 
+ * @returns The invitation object or NULL. The drupal_goto should send the request directly back to the user.
+ */
+function _rsvp_check_invite($invite, $die = false) {
+
+  if (is_null($invite) || $invite == false) {
+  	if ($die == true) {
+      drupal_set_message(t('The invitation you requested is invalid.'));
+      drupal_goto();
+  	}
+    return NULL;
+  }  
+  return $invite;
+}
+
+/*
+ * Plausabiliy check if an rsvp is a valid object
+ * 
+ * @param $rsvp The rsvp object 
+ * @param $die Boolean, if true send us back with a proper message. If false, return NULL.
+ *  * 
+ * @returns The rsvp object or NULL. The drupal_goto should send the request directly back to the user.
+ */
+function _rsvp_check_rsvp($rsvp, $die = false) {
+
+  if (is_null($rsvp) || $rsvp == false) {
+    if ($die == true) {
+  	  drupal_set_message(t('The RSVP you requested is invalid.'));
+      drupal_goto();
+    }
+    return NULL;
+  }  
+  return $rsvp;
+}
 
 
 /**
@@ -3704,6 +4125,156 @@ function _rsvp_email_getFromField($username, $useremail) {
       
   }
   return $from_target;	
+}
+
+
+/**
+ * Verifies if a node or rsvp for a particular node is expired or not.
+ * @param $node The node object.
+ * @param $rsvp The rsvp object or NULL.
+ * @return true or false. 
+ *
+ * If $rsvp is null we check all available enddates (reocurring dates) for at least on e not expired date.
+ * If $rsvp is not null we check only the enddate for the rsvp
+ * 
+ */
+function _rsvp_is_expired($node, $rsvp = NULL) {
+
+  $connector = new RsvpConnector();
+
+  if (is_null($node))
+  	return true;
+
+  $now = time();
+  	
+  $field = _rsvp_getField($node->type);
+  	
+  if (is_null($rsvp)) {
+  	$allExpired = true;
+    //debug $end_dates = array();
+    $count = $connector->get_datecount($node, $field);
+    //iterate through all specified enddates (in case of repeating dates)
+    //debug $end_dates[] = array('current time stamp' => $time, 'current time readable' => date('r', $time) );
+    for ($i = 0; $i < $count; $i++) {
+      $t2 = $connector->get_enddate($node, $field, $i);
+      //debug $end_dates[] = array('field' => $field, 'stamp' => $t2, 'readable' => date('r', $t2) );
+          
+      if ($t2 > $now) {
+        $allExpired = false;
+        break;
+      }
+    }
+    //debug var_dump($allExpired, $end_dates);
+    
+    return $allExpired;
+  	
+  }
+  else {
+    $pos = $connector->get_posByHash($node, $field, $rsvp->startdate);
+  
+    return ($now > $connector->get_enddate($node, $field, $pos));
+  	
+  }
+  
+}
+
+/**
+ * Verifies if a user (by role) is entitled to view an invitation or not.
+ * @param $rsvp The rsvp object.
+ * @param $usr The user object you want to check for. If NULL check for the current user.
+ * @return true or false. 
+ * 
+ */
+function _rsvp_is_rsvp_view_roles($rsvp, $usr) {
+  return __rsvp_is_view_roles($usr, $rsvp->rsvp_view_roles);
+}
+
+/**
+ * Verifies if a user (by role) is entitled to view a rsvp or not.
+ * @param $rsvp The rsvp object.
+ * @param $usr The user object you want to check for. If NULL check for the current user.
+ * @return true or false. 
+ * 
+ */
+function _rsvp_is_response_view_roles($rsvp, $usr) {
+  return __rsvp_is_view_roles($usr, $rsvp->response_view_roles);
+}
+
+/**
+ * Verifies if a user is entitled to view an object or not.
+ * @param $usr The user object you want to check for. If NULL check for the current user.
+ * @param $roles String a string with roles(separated by semicolon) 
+ * @return true or false. 
+ * 
+ */
+function __rsvp_is_view_roles($usr, $roles) {
+
+  $role_view = false;
+  
+  $_roles = explode(';', $roles);
+  
+  
+  if (is_null($usr)) {
+    if (user_is_anonymous()) {
+      $usr_roles = array(1); //=anonymous
+    }
+    else {
+      global $user;
+      $usr_roles = array_keys($user->roles);
+    }
+  }
+  else {
+    //get roles from rsvp allowed to access the rsvp.
+    $usr_roles = array_keys($usr->roles);
+  }
+
+  if (count(array_intersect($_roles, $usr_roles)) > 0) {
+    $role_view = true;
+  }
+  
+  return $role_view;
+}
+
+
+/**
+* Helperfunction to store/load the caller in a session object.
+*
+* @ingroup rsvp_functions
+*
+* @param $parent The link of the page that has to be stored as parent or NULL.
+* @param $remove Boolean remove the link from the top of the stack if $parent is NULL.
+* @return a link which represents the parent frame, or NULL 
+*
+* This function works as a setter and getter.
+* - if $parent = NULL, then it returns the last parent link on the stack.
+* - if $parent != NULL, then it stores parameter parent on the stack.
+*/
+function _rsvp_session_parent($parent = NULL, $remove = false) {
+  
+  if (!isset($_SESSION['rsvp_par']))
+    $_SESSION['rsvp_par'] = array();
+
+  if (is_null($parent)) {
+    if ($remove == true)
+	 	  return array_shift($_SESSION['rsvp_par']);
+    else
+        return $_SESSION['rsvp_par'][0];
+  }
+  else {
+  	// check the stack for existence. If available remove everything in front of it. Atterwise put on stack
+    $exist = in_array ( $parent  , $_SESSION['rsvp_par'] );
+    if ($exist == true) {
+      while($_SESSION['rsvp_par'][0]) {
+      	if ($_SESSION['rsvp_par'][0] != $parent)	
+          array_shift($_SESSION['rsvp_par']);
+        else
+          break;
+      }
+    }
+    else {
+      array_unshift($_SESSION['rsvp_par'], $parent);
+    }
+  }
 }
 
 
@@ -3780,11 +4351,6 @@ class RsvpConnector {
   	  //die('No RSVP connector has been enabled.');
   	}
   }
-  
-  //returns a unix date (int) as String. (and already converted to the correct timezone).
-//  function print_unixDateAsString($unixdate) {  
-//    return $this->connector->print_unixDateAsString($unixdate);
-//  } 
   
   function get_datecount($node, $field) {
     return $this->connector->get_datecount($node, $field);

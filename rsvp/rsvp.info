@@ -5,9 +5,9 @@ package = RSVP
 core = 6.x
 
 
-; Information added by drupal.org packaging script on 2008-12-10
+; Information added by drupal.org packaging script on 2008-12-21
 version = "6.x-1.x-dev"
 core = "6.x"
 project = "rsvp"
-datestamp = "1228911181"
+datestamp = "1229862089"
 

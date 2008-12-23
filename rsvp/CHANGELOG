@@ -1,11 +1,31 @@
+12/20/2008 - ulf1
+- Fixed a problem that Invitation tab was not visible on nodes. Creation of Invitations was not possible.
+
+12/19/2008 - ulf1
+- Fixed problem that anonymous user can view and reply to Invitations
+
+12/18/2008 - ulf1
+- Added more fine-grained control.
+    - Distinguish now between invitees, respondents and attendees
+    - Control now over "view invitation" and "view guest list"
+- More cleanup of the User Interface. The synonym RSVP has been removed from user accessible pages.
+
+
+12/17/2008 - ulf1
+#344324 : Adding RSVP admin per event
+#263777 : Added a new role based option for each RSVP who is allowed to view an RSVP and the Invitation list
+- Added new abstraction for rsvp permission system
+- Improved RSVP overview page.
+- Improved settings page with better descriptions.
+
 12/09/2008 - ulf1
-#344338 : emails sent have \n\r in front of each line
+#344338 : Fixed emails sent have \n\r in front of each line
 -Fixed a problem with attendees not having their emails properly stored which generates issues
 when sending invitations.
 
 12/05/2008 - ulf1
-#344083 : RSVP tab visible on other users user page 
-#344334 : anon users can view and alter other RSVPs
+#344083 : Fixed RSVP tab visible on other users user page 
+#344334 : Fixed anon users can view and alter other RSVPs
 
 12/04/2008 - ulf1
 - port to drupal 6.0
