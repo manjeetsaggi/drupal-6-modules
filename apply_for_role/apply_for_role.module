@@ -1,5 +1,5 @@
 <?php
-// $Id: apply_for_role.module,v 1.32 2008/10/16 23:44:36 sorenjones Exp $
+// $Id: apply_for_role.module,v 1.35 2008/12/20 04:11:53 sorenjones Exp $
 
 /**
  * @file
@@ -123,9 +123,13 @@ function theme_apply_for_role_status($status) {
  * User interface
  */
 
+/**
+ * Implementation of hook_form().
+ */
 function apply_for_role_apply_form(&$form_state, $user) {
-  $filter_roles = apply_for_role_available_roles($user);
+  $form = array();
 
+  $filter_roles = apply_for_role_available_roles($user);
   if (count($filter_roles)) {
     $form['user'] = array(
       '#type' => 'value',
@@ -149,6 +153,7 @@ function apply_for_role_apply_form(&$form_state, $user) {
 }
 
 function apply_for_role_apply_form_submit($form, &$form_state) {
+  global $user;
   apply_for_role_process_applications($form_state['values']['user'], $form_state['values']['rid']);
   $form_state['redirect'] = 'user/'. $user->uid;
 }
@@ -192,7 +197,7 @@ function apply_for_role_user($op, &$edit, &$user, $category = NULL) {
             '#title' => t('Apply for role'),
             '#collapsible' => FALSE,
           );
-          if (variable_get('apply_for_role_multiple', 0) == 0) {
+          if ((variable_get('apply_for_role_multiple', 0) == 0) && (variable_get('apply_for_role_register', 0) == 1)) {
             $filter_roles[0] = t('--');
             ksort($filter_roles);
           }
@@ -204,12 +209,6 @@ function apply_for_role_user($op, &$edit, &$user, $category = NULL) {
           );
         }
         return $form;
-      }
-      break;
-
-    case 'validate':
-      if ((variable_get('apply_for_role_register', 0) == 2) && (empty($edit['rid']))) {
-        form_set_error('apply_for_role_register', t('Please select a role.'));
       }
       break;
 
