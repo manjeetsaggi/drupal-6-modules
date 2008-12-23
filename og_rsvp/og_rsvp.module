@@ -1,5 +1,5 @@
 <?php
-// $Id: og_rsvp.module,v 1.1 2008/10/16 02:20:52 mradcliffe Exp $
+// $Id: og_rsvp.module,v 1.1.2.1 2008/12/20 20:57:12 mradcliffe Exp $
 
  /**
   * @File
@@ -138,7 +138,6 @@
   */
  function og_rsvp_nodeapi(&$node, $op)
  {
-     global $user;
      if ($node->type <> 'event' )
          return;
 
@@ -167,10 +166,10 @@
 
 		 	foreach ($attendees as $my_uid)
 			{
-				$user = user_load($my_uid);
+				$usr = user_load($my_uid);
 				db_query("insert into {og_rsvp} values (%d,%d,-1)",$node->nid,$my_uid);
 				if ( variable_get('rsvp_mail',0) == 1)
-					drupal_mail('og_rsvp','rsvp',$user->mail,user_preferred_language($user, NULL), $params = array('account' => $user, 'node' => $node, 'event' => $ev));
+					drupal_mail('og_rsvp','rsvp',$user->mail,user_preferred_language($usr, NULL), $params = array('account' => $usr, 'node' => $node, 'event' => $ev));
 				//watchdog('og_rsvp',t('Sent an rsvp e-mail to %email',array('%email' => $user->mail)),NULL,WATCHDOG_NOTICE,NULL);
 			}
 		 	break;
