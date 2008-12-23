@@ -1,0 +1,328 @@
+Index: update_advanced.compare.inc
+===================================================================
+RCS file: update_advanced.compare.inc
+diff -N update_advanced.compare.inc
+--- /dev/null	1 Jan 1970 00:00:00 -0000
++++ update_advanced.compare.inc	2 Apr 2008 13:41:01 -0000
+@@ -0,0 +1,103 @@
++<?php
++// $Id$
++
++/**
++ * @file
++ * Code required only when comparing available updates to existing data.
++ */
++
++/**
++ * Fetch an array of installed and enabled projects.
++ *
++ * This is only responsible for generating an array of projects (taking into
++ * account projects that include more than one module or theme). Other
++ * information like the specific version and install type (official release,
++ * dev snapshot, etc) is handled later in update_process_project_info() since
++ * that logic is only required when preparing the status report, not for
++ * fetching the available release data.
++ *
++ * @see update_advanced_process_project_info()
++ * @see update_calculate_project_data()
++ *
++ */
++function update_advanced_get_projects() {
++  static $projects = array();
++  if (empty($projects)) {
++    // Retrieve the projects from cache, if present.
++    module_load_include('inc', 'update', 'update.compare');
++    $projects = update_project_cache('update_project_projects');
++    if (empty($projects)) {
++      // Still empty, so we have to rebuild the cache.
++      _update_advanced_process_info_list($projects, module_rebuild_cache(), 'module');
++      _update_advanced_process_info_list($projects, system_theme_data(), 'theme');
++      // Set the projects array into the cache table.
++      cache_set('update_project_projects', $projects, 'cache_update', time() + 3600);
++      // Force update_get_projects() to store our version of the project cache statically.
++      $q = $_GET['q'];
++      $_GET['q'] = ''; // Don't let update_project_cache() invalidate our cache based on the path.
++      update_get_projects();
++      $_GET['q'] = $q;
++    }
++  }
++  return $projects;
++}
++
++/**
++ * Populate an array of project data.
++ *
++ * Similar to _update_process_info_list(), but optionally includes disabled modules and themes.
++ */
++function _update_advanced_process_info_list(&$projects, $list, $project_type) {
++  module_load_include('inc', 'update', 'update.compare');
++  $update_advanced_projects = variable_get('update_advanced_projects', 'enabled');
++  foreach ($list as $file) {
++    if ($update_advanced_projects == 'enabled' && empty($file->status)) {
++      // Skip disabled modules or themes.
++      continue;
++    }
++
++    // Skip if the .info file is broken.
++    if (empty($file->info)) {
++      continue;
++    }
++
++    // If the .info doesn't define the 'project', try to figure it out.
++    if (!isset($file->info['project'])) {
++      $file->info['project'] = update_get_project_name($file);
++    }
++
++    // If we still don't know the 'project', give up.
++    if (empty($file->info['project'])) {
++      continue;
++    }
++
++    // If we don't already know it, grab the change time on the .info file
++    // itself. Note: we need to use the ctime, not the mtime (modification
++    // time) since many (all?) tar implementations will go out of their way to
++    // set the mtime on the files it creates to the timestamps recorded in the
++    // tarball. We want to see the last time the file was changed on disk,
++    // which is left alone by tar and correctly set to the time the .info file
++    // was unpacked.
++    if (!isset($file->info['_info_file_ctime'])) {
++      $info_filename = dirname($file->filename) .'/'. $file->name .'.info';
++      $file->info['_info_file_ctime'] = filectime($info_filename);
++    }
++
++    $project_name = $file->info['project'];
++    if (!isset($projects[$project_name])) {
++      // Only process this if we haven't done this project, since a single
++      // project can have multiple modules or themes.
++      $projects[$project_name] = array(
++        'name' => $project_name,
++        'info' => $file->info,
++        'datestamp' => isset($file->info['datestamp']) ? $file->info['datestamp'] : 0,
++        'includes' => array($file->name => $file->info['name']),
++        'project_type' => $project_name == 'drupal' ? 'core' : (empty($file->status) ? 'disabled-'. $project_type : $project_type),
++      );
++    }
++    else {
++      $projects[$project_name]['includes'][$file->name] = $file->info['name'];
++      $projects[$project_name]['info']['_info_file_ctime'] = max($projects[$project_name]['info']['_info_file_ctime'], $file->info['_info_file_ctime']);
++    }
++  }
++}
+Index: update_advanced.fetch.inc
+===================================================================
+RCS file: update_advanced.fetch.inc
+diff -N update_advanced.fetch.inc
+--- /dev/null	1 Jan 1970 00:00:00 -0000
++++ update_advanced.fetch.inc	2 Apr 2008 13:41:01 -0000
+@@ -0,0 +1,20 @@
++<?php
++// $Id$
++
++/**
++ * @file
++ * Code required only when fetching information about available updates.
++ */
++
++/**
++ * Callback to manually check the update status without cron.
++ */
++function update_advanced_manual_status() {
++  if (update_advanced_refresh()) {
++    drupal_set_message(t('Fetched information about all available new releases and updates.'));
++  }
++  else {
++    drupal_set_message(t('Unable to fetch any information about available new releases and updates.'), 'error');
++  }
++  drupal_goto('admin/reports/updates');
++}
+Index: update_advanced.install
+===================================================================
+RCS file: update_advanced.install
+diff -N update_advanced.install
+--- /dev/null	1 Jan 1970 00:00:00 -0000
++++ update_advanced.install	2 Apr 2008 13:41:01 -0000
+@@ -0,0 +1,9 @@
++<?php
++
++/**
++ * Implementation of hook_install().
++ */
++function update_advanced_install() {
++  // update_advanced_cron() needs to run before update_cron().
++  db_query("UPDATE {system} SET weight = '-1' WHERE name = 'update_advanced'");
++}
+Index: update_advanced.module
+===================================================================
+RCS file: /cvs/drupal-contrib/contributions/modules/update_advanced/update_advanced.module,v
+retrieving revision 1.2
+diff -u -p -r1.2 update_advanced.module
+--- update_advanced.module	20 Oct 2007 22:34:21 -0000	1.2
++++ update_advanced.module	2 Apr 2008 13:41:01 -0000
+@@ -15,6 +15,46 @@
+  */
+ 
+ /**
++ * Implementation of hook_help().
++ */
++function update_advanced_help($path, $arg) {
++  switch ($path) {
++    case 'admin/build/themes':
++    case 'admin/build/modules':
++      module_load_include('inc', 'update_advanced', 'update_advanced.compare');
++      update_advanced_get_projects();
++      break;
++
++    default:
++      // Otherwise, if we're on *any* admin page and there's a security
++      // update missing, print an error message about it.
++      if (arg(0) == 'admin' && strpos($path, '#') === FALSE
++          && user_access('administer site configuration')) {
++        module_load_include('inc', 'update_advanced', 'update_advanced.compare');
++        update_advanced_get_projects();
++      }
++
++  }
++}
++
++/**
++ * Implementation of hook_menu_alter().
++ */
++function update_advanced_menu_alter(&$items) {
++  $items['admin/reports/updates']['page callback'] = 'update_advanced_status';
++  $items['admin/reports/updates']['file'] = 'update_advanced.report.inc';
++  $items['admin/reports/updates']['module'] = 'update_advanced';
++
++  $items['admin/reports/updates/list']['page callback'] = 'update_advanced_status';
++  $items['admin/reports/updates/list']['file'] = 'update_advanced.report.inc';
++  $items['admin/reports/updates/list']['module'] = 'update_advanced';
++
++  $items['admin/reports/updates/check']['page callback'] = 'update_advanced_manual_status';
++  $items['admin/reports/updates/check']['file'] = 'update_advanced.fetch.inc';
++  $items['admin/reports/updates/check']['module'] = 'update_advanced';
++}
++
++/**
+  * Implementation of the hook_theme() registry.
+  */
+ function update_advanced_theme() {
+@@ -69,3 +109,30 @@ function update_advanced_update_status_a
+     }
+   }
+ }
++
++/**
++ * Implementation of hook_cron().
++ */
++function update_advanced_cron() {
++  $frequency = variable_get('update_check_frequency', 1);
++  $interval = 60 * 60 * 24 * $frequency;
++  if (time() - variable_get('update_last_check', 0) > $interval) {
++    // We build the project list cache before update module gets a chance.
++    module_load_include('inc', 'update_advanced', 'update_advanced.compare');
++    update_advanced_get_projects();
++  }
++}
++
++/**
++ * Wrapper to load the include file and then refresh the release data.
++ */
++function update_advanced_refresh() {
++  // Build the project cache our way.
++  module_load_include('inc', 'update_advanced', 'update_advanced.compare');
++  $projects = update_advanced_get_projects();
++  // Refresh the release data.
++  $output = update_refresh();
++  // update_refresh() deletes the cache, so we set the projects array into the cache table.
++  cache_set('update_project_projects', $projects, 'cache_update', time() + 3600);
++  return $output;
++}
+Index: update_advanced.report.inc
+===================================================================
+RCS file: update_advanced.report.inc
+diff -N update_advanced.report.inc
+--- /dev/null	1 Jan 1970 00:00:00 -0000
++++ update_advanced.report.inc	2 Apr 2008 13:41:01 -0000
+@@ -0,0 +1,19 @@
++<?php
++// $Id$
++
++/**
++ * @file
++ * Code required only when rendering the available updates report.
++ */
++
++/**
++ * Menu callback. Generate a page about the update status of projects.
++ */
++function update_advanced_status() {
++  // We build the project list cache before update module gets a chance.
++  module_load_include('inc', 'update_advanced', 'update_advanced.compare');
++  update_advanced_get_projects();
++  // Call the update module's menu callback.
++  module_load_include('inc', 'update', 'update.report');
++  return update_status();
++}
+Index: update_advanced.settings.inc
+===================================================================
+RCS file: /cvs/drupal-contrib/contributions/modules/update_advanced/update_advanced.settings.inc,v
+retrieving revision 1.1
+diff -u -p -r1.1 update_advanced.settings.inc
+--- update_advanced.settings.inc	11 Jul 2007 16:07:00 -0000	1.1
++++ update_advanced.settings.inc	2 Apr 2008 13:41:02 -0000
+@@ -18,6 +18,17 @@ function _update_advanced_alter_settings
+     unset($form['#theme']);
+     $form['#theme'] = 'update_advanced_settings';
+ 
++    $form['update_advanced_projects'] = array(
++      '#type' => 'radios',
++      '#title' => t('What to check'),
++      '#default_value' => variable_get('update_advanced_projects', 'enabled'),
++      '#options' => array(
++        'enabled' => t('Only enabled modules and themes.'),
++        'all' => t('All modules and themes.'),
++      ),
++      '#description' => t('Select whether drupal should check for updates of disabled modules and themes.'),
++    );
++
+     $values = variable_get('update_advanced_project_settings', array());
+     $form['update_advanced_project_settings'] = array('#tree' => TRUE);
+ 
+@@ -77,6 +88,7 @@ function theme_update_advanced_settings(
+   $output = '';
+   $output .= drupal_render($form['update_notify_emails']);
+   $output .= drupal_render($form['update_check_frequency']);
++  $output .= drupal_render($form['update_advanced_projects']);
+   $output .= drupal_render($form['update_notification_threshold']);
+ 
+   $header = array(
+@@ -118,6 +130,8 @@ function theme_update_advanced_settings(
+     'core' => t('Drupal core'),
+     'module' => t('Modules'),
+     'theme' => t('Themes'),
++    'disabled-module' => t('Disabled modules'),
++    'disabled-theme' => t('Disabled themes'),
+   );
+   foreach ($project_types as $type_name => $type_label) {
+     if (!empty($rows[$type_name])) {
+@@ -155,5 +169,21 @@ function theme_update_advanced_settings(
+ function update_advanced_settings_submit($form, &$form_state) {
+   unset($form_state['values']['data']);
+   unset($form_state['values']['available']);
++
++  if ($form_state['values']['op'] == t('Reset to defaults')) {
++    if (variable_get('update_advanced_projects', 'enabled') != 'enabled') {
++      // If the setting is changed, rebuild the update cache.
++      update_advanced_refresh();
++    }
++    variable_del('update_advanced_projects');
++  }
++  else {
++    if (variable_get('update_advanced_projects', 'enabled') != $form_state['update_advanced_projects']) {
++      // If the setting is changed, rebuild the update cache.
++      update_advanced_refresh();
++    }
++    variable_set('update_advanced_projects', $form_state['update_advanced_projects']);
++  }
++
+   return update_settings_submit($form, $form_state);
+ }
