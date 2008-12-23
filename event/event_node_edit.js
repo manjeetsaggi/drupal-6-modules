@@ -1,4 +1,4 @@
-// $Id:
+// $Id: event_node_edit.js,v 1.4 2008/12/17 22:55:03 killes Exp $
 if (Drupal.jsEnabled) {
   // Define the selectors of the fields that needs hiding/showing
   var times = new Array("#edit-event-start-exploded-hour", "#edit-event-start-exploded-minute", "#edit-event-end-exploded-hour", "#edit-event-end-exploded-minute");
