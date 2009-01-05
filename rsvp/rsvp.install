@@ -1,5 +1,5 @@
 <?php
-// $Id: rsvp.install,v 1.6.2.3 2008/12/20 08:33:10 ulf1 Exp $ 
+// $Id: rsvp.install,v 1.6.2.4 2008/12/25 22:01:40 ulf1 Exp $ 
 
 function rsvp_install() {
   drupal_install_schema('rsvp');
@@ -241,7 +241,7 @@ function rsvp_schema() {
 
 function rsvp_uninstall() {
   drupal_uninstall_schema('rsvp');
-
+  
   variable_del('rsvp_connector');
   variable_del('rsvp_content_types');
   variable_del('rsvp_from_address');

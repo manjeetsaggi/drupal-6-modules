@@ -62,14 +62,31 @@ Go to the node you want to create an invitation for and click on the Invitation 
     - verify that this content type is enabled in the rsvp settings.
     - verify that the user has the right permissions ("rsvp on events" or "rsvp on own events")
 
+Modify invitations
+------------------
+Automatic startdate adjustment is not supported yet. 
+If the startdate of an event/node changes, the startdate of the related invitation needs to be changed
+as well.
+
+
 
 
    
-TODO/Features:
+TODO/Features for upcoming 2.0 release:
+- Tighter Integration to event nodes. Why do we need an extra Invitation page at all??
 - http://drupal.org/node/293409 : Block on the side of eventnodes with the attendees
 - http://drupal.org/node/344328 : notify admin of RSVP changes
-- http://drupal.org/node/331423 : Can RSVP and remove RSVP be exposed as Drupal Actions, so other modules like Flag could trigger this action? 
+- http://drupal.org/node/331423 : Can RSVP and remove RSVP be exposed as Drupal Actions, so other modules like Flag could trigger this action?
+  possible actions : create Invitation, add Invitees, add Invitees(simplenews), add Invitees(roles), 
+                     delete Invitation, send Message, send Invitation, remove Invitee
 
+- http://drupal.org/node/180153 : Add invitations to "MyCalendar" 
+
+- Add icon to send message to a specific Invitee (if allowed for user/invitees)
+- Add icon to send invitation to a specific Invitee
+- preview option when writing an rsvp
+- automatic update of invitations startdate when startdate in node changes.
+- Allow parallel usage of event connector and date connector
 - allow parameters for views
 - I would like to see a "reply/response" panel like in evite. Any Volunteers ?? Who can help here.
 - Adding toolbox feature like in Evite:
@@ -88,15 +105,6 @@ TODO/Features:
     * › Cancel Event
     * › Copy this Event
     * › Add to my Outlook Calendar
-
-Documentation:
-    The term R.S.V.P. comes from the French expression "répondez s'il vous plaît", meaning "please respond".
-    Terms used in the module:
-       "RSVP": The module name
-       "Invitation": The invitation generated for an event or an invitation someone receives for an event. 
-       "Invitee": A person invited to an event by adding the person to an invitation.
-       "Respondent": An invitee that responded.
-       "Attendee": A respondent that responded to attend the event.
         
 
 

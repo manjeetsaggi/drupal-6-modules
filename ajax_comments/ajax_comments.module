@@ -1,28 +1,46 @@
 <?php
-// $Id: ajax_comments.module,v 1.1.2.7 2008/12/22 15:12:22 neochief Exp $
+// $Id: ajax_comments.module,v 1.1.2.13 2009/01/05 00:28:24 neochief Exp $
 
 /*
  * Implementation of hook_form_alter()
  */
-function ajax_comments_form_alter( &$form, $form_state, $form_id ){
-  if (($form_id == 'comment_form') && (arg(1) != 'edit')) {
+function ajax_comments_form_alter(&$form, $form_state, $form_id) {
+  if (($form_id == 'comment_form') && (arg(1) != 'edit') && (arg(1) != 'reply') && (arg(2) != 'edit') && (arg(2) != 'reply')) {
     $form['#prefix'] = '<div id="comment-preview"></div>';
-
-    if (!empty($_POST) && ($_POST['form_id'] == $form_id)) {
-      // Redirect on successful submit, i.e., if there are no errors.
-      $form['#pre_render'][] = 'ajax_comments_dispatch';
-    }
-    $form['#submit'] = array('ajax_comments_submit_dispatch' => array());
-    $form['#redirect'] = FALSE;
-
+    
+    // we should set specific ID to let ahah wrapper know what to wrap on ajax
+    // loaded comment-form even if we have many submit buttons on the page
+    $form['preview']['#id'] = "ajax-comments-preview";
+    $form['preview']['#ahah'] = array(
+      'path' => 'ajax_comments/js',
+      'wrapper' => 'comment-preview',
+      'event' => 'click',
+      'method' => 'append',
+      'effect' => 'ajaxCommentsPreview',
+      'progress' => array('type' => '1bar', 'message' => t('Please wait...')),
+    );
+    
+    $form['submit']['#id'] = "ajax-comments-submit";
+    $form['submit']['#submit'] = array('ajax_comments_submit');
+    $form['submit']['#ahah'] = array(
+      'path' => 'ajax_comments/js',
+      'wrapper' => 'comment-form-content',
+      'event' => 'click',
+      'method' => 'before',
+      'effect' => 'ajaxCommentsSubmit',
+      'progress' => array('type' => '1bar', 'message' => t('Please wait...')),
+    );
+    
     $path = drupal_get_path('module', 'ajax_comments');
+    drupal_add_css($path .'/jquery.scrollTo.js');
+    drupal_add_css($path .'/ajax_comments.css');
+    
     drupal_add_js('misc/jquery.form.js');
     drupal_add_js($path .'/ajax_comments.js', 'module');
     drupal_add_js(array(
-      'cleanurls' => variable_get('clean_url', 0),
       'rows_in_reply' => variable_get('ajax_comments_reply_row_count', 3),
       'rows_default' => variable_get('ajax_comments_default_row_count', 5),
-      'always_expand_form' => variable_get('ajax_comments_always_expand_form', TRUE),
+      'always_expand_main_form' => variable_get('ajax_comments_always_expand_form', TRUE),
     ), 'setting');
   }
 }
@@ -39,22 +57,22 @@ function ajax_comments_menu() {
     'access callback' => 'user_access',
     'access arguments' => array('administer site configuration'),
    );
-  $items['get_form_token/%/%'] = array(
+  $items['ajax_comments/get_form_token/%/%'] = array(
     'page callback' => 'get_form_token',
-    'page arguments' => array(1,2),
+    'page arguments' => array(2,3),
     'access callback' => 'user_access',
     'access arguments' => array('access content'),
     'type' => MENU_CALLBACK,
   );
-  $items['comment/instant_delete/%'] = array(
+  $items['ajax_comments/instant_delete/%'] = array(
     'page callback' => 'instant_delete',
     'page arguments' => array(2),
     'access callback' => 'user_access',
     'access arguments' => array('administer comments'),
     'type' => MENU_CALLBACK,
   );
-  $items['ajaxsubmit/dispatch'] = array(
-    'page callback' => 'ajax_comments_dispatch',
+  $items['ajax_comments/js'] = array(
+    'page callback' => 'ajax_comments_js',
     'access callback' => 'user_access',
     'access arguments' => array('access content'),
     'type' => MENU_CALLBACK,
@@ -62,12 +80,104 @@ function ajax_comments_menu() {
   return $items;
 }
 
+
+/*
+ * AHAH callback
+ */
+function ajax_comments_js() {
+  include_once 'modules/node/node.pages.inc';
+  $form_state = array('storage' => NULL, 'submitted' => FALSE);
+  $form_build_id = $_POST['form_build_id'];
+  $form = form_get_cache($form_build_id, $form_state);
+
+  $args = $form['#parameters'];
+  $form_id = array_shift($args);
+  $form_state['post'] = $form['#post'] = $_POST;
+  $form['#programmed'] = $form['#redirect'] = FALSE;
+
+  $form['#after_build'] = array('comment_form_add_preview');
+  drupal_process_form($form_id, $form, $form_state);
+  
+  $errors = form_get_errors();
+
+  if (!$errors) {
+    if ($form_state['values']['op'] == t('Preview')) {
+      $output = '<div class="preview-item">'.$form['comment_preview']['#value'].'</div>';
+    }
+    elseif ($form_state['values']['op'] == t('Save')) {
+      $output = '<div class="comment-new-success">'.$form_state['ajax_comment'].'</div>';
+    }
+    
+    if ($output && $form_state['values']['pid']) {
+      $output = '<div class="indented">'. $output .'<div>';
+    }
+    $form = drupal_rebuild_form($form_id, $form_state, $args, $form_build_id);
+  }
+  unset($form['#suffix']);
+  unset($form['#prefix']);
+  $output = theme('status_messages') . $output . drupal_render($form);
+
+  drupal_json(array('status' => TRUE, 'data' => $output));
+}
+
+/*
+ * Comment submit routine
+ */
+function ajax_comments_submit($form, &$form_state) {
+  //remove self
+  unset($form_state['submit_handlers']);
+  // ..and standart comments submit handler
+  foreach ($form['#submit'] as $key => $value) {
+    if ($value == 'comment_form_submit') {
+      unset($form['#submit'][$key]);
+    }
+  }
+  //execute all others
+  form_execute_handlers('submit', $form, $form_state);
+  
+  //save comment just like comments module do it
+  $edit = $form_state['values'];
+  _comment_form_submit($edit);
+  if ($cid = comment_save($edit)) {
+    $errors = form_get_errors();
+    if (!$errors) {
+      _comment_update_node_statistics($cid);
+      $node = node_load($edit['nid']);
+
+      $query = 'SELECT c.cid, c.pid, c.nid, c.subject, c.comment, c.format, c.timestamp, c.name, c.mail, c.homepage, u.uid, u.name AS registered_name, u.signature, u.picture, u.data, c.status FROM {comments} c INNER JOIN {users} u ON c.uid = u.uid WHERE c.cid = %d';
+      $query_args = array($cid);
+      if (!user_access('administer comments')) {
+        $query .= ' AND c.status = %d';
+        $query_args[] = COMMENT_PUBLISHED;
+      }
+
+      $query = db_rewrite_sql($query, 'c', 'cid');
+      $result = db_query($query, $query_args);
+
+      if ($comment = db_fetch_object($result)) {
+        $comment->name = $comment->uid ? $comment->registered_name : $comment->name;
+        $links = module_invoke_all('link', 'comment', $comment, 0);
+        drupal_alter('link', $links, $node);
+
+        //render our comment and get it back to AHAH handler
+        $output .= theme('comment_view', $comment, $node, $links);
+        $form_state['ajax_comment'] = $output;
+      }
+    }
+  }
+  return $output;
+}
+
+
+/*
+ * AJAX comments settings form
+ */
 function admin_ajax_comments() {
   $form['ajax_comments_always_expand_form'] = array(
     '#type' => 'checkbox',
     '#title' => t('Form always expanded'),
     '#description' => t('This setting allows to render comments as collapsed link by default.'),
-    '#default_value' => variable_get('ajax_comments_always_expand_form', TRUE),
+    '#default_value' => variable_get('ajax_comments_always_expand_form', FALSE),
   );
   $form['ajax_comments_default_row_count'] = array(
     '#type' => 'textfield',
@@ -85,7 +195,7 @@ function admin_ajax_comments() {
 }
 
 /*
- * Misc function to fetch form tokens for authentificated users
+ * Misc function to fetch new form and it's values when full reload needed
  */
 function get_form_token($nid, $pid = NULL){
   drupal_set_header('Content-type: text/javascript; charset=utf-8');
@@ -117,100 +227,6 @@ function instant_delete($cid = 0){
   exit();
 }
 
-/*
- * Serves form submit functionality
- */
-function ajax_comments_submit_dispatch($form_id, &$form_state) {
-  global $user;
-
-  $edit = $form_state['values'];
-  _comment_form_submit($edit);
-  if ($cid = comment_save($edit)) {
-    $errors = form_get_errors();
-    if (!$errors) {
-      $node = node_load($edit['nid']);
-
-      $query = 'SELECT c.cid, c.pid, c.nid, c.subject, c.comment, c.format, c.timestamp, c.name, c.mail, c.homepage, u.uid, u.name AS registered_name, u.signature, u.picture, u.data, c.status FROM {comments} c INNER JOIN {users} u ON c.uid = u.uid WHERE c.cid = %d';
-      $query_args = array($cid);
-      if (!user_access('administer comments')) {
-        $query .= ' AND c.status = %d';
-        $query_args[] = COMMENT_PUBLISHED;
-      }
-
-      $query = db_rewrite_sql($query, 'c', 'cid');
-      $result = db_query($query, $query_args);
-
-      if ($comment = db_fetch_object($result)) {
-        $comment->name = $comment->uid ? $comment->registered_name : $comment->name;
-        $links = module_invoke_all('link', 'comment', $comment, 0);
-        drupal_alter('link', $links, $node);
-
-        $preview .= theme('comment_view', $comment, $node, $links);
-      }
-
-      if ($comment->pid) {
-        $preview = '<div class="indented">'.$preview.'<div>';
-      }
-
-      $redirect = drupal_get_path_alias('node/'.$comment->nid).'?r'.$cid.'#comment-'.$cid;
-    }
-
-    $result = array(
-      'status' => TRUE,
-      'data' =>  array(
-        'errors' => $errors,
-        'message' => theme('status_messages'),
-        'preview' => $preview,
-        'destination' => $redirect
-      )
-    );
-    return $result;
-  }
-}
-
-/*
- * Serves previews and validation
- */
-function ajax_comments_dispatch(&$form) {
-  if (module_exists('captcha')) {
-    $form_c = array();
-    captcha_form_alter($form_c, NULL, 'comment_form');
-    captcha_pre_render($form_c);
-
-    $form_c['captcha']['captcha_token']['#id'] = 'edit-captcha-token';
-    $form_c['captcha']['captcha_response']['#id'] = 'edit-captcha-response';
-    $form_c['captcha']['captcha_token']['#name'] = 'captcha_token';
-    $form_c['captcha']['captcha_response']['#name'] = 'captcha_response';
-
-    $captcha = @drupal_render($form_c);
-  }
-  
-  $errors =  form_get_errors();
-
-  if ((!$errors) && (empty($form['comment_preview']))) {
-    $form_state = array();
-    drupal_process_form('comment_form', $form, $form_state);
-    $result = ajax_comments_submit_dispatch('comment_form', $form_state);
-    print drupal_to_js($result);
-    exit();
-  }
-  
-  $result = array(
-    'status' => TRUE,
-    'data' =>  array(
-      'errors' => $errors,
-      'message' => theme('status_messages'),
-      'preview' => isset($form['comment_preview']) && !empty($form['comment_preview']['#value']) ? $form['comment_preview']['#value'] : NULL,
-      'submit' => isset($form['submit']) && !empty($form['submit']) ? drupal_render($form['submit']) : NULL,
-      'destination' => '',
-      'captcha' => $captcha,
-    )
-  );
-  
-  print drupal_to_js($result);
-  exit();
-}
-
 /**
  * Process variables for comment.tpl.php.
  */
@@ -221,6 +237,3 @@ function ajax_comments_preprocess_comment(&$variables) {
     $variables['comment']->new = TRUE;
   }
 }
-
-
-

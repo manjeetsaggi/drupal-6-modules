@@ -1,3 +1,21 @@
+12/30/2008 - ulf1
+- Improoved invitation email and message email context.
+- Fixed permission problem: Moderator can not send message emails if setting is restrictive.
+ 
+
+12/29/2008 - ulf1
+#351880 : Added logic to avoid enabling multiple rsvp connectors.
+- Fixed logic in status dialog: If response is "no", do not print "Attendee will bring a total of 1 guests".
+- Reply box was not visible if an invitee has "rsvp moderator permissions".
+- Edit icon was missing in distribution
+- Fixed permission problem: guest list displays no responses for moderators, if detail level is restrictive, but 
+  moderators should always see responses.
+- Fixed problem with "current user" icon in guest list displayed in front of the wrong user.   
+
+12/25/2008 - ulf1
+- Fixed a problem during hook_uninstall of rsvp
+- More cleanup of the User Interface.
+
 12/20/2008 - ulf1
 - Fixed a problem that Invitation tab was not visible on nodes. Creation of Invitations was not possible.
 

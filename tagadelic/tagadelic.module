@@ -1,5 +1,5 @@
 <?php
-// $Id: tagadelic.module,v 1.40 2008/02/27 15:32:05 robloach Exp $
+// $Id: tagadelic.module,v 1.40.2.4 2008/12/31 11:35:44 ber Exp $
 
 /**
  * Implementation of hook_help
@@ -170,6 +170,7 @@ function tagadelic_page_list($vocs) {
  */
 function tagadelic_node_get_terms($node) {
   if ($terms = taxonomy_node_get_terms($node, 'tid')) {
+    $tags = array();
     $vocs = taxonomy_get_vocabularies($node->type);
     foreach ($terms as $tid => $term) {
       if ($vocs[$term->vid]->tags) {
@@ -228,7 +229,7 @@ function tagadelic_get_weighted_tags($vids, $steps = 6, $size = 60) {
     
     $tags = tagadelic_build_weighted_tags($result, $steps);
 
-    cache_set($cache_name, $tags);
+    cache_set($cache_name, $tags, 'cache', CACHE_TEMPORARY);
   }
   
   return $tags;
@@ -348,7 +349,10 @@ function tagadelic_block($op = 'list', $delta = 0, $edit = array()) {
       $tags = tagadelic_get_weighted_tags(array($voc->vid), variable_get('tagadelic_levels', 6), variable_get('tagadelic_block_tags_'. $delta, 12));
       $tags = tagadelic_sort_tags($tags);
       $blocks['content'] = theme('tagadelic_weighted', $tags);//return a chunk of 12 tags
-      $blocks['content'] .= theme('tagadelic_more', $voc->vid);//add more link
+      if (count($tags) >= variable_get('tagadelic_block_tags_'. $delta, 12)) {
+        $blocks['content'] .= theme('tagadelic_more', $voc->vid);//add more link
+      }
+
     }
     elseif (arg(0) == 'node' && is_numeric(arg(1)) && $node = node_load(arg(1))) {
       $blocks['subject'] = t('Tags for @title', array('@title' => $node->title));
@@ -359,7 +363,7 @@ function tagadelic_block($op = 'list', $delta = 0, $edit = array()) {
   elseif ($op == 'list') {
     foreach (taxonomy_get_vocabularies() as $voc) {
       $blocks[$voc->vid]['info'] = variable_get('tagadelic_block_title_'. $voc->vid, t('Tags in @voc', array('@voc' => $voc->name)));
-      $blocks[0]['cache'] = BLOCK_CACHE_GLOBAL;
+      $blocks[$voc->vid]['cache'] = BLOCK_CACHE_GLOBAL;
     }
     $blocks[0]['info'] = t('Tags for the current post');
     $blocks[0]['cache'] = BLOCK_CACHE_PER_PAGE;

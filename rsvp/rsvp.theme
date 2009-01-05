@@ -1,6 +1,6 @@
 <?php
 /**
- * $Id: rsvp.theme,v 1.6.2.5 2008/12/20 08:33:10 ulf1 Exp $
+ * $Id: rsvp.theme,v 1.6.2.9 2008/12/30 21:04:48 ulf1 Exp $
  
  * @addtogroup themeable
  * @{
@@ -8,43 +8,43 @@
 
 function theme_rsvp_send_status($status = NULL) {
   if(count($status) == 0) {
-    $content .= '<div class="title">'. t('No recipients found.') .'</div>';
+    $content .= '<div class="title">'. t('No invitees found.') .'</div>';
   }
   if(count($status['invalid'])) {
-    $content .= '<div class="title">'. t('The following recipients are invalid:') .'</div>';
+    $content .= '<div class="title">'. t('The following invitees are invalid:') .'</div>';
     $content .= theme('item_list', $status['invalid']);
   }
   if(count($status['existing'])) {
-    $content .= '<div class="title">'. t('The following recipients could not be added, because they already have been added earlier:') .'</div>';
+    $content .= '<div class="title">'. t('The following invitees could not be added, because they already have been added earlier:') .'</div>';
     $content .= theme('item_list', $status['existing']);
   }
   if(count($status['failed_add'])) {
-    $content .= '<div class="title">'. t('Failed adding these recipients:') .'</div>';
+    $content .= '<div class="title">'. t('Failed adding these invitees:') .'</div>';
     $content .= theme('item_list', $status['failed_add']);
   }
   if(count($status['failed_send'])) {
-    $content .= '<div class="title">'. t('Failed sending email to these recipients:') .'</div>';
+    $content .= '<div class="title">'. t('Failed sending email to these invitees:') .'</div>';
     $content .= theme('item_list', $status['failed_send']);
   }
   if(count($status['success_add'])) {
-    $content .= '<div class="title">'. t('Successfully added these recipients:') .'</div>';
+    $content .= '<div class="title">'. t('Successfully added these invitees:') .'</div>';
     $content .= theme('item_list', $status['success_add']);
   }
   if(count($status['success_send'])) {
-    $content .= '<div class="title">'. t('Successfully sent email to these recipients:') .'</div>';
+    $content .= '<div class="title">'. t('Successfully sent email to these invitees:') .'</div>';
     $content .= theme('item_list', $status['success_send']);
   }
   return '<div class="rsvpmailstatus">'. $content .'</div>';
 }
 
 function theme_rsvp_event($node = NULL, $startdate = NULL) {
-  $content .= '<div>For '. l(check_plain($node->title), 'node/'. $node->nid);
-  $content .= ' - '. check_plain($startdate) .':</div><br />';
+  $content .= '<div>Event: ' . l(check_plain($node->title), 'node/'. $node->nid);
+  $content .= '<br />Eventdate: ' . check_plain($startdate) . '</div><br />';
   return $content;
 }
 
 function theme_rsvp_event_anonymous() {
-  $content = '<div>Please sign-in to display eventually more details about other attendees.</div><br />';
+  $content = '<div>' . t('Please sign-in to display eventually more details about other invitees.') . '</div><br />';
   return $content;
 }
 
@@ -65,7 +65,7 @@ function theme_rsvp_preview($content = NULL) {
 
 function theme_rsvp_salutation($name = NULL) {
   
-  $output = '';
+  $output = '<br>';
   
   if (!is_null($name)) { 
     $salutation = t('Dear !name!', array('!name' => $name)) . '<br>';
@@ -98,27 +98,56 @@ function theme_rsvp_help($content = NULL) {
 
 function theme_rsvp_invite_mail_subject($invite = NULL, $subject = NULL) {
    $site = variable_get("site_name", "drupal");
-   $subject = "[" . check_plain($site) ."] ". t('Event Invitation - ') . check_plain($subject);
+   $subject = "[" . check_plain($site) ."] ". t('Invitation - ') . check_plain($subject);
    return $subject;
 }
-     
-function theme_rsvp_invite_mail($invite = NULL) {
+
+/**
+ * generates the body for the invitation email 
+ * @param $invite The invite object for the user it is destined to.
+ * @param $sender String The name of the sender. (already cleaned)
+ */
+function theme_rsvp_invite_mail($invite = NULL, $sender = NULL) {
   global $user;
   $site = variable_get("site_name", "drupal");
-  $body = t("Hello !uname!!nl!nlYou have been invited to attend an event by !owner at !site.!nl!nlYou can view the event itself by following this link: !nl!eventurl!nl!nlYou can view the full invitation, reply if you want to join or not, and add a comment by following this link: !nl!url!nl!nlYou also can visit the inviation by going to <i>My account | RSVP | Your Invitations</i>nl!Please do not reply to this email.!nl!nlHere is the invitation message:!nl", array('!nl' => '<br />','!owner'=>$user->name, '!site'=>$site, '!uname'=>_rsvp_getAttendeeEmail($invite, true) , '!eventurl'=>url("node/$invite->nid", array('absolute'=>true)), '!url'=>url("rsvp/email/$invite->hash/view", array('absolute'=>true)))) . check_markup($invite->invite_text);
+  //keep &nbsp; in the code. Otherwise the mail processor will remove linebreaks.
+  $body = t('Hello !uname!', array('!uname'=>_rsvp_getAttendeeEmail($invite, true))) . '<br>&nbsp;<br>';
+  $body .= t('You have been invited by !sender at !site.', array('!sender'=>$sender, '!site'=>$site)) . '<br>&nbsp;<br>';
+  $body .= t('You can view the full invitation, reply if you want to join or not, and add a comment by following this link: ');
+  $body .= url("rsvp/email/$invite->hash/view", array('absolute'=>true)) . '<br>&nbsp;<br>';
+
+  $body .= t('You can view the event by following this link: ');
+  $body .= url("node/$invite->nid", array('absolute'=>true)) . '<br>&nbsp;<br>';
+
+  $body .= t('You also can visit the inviation by going to ') . '<i>' . t('My account') . '|' . t('Invitations') . '</i><br>&nbsp;<br>';
+  $body .= t('Please do not reply to this email.') . '<br>&nbsp;<br>&nbsp;<br>';
+  $body .= t('***************************************************') . '<br>&nbsp;<br>';
+  $body .= check_markup($invite->invite_text);
+
   return $body;
 }
 
 function theme_rsvp_message_mail_subject($invite = NULL, $subject = NULL) {
    $site = variable_get("site_name", "drupal");
-   $subject = "[" . check_plain($site) ."] ". check_plain($subject);
+   $subject = "[" . check_plain($site) ."] ". t('Invitation - ') . check_plain($subject);
    return $subject;
 }
 
 function theme_rsvp_message_mail($invite = NULL, $sender = NULL, $body = NULL) {
   global $user;
   $site = variable_get("site_name", "drupal");
-  $body = t("Hello !uname!!nl!nlYou have been sent a message by !sender at !site.!nl!nlYou can view the invitation from where it originated by following this link: !nl!url!nl!nlHere is the message:!nl", array('!sender' => $sender, '!site' => $site, '!uname' =>_rsvp_getAttendeeEmail($invite, true), '!nl' => '<br />', '!url' => url("rsvp/email/$invite->hash/view", array('absolute' => TRUE)))) . check_markup($body);
+
+  //keep &nbsp; in the code. Otherwise the mail processor will remove linebreaks.
+  $body = t('Hello !uname!', array('!uname'=>_rsvp_getAttendeeEmail($invite, true))) . '<br>&nbsp;<br>';
+  $body .= t('!sender at !site has sent you a message.', array('!sender'=>$sender, '!site'=>$site)) . '<br>&nbsp;<br>';
+
+  $body .= t('You can view the full invitation, reply if you want to join or not, and add a comment by following this link: ');
+  $body .= url("rsvp/email/$invite->hash/view", array('absolute'=>true)) . '<br>&nbsp;<br>';
+
+  $body .= t('You also can visit the inviation by going to ') . '<i>' . t('My account') . '|' . t('Invitations') . '</i><br>&nbsp;<br>';
+  $body .= t('Please do not reply to this email.') . '<br>&nbsp;<br>&nbsp;<br>';
+  $body .= t('***************************************************') . '<br>&nbsp;<br>';
+  $body .= check_markup($body);
 
   return $body;
 }
@@ -298,10 +327,10 @@ function theme_rsvp_attendees_answer_body_item($item = NULL, $ismoderator = NULL
     $output .= $viral;
 
     $img1 = theme('image', $imgpath . 'edit.gif', 'edit', '', array('width' => 17, 'height' => 17));
-    $output .= l($img1, 'rsvp/email/'. $item['attendee']->hash .'/view', array('html' => true, 'attributes' => array('title' => t('Edit invitation'))));
+    $output .= '  ' . l($img1, 'rsvp/email/'. $item['attendee']->hash .'/view', array('html' => true, 'attributes' => array('title' => t('Edit invitation'))));
     
     $img2 = theme('image', $imgpath . 'profile.gif', 'status', '', array('width' => 17, 'height' => 17));
-    $output .= l($img2, 'rsvp/email/'. $item['attendee']->hash .'/status', array('html' => true, 'attributes' => array('title' => t('View status of invitation'))));
+    $output .= '  ' . l($img2, 'rsvp/email/'. $item['attendee']->hash .'/status', array('html' => true, 'attributes' => array('title' => t('View status of invitation'))));
       
     $img3 = theme('image', $imgpath . 'delete.gif', 'remove', '', array('width' => 17, 'height' => 17));
     $output .= '  ' . l($img3, 'rsvp/email/'. $item['attendee']->hash .'/remove', array('html' => true, 'attributes' => array('title' => t('Remove attendee from invitation list'))));

@@ -1,5 +1,5 @@
 <?php
-// $Id: event-node-week.tpl.php,v 1.7 2008/12/01 14:40:10 killes Exp $
+// $Id: event-node-week.tpl.php,v 1.8 2009/01/01 23:25:39 killes Exp $
 
 /**
  * @file event-node-week.tpl.php
@@ -47,6 +47,7 @@
       <div class="ongoing" ><?php print t('all day'); ?></div>
   <?php } ?>
 
+  <div class="content description"><?php print $teaser ?></div>
   <div class="links"><?php print $links ?></div>
   <div class="links"><?php print $calendarsignup ?></div>
 </div>
