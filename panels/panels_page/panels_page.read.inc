@@ -1,5 +1,5 @@
 <?php
-// $Id: panels_page.read.inc,v 1.11.2.8 2008/10/08 20:39:30 merlinofchaos Exp $
+// $Id: panels_page.read.inc,v 1.11.2.13 2008/12/29 04:09:07 sdboyer Exp $
 
 /**
  * @file panels_page.write.inc
@@ -145,12 +145,19 @@ function panels_page_default_panels() {
   return $return;
 }
 
-
 function panels_page_set_current(&$panel_page) {
-  static $cache = NULL;
-  // Only allow it to be set once per request.
+  static $cache;
+  // Only allow the current cache to be set once per request.
   if (!isset($cache) && isset($panel_page)) {
-    $cache = &$panel_page;
+    // In PHP5 if we actually set a reference here, the panel page will get destroyed
+    // when the original reference is destroyed, but in PHP4 we need a reference
+    // to prevent copying it.
+    if (version_compare(PHP_VERSION, '5', '>=')) {
+      $cache = $panel_page;
+    }
+    else {
+      $cache = &$panel_page;
+    }
   }
   return $cache;
 }
@@ -273,8 +280,10 @@ function panels_page_access($id, $account = NULL) {
   if (is_null($access_data)) {
     $result = db_query('SELECT pid, name, access FROM {panels_page}');
     while ($row = db_fetch_object($result)) {
-      $access_data[$row->pid] = explode(', ', $row->access);
-      $access_data[$row->name] = &$access_data[$row->pid];
+      if (!empty($row->access)) {
+        $access_data[$row->pid] = explode(', ', $row->access);
+        $access_data[$row->name] = &$access_data[$row->pid];
+      }
     }
   }
 
@@ -294,13 +303,12 @@ function panels_page_access($id, $account = NULL) {
   }
 
   // Otherwise, check roles
-  static $roles = array();
-  if (!isset($roles[$account->uid])) {
-    $roles[$account->uid] = array_keys($account->roles);
-    $roles[$account->uid][] = $account->uid ? DRUPAL_AUTHENTICATED_RID : DRUPAL_ANONYMOUS_RID;
+  $roles = array_keys($account->roles);
+  if (empty($account->uid)) {
+    $roles[] = DRUPAL_ANONYMOUS_RID;
   }
 
-  return array_intersect($access_data[$id], $roles[$account->uid]);
+  return array_intersect($access_data[$id], $roles);
 }
 
 /**

@@ -1,5 +1,5 @@
 <?php
-// $Id: panels_page.module,v 1.36.2.3 2008/10/11 01:33:48 sdboyer Exp $
+// $Id: panels_page.module,v 1.36.2.10 2008/12/29 04:09:38 sdboyer Exp $
 
 /**
  * @file panels_page.module
@@ -9,8 +9,6 @@
  * .inc files for various segments of its functionality. These includes are
  * lazy-loaded (some through the menu system, some internally) in order to keep
  * code weight to an absolute minimum.
- *
- * TODO Reduce the number of include loads calls...it's amateurish.
  */
 
 /**
@@ -118,12 +116,27 @@ function panels_page_menu_alter(&$callbacks) {
  * @param string $which
  * @return mixed
  */
-function panels_page_admin_load($name, $which = '') {
+function panels_page_admin_load() {
+  // Lets us tell if this is the first time through the function. Fugly hack to
+  // do it this way, but this gets called numerous times by theme(), which makes
+  // it the only way to avoid generating superfluous object cache items due to
+  // later indirect calls to this function made by access checking within
+  // theme(). They entries get get cleared later, but it's still icky, so we
+  // head it off here.
+  static $first = TRUE;
   panels_page_load_include('write');
   panels_load_include('plugins');
+  $args = func_get_args();
+  $name = array_shift($args);
+  $which = array_shift($args);
+  if (function_exists($which) && $first) {
+    return $which($name, array_shift($args));
+  }
 
+  $first = FALSE;
   $panel_page = panels_page_load($name);
   panels_page_fetch_display($panel_page, $which);
+  panels_page_set_current($panel_page);
   return is_object($panel_page) && !empty($panel_page->pid) ? $panel_page : FALSE;
 }
 
@@ -140,22 +153,62 @@ function panels_page_admin_load($name, $which = '') {
  * @return mixed
  */
 function panels_page_admin_cache_load($name, $which = '') {
-  panels_page_load_include('write');
-  panels_load_include('plugins');
-
-  if (!empty($_POST)) {
-    // FIXME With the way the menu system currently works, this is likely to be
-    // fired AT LEAST six times per admin page request. BOLLOCKS. Time to
-    // figure out yet another fracking caching method...maybe just right here?
-    $panel_page = panels_cache_get('panel_object:panel_page', $name);
+  static $panel_page;
+  if (empty($panel_page)) {
+    if (!empty($_POST)) {
+      $panel_page = panels_cache_get('panel_object:panel_page', $name);
+    }
+    else {
+      $panel_page = panels_page_load($name);
+      panels_page_fetch_display($panel_page, $which);
+      panels_cache_set('panel_object:panel_page', $name, $panel_page);
+    }
   }
-  else {
-    $panel_page = panels_page_load($name);
-    panels_page_fetch_display($panel_page, $which);
-    panels_cache_set('panel_object:panel_page', $name, $panel_page);
+  if (is_object($panel_page) && !empty($panel_page->pid)) {
+    panels_page_set_current($panel_page);
+    return $panel_page;
   }
-  return is_object($panel_page) && !empty($panel_page->pid) ? $panel_page : FALSE;
+  return FALSE;
 }
+
+/**
+ * Kluges local tasks to basically work like menu links instead of router items.
+ *
+ * ...like they should. This function is headdesking's raison d'etre.
+ */
+function panels_page_concession_to_borked_tabs($name) {
+  static $first = TRUE;
+  if (!user_access('create panel-pages')) {
+    return FALSE;
+  }
+
+  if (!$first || panels_page_climb_stack()) {
+    $panel_page = panels_page_get_current();
+    return $panel_page->name == $name;
+  }
+  $first = FALSE;
+  return TRUE;
+}
+
+/**
+ * Checks to see if theme() is in the current call stack.
+ *
+ * Let there be kluge. Horrible, awful, kitten-mass-murdering KLUGE.
+ *
+ */
+function panels_page_climb_stack() {
+  $backtrace = debug_backtrace();
+  $result = array_filter($backtrace, '_panels_page_climb_stack');
+  return !empty($result);
+}
+
+/**
+ * Kluge's little helper. Kinda like Santa's little helper. Except not.
+ */
+function _panels_page_climb_stack($call) {
+  return $call['function'] == 'theme';
+}
+
 
 /**
  * Check whether the current page request is allowed.
@@ -172,8 +225,7 @@ function panels_page_access_handler() {
   panels_page_load_include('read');
   $args = func_get_args();
   $name = array_shift($args);
-  $access = panels_page_access($name);
-  return !empty($access);
+  return (bool) panels_page_access($name);
 }
 
 /**
@@ -188,7 +240,7 @@ function panels_page_access_handler() {
  */
 function panels_page_render_handler() {
   $args = func_get_args();
-  // FIXME all of these are wrapped in if statements b/c of the 404/500 possibility
+  // FIXME all of these are wrapped in if statements b/c of the 403/404 possibility
   if ($loader_data = panels_page_master_loader($args)) {
     return call_user_func_array($loader_data->page_callback, $loader_data->page_arguments);
   }
@@ -241,6 +293,7 @@ function _panels_page_master_loader($name, $args) {
   }
   $load = new stdClass();
   $loader_data[$name] = &$load;
+  $load->panel_args = array();
 
   panels_load_include('plugins');
   panels_page_load_include('read');
@@ -251,7 +304,7 @@ function _panels_page_master_loader($name, $args) {
     if ((bool) panels_page_access($panel_page->name)) {
       panels_page_load_include('render');
       panels_page_fetch_primary_display($panel_page);
-      panels_page_prepare_panels_render($load, $panel_page, $args);
+      panels_page_prepare_panels_render($load, $panel_page);
     }
     return $load;
   }
@@ -274,7 +327,7 @@ function _panels_page_master_loader($name, $args) {
     return drupal_access_denied();
   }
   panels_page_load_include('render');
-  return panels_page_prepare_panels_render($load, $panel_page, $args);
+  return panels_page_prepare_panels_render($load, $panel_page);
 }
 
 /**
@@ -314,6 +367,7 @@ function _panels_page_construct_argument_contexts(&$load, &$panel_page, $args) {
       return _panels_page_not_found($load);
     }
     $panel_page->context[panels_context_id($argument, 'argument')] = $context;
+    $load->panel_args[] = $context->get_original_argument();
   }
 }
 
@@ -359,6 +413,7 @@ function _panels_page_rebuild_menu_map($load_objects, $positions) {
  */
 function panels_page_prepare_fallback_render(&$load, $map) {
   $original_map = arg(NULL, $_GET['q']);
+  $default_menu = menu_get_item($_GET['q']);
   $parts = array_slice($original_map, 0, MENU_MAX_PARTS);
   list($ancestors, $placeholders) = menu_get_ancestors($parts);
   if (!$router_item = db_fetch_array(db_query_range('SELECT * FROM {panels_page_router_store} WHERE path IN ('. implode (',', $placeholders) .') ORDER BY fit DESC', $ancestors, 0, 1))) {
@@ -366,11 +421,20 @@ function panels_page_prepare_fallback_render(&$load, $map) {
   }
   // FIXME calling _menu_translate would result in an incomplete load
   // $map = _menu_translate($router_item, $original_map);
-
   $load->map            = $map;
   $load->page_arguments = array_merge(menu_unserialize($router_item['page_arguments'], $map), array_slice($map, $router_item['number_parts']));
   $load->page_callback  = $router_item['page_callback'];
   $load->router_item    = $router_item;
+  // If we did not override the default menu callback, stop here.
+  if ($router_item['page_callback'] != $default_menu['page_callback']) {
+    return $load;
+  }
+  // Fix for lack of the _menu_translate() function.  We crib some of that function here.
+  _menu_check_access($router_item, $map);
+  // For performance, don't localize an item the user can't access.
+  if ($router_item['access']) {
+    _menu_item_localize($router_item, $map);
+  }
   menu_set_item($_GET['q'], $router_item);
   return $load;
 }
@@ -404,9 +468,9 @@ function theme_panels_page_render_form($form) {
 /**
  * Wrapper for panels_load_include() that specifically targets panels_page
  * include files.
+ *
  * @param string $include
  *   The name of the panels_page include file, without the .inc extension.
- * TODO move me to an inc!
  */
 function panels_page_load_include($include) {
   panels_load_include($include, 'panels_page/panels_page.');
@@ -446,7 +510,9 @@ function panels_page_panels_exportables($op = 'list', $panels = NULL, $name = 'f
 }
 
 /**
- * Sanitize a panel with safe empty values.
+ * Sanitize a panel with safe, empty values.
+ *
+ * Used by various panels_page CRUD-type functions.
  */
 function panels_page_sanitize($page) {
   foreach (array('arguments', 'displays', 'contexts', 'relationships', 'switcher_options') as $id) {

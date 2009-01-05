@@ -1,4 +1,4 @@
-# $Id: de.po,v 1.2 2008/05/20 17:48:46 darrenoh Exp $
+# $Id: de.po,v 1.2.2.2 2008/12/20 13:06:35 hass Exp $
 #
 # LANGUAGE translation of Drupal (gsitemap.module)
 # Copyright YEAR NAME <EMAIL@ADDRESS>

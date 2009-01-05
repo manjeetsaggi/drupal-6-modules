@@ -1,5 +1,5 @@
 <?php
-// $Id: panels_page.menu.inc,v 1.24.2.3 2008/10/12 06:03:11 sdboyer Exp $
+// $Id: panels_page.menu.inc,v 1.24.2.8 2008/12/28 13:21:16 sdboyer Exp $
 
 /**
  * @file panels_page.menu.inc
@@ -93,29 +93,45 @@ function panels_page_admin_dynamic_menu_items($items = array(), $path_prefix = N
     'page callback' => 'panels_page_edit_advanced',
     'weight' => -8,
   ) + $admin;
-  $items[$path_prefix . '%panels_page_admin_cache/edit/context'] = array(
+  $items[$path_prefix . '%panels_page_admin/edit/context'] = array(
     'title' => 'Context',
     'page callback' => 'panels_page_edit_context',
+    'load arguments' => array('panels_page_admin_cache_load'),
     'weight' => -6,
   ) + $admin;
   $items[$path_prefix . '%panels_page_admin/edit/layout'] = array(
     'title' => 'Layout',
     'page callback' => 'panels_page_edit_layout',
-    'load arguments' => array($loader_arg + 4),
+    'load arguments' => array('panels_page_admin_cache_load', $loader_arg + 3),
     'weight' => -4,
   ) + $admin;
-  $items[$path_prefix . '%panels_page_admin_cache/edit/layout-settings'] = array(
+  $items[$path_prefix . '%panels_page_admin/edit/layout/default'] = array(
+    'title' => 'Default',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -20,
+  );
+  $items[$path_prefix . '%panels_page_admin/edit/layout-settings'] = array(
     'title' => 'Layout settings',
     'page callback' => 'panels_page_edit_layout_settings',
-    'load arguments' => array($loader_arg + 4),
+    'load arguments' => array('panels_page_admin_cache_load', $loader_arg + 3),
     'weight' => -2,
   ) + $admin;
-  $items[$path_prefix . '%panels_page_admin_cache/edit/content'] = array(
+  $items[$path_prefix . '%panels_page_admin/edit/layout-settings/default'] = array(
+    'title' => 'Default',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -20,
+  );
+  $items[$path_prefix . '%panels_page_admin/edit/content'] = array(
     'title' => 'Content',
     'page callback' => 'panels_page_edit_content',
-    'load arguments' => array($loader_arg + 4),
+    'load arguments' => array('panels_page_admin_cache_load', $loader_arg + 3),
     'weight' => 0,
   ) + $admin;
+  $items[$path_prefix . '%panels_page_admin/edit/content/default'] = array(
+    'title' => 'Default',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -20,
+  );
 /*  $items[$path_prefix . '%panels_page_admin/edit/preview'] = array(
     'title' => 'Preview',
     'page callback' => 'panels_page_preview',
@@ -253,7 +269,11 @@ function _panels_page_create_menu_structure() {
       if (strpos($panel_page->path, '%') === FALSE) {
         panels_page_construct_static_menu_link($items, $panel_page, $map);
       }
-      else {
+      // Only construct dynamic menu items if at least one argument has been
+      // defined. Kinda hacky, but failure to do this check can result in really
+      // icky, non-user-intuitive inconsistencies if someone creates a panel
+      // page on an override path but doesn't give it an argument right away.
+      elseif (!empty($panel_page->arguments)) {
         panels_page_construct_dynamic_menu_link($items, $panel_page, $map);
       }
     }
@@ -291,6 +311,40 @@ function _panels_page_construct_dynamic_menu_link(&$items, $panel_page, $page_ar
     'module'          => 'panels_page',
     'file'            => NULL, // Ensure we don't get the overriddee's file property
   );
+
+  // Add individual tab items for each of the per-display differentiated admin
+  // editing areas (layout, layout settings, and content) using a static path,
+  // then stack them on top of the normal admin wildcard stack using the
+  // tab_root and tab_parent menu properties.
+  if (!empty($panel_page->arguments)) {
+    $path = "admin/panels/panel-page/$panel_page->name/edit";
+    $admin = array(
+      'title' => 'Default',
+      'access callback' => 'panels_page_concession_to_borked_tabs',
+      'access arguments' => array($panel_page->name),
+      'file' => 'panels_page.admin.inc',
+      'page callback' => 'panels_page_edit_alternate',
+      'module' => 'panels_page',
+      'tab_root' => 'admin/panels/panel-page/%/edit',
+      'type' => MENU_LOCAL_TASK,
+    );
+    foreach ($panel_page->displays as $id => $display_conf) {
+      $admin['title'] = $display_conf['title'];
+
+      $items['menu items']["$path/layout/$id"] = array(
+        'page arguments' => array('panels_page_edit_layout', 3, 6),
+        'tab_parent' => $admin['tab_root'] . '/layout',
+      ) + $admin;
+      $items['menu items']["$path/layout-settings/$id"] = array(
+        'page arguments' => array('panels_page_edit_layout_settings', 3, 6),
+        'tab_parent' => $admin['tab_root'] . '/layout-settings',
+      ) + $admin;
+      $items['menu items']["$path/content/$id"] = array(
+        'page arguments' => array('panels_page_edit_content', 3, 6),
+        'tab_parent' => $admin['tab_root'] . '/content',
+      ) + $admin;
+    }
+  }
 }
 
 /**
@@ -301,7 +355,7 @@ function panels_page_construct_static_menu_link(&$items, $panel_page, $map) {
   panels_page_construct_menu_item_metadata($items, $panel_page);
 
   $items['menu items'][$panel_page->path] = array(
-    'title'            => filter_xss_admin(panels_page_get_title($panel_page, 'menu')),
+    'title'            => filter_xss_admin(panels_page_get_title($panel_page, 'menu', '')),
     'access callback'  => 'panels_page_access_handler',
     'access arguments' => array($panel_page->name),
     'page callback'    => 'panels_page_render_handler',

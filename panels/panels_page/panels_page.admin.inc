@@ -1,5 +1,5 @@
 <?php
-// $Id: panels_page.admin.inc,v 1.20.2.6 2008/10/11 01:33:48 sdboyer Exp $
+// $Id: panels_page.admin.inc,v 1.20.2.14 2008/12/29 04:10:03 sdboyer Exp $
 
 
 /**
@@ -366,6 +366,9 @@ function panels_page_edit_form_validate($form, &$form_state) {
   else if (preg_match("/[^A-Za-z0-9_]/", $form_state['values']['name'])) {
     form_error($form['left']['info']['name'], t('Panel name must be alphanumeric or underscores only.'));
   }
+  else if (!preg_match("/[A-Za-z_]/", $form_state['values']['name'])) {
+    form_error($form['left']['info']['name'], t('Panel name must not consist exclusively of numbers.'));
+  }
   else {
     if (db_result(db_query("SELECT pid FROM {panels_page} WHERE name = '%s' AND pid <> %d", $form_state['values']['name'], $form_state['pid']))) {
       form_error($form['left']['info']['name'], t('Panel name must be unique.'));
@@ -413,15 +416,16 @@ function panels_page_edit_form_submit($form, &$form_state) {
     else {
       $form_state['redirect'] = "admin/panels/panel-page/$panel_page->name/edit/advanced/next";
     }
+    menu_rebuild();
     return;
   }
   else {
     drupal_set_message(t('Your changes have been saved.'));
     panels_page_load_include('write');
     panels_page_save($panel_page);
+    // The path may have changed - rebuild the menu.
+    menu_rebuild();
   }
-  // The path may have changed - rebuild the menu.
-  menu_rebuild();
 }
 
 /**
@@ -436,7 +440,6 @@ function panels_page_edit_advanced($panel_page, $next = NULL) {
  * The form to edit the advanced settings of a panel page.
  */
 function panels_page_advanced_form(&$form_state, $panel_page, $next) {
-  drupal_add_css(panels_get_path('css/panels_admin.css'));
   $form_state['panel_page'] = &$panel_page;
   $form_state['next'] = $next;
 
@@ -515,15 +518,16 @@ function panels_page_advanced_form(&$form_state, $panel_page, $next) {
     '#description' => t('If this is a menu tab, select the weight; lower numbers will be further to the left.'),
   );
 
-  $form['left']['menu-info']['menu_title'] = array(
+/*  $form['left']['menu-info']['menu_title'] = array(
     '#type' => 'textfield',
     '#title' => t('Menu Title'),
     '#default_value' => $panel_page->menu_title,
     '#size' => 35,
     '#maxlength' => 255,
     '#description' => t('Enter the title to use for the menu entry or tab. If blank, the page title will be used.'),
-  );
-
+  );*/
+/* !!!NOTE: disabled completely since this is mostly borked at the moment and
+ * isn't super-critical to have working in the consolation release of 2.x
   $form['left']['menu-info']['default-tab'] = array(
     '#type' => 'fieldset',
     '#collapsible' => TRUE,
@@ -569,7 +573,7 @@ function panels_page_advanced_form(&$form_state, $panel_page, $next) {
     '#maxlength' => 255,
     '#description' => t('If the Parent Menu Item is being defined by this panel (if you set the %type_field to either %tab or %menu), you can specify its title here.  If blank, the menu title will be used if that is defined, or the page title if not. <b>DISABLED IN D6 ALPHA</b>', array('%type_field' => t('Parent Menu Item Type'), '%tab' => t('Tab'), '%menu' => t('Normal menu item'))),
   );
-
+*/
   $label = ($next) ? t('Save and proceed') : t('Save');
   $form['submit'] = array(
     '#type' => 'submit',
@@ -603,6 +607,7 @@ function panels_page_advanced_form_submit($form, &$form_state) {
   if ($form_state['next']) {
     $form_state['redirect'] = "admin/panels/panel-page/$panel_page->name/edit/context/next";
   }
+  menu_rebuild();
   drupal_set_message(t('Your changes have been saved.'));
 }
 
@@ -625,13 +630,6 @@ function panels_page_export_page(&$form_state, $panel_page) {
  */
 function panels_page_edit_context($panel_page, $next = NULL) {
   drupal_set_title(check_plain(panels_page_get_title($panel_page)));
-  if (!empty($_POST)) {
-    $panel_page = panels_cache_get('panel_object:panel_page', $panel_page->name);
-  }
-  else {
-    panels_cache_set('panel_object:panel_page', $panel_page->name, $panel_page);
-  }
-
   // drupal_set_title(check_plain(panels_page_get_title($panel_page)));
   return drupal_get_form('panels_page_context_form', $panel_page, $next);
 }
@@ -726,6 +724,7 @@ function panels_page_context_form_submit($form, &$form_state) {
   panels_page_load_include('write');
   panels_page_save($panel_page);
   panels_cache_clear('panel_object:panel_page', $panel_page->name);
+  menu_rebuild();
   if ($form_state['next']) {
     $form_state['redirect'] = "admin/panels/panel-page/$panel_page->name/edit/content";
   }
@@ -743,9 +742,9 @@ function panels_page_edit_layout($panel_page) {
     $panel_page->display = $output;
     panels_page_save_display($panel_page);
 
-    $dest = "admin/panels/panel-page/edit/$panel_page->name/layout";
-    if ($panel_page->display->did != $panel_page->did) {
-      $dest .= '/' . $panel_page->display->did;
+    $dest = "admin/panels/panel-page/$panel_page->name/edit/layout";
+    if ($panel_page->current != 'primary') {
+      $dest .= '/' . $panel_page->current;
     }
     drupal_goto($dest);
   }
@@ -761,8 +760,8 @@ function panels_page_edit_layout_settings($panel_page, $next = NULL) {
   if (empty($next)) {
     $button = t('Save');
     $dest = "admin/panels/panel-page/$panel_page->name/edit/settings";
-    if ($panel_page->display->did != $panel_page->did) {
-      $dest .= '/' . $panel_page->display->did;
+      if ($panel_page->current != 'primary') {
+      $dest .= '/' . $panel_page->current;
     }
   }
   else {
@@ -804,7 +803,7 @@ function panels_page_edit_content($panel_page) {
     // And do the drupal_goto that a submit function ordinarily would have.
     $dest = "admin/panels/panel-page/$panel_page->name/edit/content";
     if ($panel_page->current != 'primary') {
-      $dest .= '/' . $panel_page->display->did;
+      $dest .= '/' . $panel_page->current;
     }
     drupal_goto($dest);
   }
@@ -1021,4 +1020,21 @@ function panels_page_import_form_submit($form, &$form_state) {
   else {
     drupal_set_message(t('Unable to get a panel page out of that.'));
   }
+}
+
+function panels_page_edit_alternate($callback, $name, $alternate = '') {
+  // TODO reorganize this redundant call.
+  panels_page_load_include('read');
+  panels_page_load_include('write');
+  panels_load_include('plugins');
+  if (!empty($_POST)) {
+    $panel_page = panels_cache_get('panel_object:panel_page', $name);
+  }
+  else {
+    $panel_page = panels_page_load($name);
+    panels_page_fetch_display($panel_page, $alternate);
+    panels_cache_set('panel_object:panel_page', $name, $panel_page);
+  }
+  panels_page_set_current($panel_page);
+  return $callback($panel_page);
 }

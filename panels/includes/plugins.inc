@@ -1,5 +1,5 @@
 <?php
-// $Id: plugins.inc,v 1.12.2.4 2008/10/11 01:54:40 sdboyer Exp $
+// $Id: plugins.inc,v 1.12.2.9 2008/11/20 23:18:53 sdboyer Exp $
 
 
 /**
@@ -23,6 +23,7 @@ class panels_context {
   var $identifier = '';
   var $argument = NULL;
   var $keyword = '';
+  var $original_argument = NULL;
 
   function panels_context($type = 'none', $data = NULL) {
     $this->type  = $type;
@@ -41,6 +42,13 @@ class panels_context {
   }
 
   function get_argument() {
+    return $this->argument;
+  }
+
+  function get_original_argument() {
+    if (!is_null($this->original_argument)) {
+      return $this->original_argument;
+    }
     return $this->argument;
   }
 
@@ -903,6 +911,10 @@ function panels_relationship_get_contexts($relationships, &$contexts) {
   $return = array();
 
   foreach ($relationships as $rdata) {
+    if (!isset($rdata['context'])) {
+      continue;
+    }
+
     if (empty($contexts[$rdata['context']])) {
       continue;
     }
@@ -925,6 +937,10 @@ function panels_relationship_get_contexts($relationships, &$contexts) {
  */
 function panels_relationship_get_context($relationship, $arg) {
   if ($function = panels_plugin_get_function('relationships', $relationship['name'], 'context')) {
+    if (!isset($relationship['relationship_settings'])) {
+      $relationship['relationship_settings'] = array();
+    }
+
     $context = $function($arg, $relationship['relationship_settings']);
     if ($context) {
       $context->identifier = $relationship['identifier'];
@@ -1407,11 +1423,15 @@ function panels_get_directories($plugin_type) {
  * want them at the root level of your module directory, this code would work:
  * @code
  *  function MYMODULE_panels_include_directory($plugin_type) {
- *    if ($plugin_type == 'content_type' || $plugin_type == 'context') {
+ *    if ($plugin_type == 'content_types' || $plugin_type == 'contexts') {
  *      return 'panels_inc/' . $plugin_type;
  *    }
  *  }
  * @endcode
+ *
+ * Note finally that plurals matter! $plugin_type is always going to be the
+ * plural form of the plugin name - so 'contexts', 'content_types', etc. will
+ * work, but 'context', 'content_type' will have you tearing your hair out.
  *
  * @param string $plugin_type
  *    The plugin type for which the Panels engine is currently requesting the

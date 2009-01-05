@@ -1,5 +1,5 @@
 <?php
-// $Id: node.inc,v 1.7.2.3 2008/10/12 05:45:44 sdboyer Exp $
+// $Id: node.inc,v 1.7.2.7 2008/11/17 20:46:01 merlinofchaos Exp $
 
 
 /**
@@ -44,10 +44,10 @@ function panels_context_create_node($empty, $data = NULL, $conf = FALSE) {
   }
 
   if ($conf) {
-    $nid = is_array($data) ? $data['nid'] : $data->nid;
+    $nid = is_array($data) && isset($data['nid']) ? $data['nid'] : (is_object($data) ? $data->nid : 0);
 
     if (module_exists('translation')) {
-       if ($translation = module_invoke('translation', 'node_nid', $nid, $GLOBALS['locale'])) {
+       if ($translation = module_invoke('translation', 'node_nid', $nid, $GLOBALS['language']->language)) {
         $nid = $translation;
         $reload = TRUE;
       }
@@ -73,6 +73,12 @@ function panels_context_create_node($empty, $data = NULL, $conf = FALSE) {
 }
 
 function panels_context_node_settings_form($conf, $external = FALSE) {
+  if (empty($conf)) {
+    $conf = array(
+      'nid' => '',
+    );
+  }
+
   if ($external) {
     $form['external'] = array(
       '#type' => 'checkbox',
@@ -118,18 +124,18 @@ function panels_context_node_settings_form($conf, $external = FALSE) {
 /**
  * Validate a node.
  */
-function panels_context_node_settings_form_validate($form, &$form_state) {
+function panels_context_node_settings_form_validate($form, &$form_values, &$form_state) {
   // Validate the autocomplete
-  if (empty($form_state['values']['external']) && empty($form_state['values']['nid']) && empty($form_state['values']['node'])) {
+  if (empty($form_values['external']) && empty($form_values['nid']) && empty($form_values['node'])) {
     form_error($form['node'], t('You must select a node.'));
     return;
   }
 
-  if (empty($form_state['values']['node'])) {
+  if (empty($form_values['node'])) {
     return;
   }
 
-  $nid = $form_state['values']['node'];
+  $nid = $form_values['node'];
   $preg_matches = array();
   $match = preg_match('/\[nid: (\d+)\]/', $nid, $preg_matches);
   if (!$match) {
@@ -151,16 +157,16 @@ function panels_context_node_settings_form_validate($form, &$form_state) {
   }
   else {
     form_set_value($form['nid'], $node->nid, $form_state);
-    // $form_state['values']['nid'] = $node->nid;
+    // $form_values['nid'] = $node->nid;
   }
 }
 
-function panels_context_node_settings_form_submit($form, &$form_state) {
-  if ($form_state['values']['set_identifier']) {
-    $node = node_load($form_state['values']['nid']);
+function panels_context_node_settings_form_submit($form, &$form_values, &$form_state) {
+  if ($form_values['set_identifier']) {
+    $node = node_load($form_values['nid']);
     $form_state['values']['context']['identifier'] = $node->title;
   }
 
   // Don't let this be stored.
-  unset($form_state['values']['set_identifier']);
+  unset($form_values['set_identifier']);
 }
