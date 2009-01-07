@@ -1,5 +1,5 @@
 <?php
-// $Id: addresses_cck.module,v 1.11 2008/10/21 14:32:28 brmassa Exp $
+// $Id: addresses_cck.module,v 1.16 2008/12/11 18:20:24 brmassa Exp $
 /**
  * @author Bruno Massa
  * @file
@@ -37,7 +37,7 @@ function addresses_cck_content_is_empty($item, $field) {
 function addresses_cck_field_info() {
   return array(
     'addresses_cck' => array(
-      'label'       => 'Address',
+      'label'       => t('Address'),
       'description' => t('Store addresses.'),
       'callbacks'   => array(
         'tables'    => CONTENT_CALLBACK_DEFAULT,
@@ -66,7 +66,7 @@ function addresses_cck_field_formatter_info() {
     'field types'     => array('addresses_cck'),
   );
   $formatters = array(
-    'addresses' => array(
+    'default' => array(
       'label'           => t('Default'),
       'arguments'       => array('element'),
       'multiple values' => CONTENT_HANDLE_CORE,
@@ -179,7 +179,7 @@ function addresses_cck_field_settings($op, $field) {
 //         unset($field_cck['field']['additional fields']);
         $data[$table_alias][$field['field_name'] .'_'. $ftype] = $field_cck;
       }
-dpm($data['node_data_field_addresses']['field_addresses_aname']);
+
       return $data;
   }
 }

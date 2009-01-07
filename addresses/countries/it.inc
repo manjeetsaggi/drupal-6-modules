@@ -1,5 +1,5 @@
 <?php
-// $Id: it.inc,v 1.8 2008/08/04 12:36:01 brmassa Exp $
+// $Id: it.inc,v 1.11 2009/01/07 01:10:11 brmassa Exp $
 
 /**
  * @file
@@ -129,4 +129,21 @@ function addresses_province_list_it() {
     'VI' => t('Vicenza'),
     'VT' => t('Viterbo')
   );
+}
+
+/**
+ * Implementation of hook_address_format().
+ *
+ * Format the address using local preferences. It uses
+ * Token module to convert this tokens to their real values.
+ *
+ * @return
+ *   String. The address field tokens
+ */
+function addresses_address_format_it() {
+  return '!aname
+!additional
+!street
+!postal_code !city !province_code
+!country_name';
 }

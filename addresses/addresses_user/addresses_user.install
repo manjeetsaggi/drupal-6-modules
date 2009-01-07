@@ -1,5 +1,5 @@
 <?php
-// $Id: addresses_user.install,v 1.5 2008/10/10 03:38:51 brmassa Exp $
+// $Id: addresses_user.install,v 1.7 2008/11/17 16:01:57 alexiswilke Exp $
 /**
  * @author Bruno Massa
  * @file

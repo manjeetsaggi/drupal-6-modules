@@ -1,5 +1,5 @@
 <?php
-// $Id: nl.inc,v 1.7 2008/08/04 12:36:01 brmassa Exp $
+// $Id: nl.inc,v 1.10 2009/01/07 01:10:11 brmassa Exp $
 
 /**
  * @file
@@ -31,4 +31,21 @@ function addresses_province_list_nl() {
     'ZE' => t('Zeeland'),
     'ZH' => t('Zuid Holland')
   );
+}
+
+/**
+ * Implementation of hook_address_format().
+ *
+ * Format the address using local preferences. It uses
+ * Token module to convert this tokens to their real values.
+ *
+ * @return
+ *   String. The address field tokens
+ */
+function addresses_address_format_nl() {
+  return '!aname
+!additional
+!street
+!postal_code !province_code !city
+!country_name';
 }

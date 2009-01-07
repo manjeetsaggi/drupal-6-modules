@@ -1,5 +1,5 @@
 <?php
-// $Id: addresses_user.module,v 1.25 2008/10/22 22:07:29 brmassa Exp $
+// $Id: addresses_user.module,v 1.28 2008/11/17 16:01:57 alexiswilke Exp $
 /**
  * @author Bruno Massa
  * @file
@@ -223,5 +223,6 @@ function addresses_user_user($op, &$edit, &$account) {
           _addresses_user_address_save($address, $account->uid);
         }
       }
+      break;
   }
 }

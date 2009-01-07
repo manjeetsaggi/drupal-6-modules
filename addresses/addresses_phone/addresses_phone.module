@@ -1,5 +1,5 @@
 <?php
-// $Id: addresses_phone.module,v 1.5 2008/10/21 13:49:23 brmassa Exp $
+// $Id: addresses_phone.module,v 1.7 2008/11/17 16:01:57 alexiswilke Exp $
 /**
  * @author Bruno Massa
  * @file

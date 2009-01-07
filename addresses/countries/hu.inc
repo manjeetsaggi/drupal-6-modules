@@ -1,5 +1,5 @@
 <?php
-// $Id: hu.inc,v 1.7 2008/08/04 12:36:01 brmassa Exp $
+// $Id: hu.inc,v 1.10 2009/01/07 01:10:11 brmassa Exp $
 
 /**
  * @file
@@ -58,4 +58,22 @@ function addresses_province_list_hu() {
     'VZ' => t('Veszprém'),
     'ZA' => t('Zala')
   );
+}
+
+/**
+ * Implementation of hook_address_format().
+ *
+ * Format the address using local preferences. It uses
+ * Token module to convert this tokens to their real values.
+ *
+ * @return
+ *   String. The address field tokens
+ */
+function addresses_address_format_hu() {
+  return '!aname
+!additional
+!city
+!street
+!postal_code
+!country_name';
 }

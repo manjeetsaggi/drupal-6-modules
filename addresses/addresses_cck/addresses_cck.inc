@@ -1,5 +1,5 @@
 <?php
-// $Id: addresses_cck.inc,v 1.2 2008/08/10 16:24:43 brmassa Exp $
+// $Id: addresses_cck.inc,v 1.4 2008/11/17 16:01:57 alexiswilke Exp $
 /**
  * @author Bruno Massa
  * @file

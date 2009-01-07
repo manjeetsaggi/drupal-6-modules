@@ -1,5 +1,5 @@
 <?php
-// $Id: us.inc,v 1.8 2008/08/04 12:36:01 brmassa Exp $
+// $Id: us.inc,v 1.11 2009/01/07 01:10:11 brmassa Exp $
 
 /**
  * @file
@@ -91,9 +91,9 @@ function addresses_province_list_us() {
  *   String. The address field tokens
  */
 function addresses_address_format_us() {
-  return "!aname
+  return '!aname
 !street
 !additional
 !city, !province_name !postal_code
-!country_name";
+!country_name';
 }

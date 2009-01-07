@@ -1,5 +1,5 @@
 <?php
-// $Id: addresses_user.inc,v 1.22 2008/10/22 21:45:20 brmassa Exp $
+// $Id: addresses_user.inc,v 1.26 2008/11/17 16:01:57 alexiswilke Exp $
 /**
  * @author Bruno Massa
  * @file
@@ -24,6 +24,9 @@ function _addresses_user_address_delete($id) {
  *
  * @param $id
  *   Number. The external ID (eid) to look into the addresses_user table.
+ * @param $id_type
+ *   The type (name) of the identifier used to search the addresses_user
+ *   table. Default to 'eid'. Can be set to 'aid' although.
  * @return
  *   Array. The numeric list of addresses arrays
  */
@@ -116,7 +119,7 @@ function _addresses_user_address($op = NULL, $aid = NULL) {
     case 'edit':
       // Its time to include the address form!
 
-      // If its a existing address, get the whole
+      // If it's an existing address, get the whole
       // address information
       $edit = arg(4) ? _addresses_user_address_get(arg(4), 'aid') : array();
 

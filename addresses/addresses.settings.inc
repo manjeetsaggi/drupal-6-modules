@@ -1,5 +1,5 @@
 <?php
-// $Id: addresses.settings.inc,v 1.19 2008/10/22 21:45:20 brmassa Exp $
+// $Id: addresses.settings.inc,v 1.21 2008/11/17 16:01:56 alexiswilke Exp $
 /**
  * @author Bruno Massa
  * @file
