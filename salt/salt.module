@@ -1,0 +1,58 @@
+<?php
+// $Id: salt.module,v 1.1.2.1.2.1 2008/03/29 21:57:44 karthik Exp $
+
+/**
+ * @file
+ * The salt module allows for Drupal passwords to be 'salted' - an internal
+ * string is appended to the password prior to storage - making them less prone
+ * to dictionary attacks, rainbow tables and the like.
+ *
+ * @author Karthik Kumar ( http://drupal.org/user/21209 )
+ */
+
+/**
+ * Implementation of hook_menu().
+ */
+function salt_menu() {
+  $items = array();
+
+  $items['admin/settings/salt'] = array(
+    'title' => t('Salt'),
+    'description' => t('Set the salt string.'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('salt_settings_form'),
+    'access arguments' => array('administer site configuration'),
+    'file' => 'salt.admin.inc'
+  );
+
+  return $items;
+}
+
+/**
+ * Implementation of hook_form_alter.
+ */
+function salt_form_alter(&$form, $form_state, $form_id) {
+  if (in_array($form_id, array('user_login_block', 'user_login', 'user_profile_form', 'user_register'))) {
+    // Give salt module's validate function preference over user_login.
+    array_unshift($form['#validate'], 'salt_login_validate');
+  }
+}
+
+/**
+ * Validation handler for the user_login form.
+ */
+function salt_login_validate($form, &$form_state) {
+  $form_state['values']['pass'] = trim($form_state['values']['pass']);
+
+  if (strlen($form_state['values']['pass'])) {
+    $salted_pass = $form_state['values']['pass'] . variable_get('salt', '');
+
+    // The user_profile_form is structured differently to the login forms.
+    if($form_state['values']['form_id'] == 'user_profile_form') {
+      form_set_value($form['account']['pass'], $salted_pass, $form_state);
+    }
+    else {
+      form_set_value($form['pass'], $salted_pass, $form_state);
+    }
+  }
+}

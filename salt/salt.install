@@ -1,0 +1,17 @@
+<?php
+// $Id: salt.install,v 1.1 2007/10/24 11:08:19 karthik Exp $
+
+/**
+ * Implementation of hook_install().
+ */
+function salt_install() {
+  drupal_set_message(t('Salt module: Installation script complete.'));
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function salt_uninstall() {
+  variable_del('salt');
+  drupal_set_message(t('Salt module: Uninstallation script complete.'));
+}
