@@ -4,9 +4,9 @@ description     = "Add phone and fax fields on addresses"
 dependencies[]  = addresses
 name            = "Addresses - Phone/Fax"
 
-; Information added by drupal.org packaging script on 2009-01-07
-version = "6.x-1.02"
+; Information added by drupal.org packaging script on 2009-01-09
+version = "6.x-1.03"
 core = "6.x"
 project = "addresses"
-datestamp = "1231293609"
+datestamp = "1231485003"
 

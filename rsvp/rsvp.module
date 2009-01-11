@@ -1,5 +1,5 @@
 <?php
-// $Id: rsvp.module,v 1.17.2.14 2008/12/30 21:04:48 ulf1 Exp $
+// $Id: rsvp.module,v 1.17.2.20 2009/01/09 21:32:14 ulf1 Exp $
 
 /**
  * @module rsvp
@@ -148,7 +148,7 @@ function rsvp_theme() {
     ),
     'rsvp_invite_mail' => array(
       'file' => 'rsvp.theme',
-      'arguments' => array('invite' => NULL, 'sender' => NULL),
+      'arguments' => array('rsvp' => NULL, 'invite' => NULL, 'sender' => NULL),
     ),
     'rsvp_message_mail_subject' => array(
       'file' => 'rsvp.theme',
@@ -156,7 +156,7 @@ function rsvp_theme() {
     ),
     'rsvp_message_mail' => array(
       'file' => 'rsvp.theme',
-      'arguments' => array('invite' => NULL, 'sender' => NULL, 'body' => NULL),
+      'arguments' => array('rsvp' => NULL, 'invite' => NULL, 'sender' => NULL, 'body' => NULL),
     ),
     'rsvp_attendees_outertable' => array(
       'file' => 'rsvp.theme',
@@ -208,7 +208,7 @@ function rsvp_help($path, $arg) {
     	global $user;
       $output = '<p>'. t('The RSVP module lets users invite people by email to events and track a list of people who will be attending.    The RSVP module requires either the event module or the date module because it is necessary to specify a content type to invite people to first.') .'</p>';
       $output .= '<p>'. t('The RSVP module also lets users invite users subscribed to newsletters, which requires !simplenews installed, as well as invite other registered users.', array('!simplenews' => l(t('Simplenews module'), 'http://drupal.org/project/simplenews'))) .'</p>';
-      $output .= '<p>'. t('The RSVP page shows a <em>Invitation</em> tab in the content type page and in <em>my account</em> page. There are confirmation screens for creating and editing invitations. Email addresses which are input for invitations have input validation.  RSVP also creates an invitation url by hash value access so that invitees can click a URL and be taken directly to their invitation. For each invitation there are view, edit, manage, and send tabs. Users can manage invitees through the "manage invitees" tab. Users can also send attendees a message through the send message tab.') .'</p>';
+      $output .= '<p>'. t('The RSVP page shows an <em>Invitation</em> tab in the content type page and in the users <em>My account</em> page. There are confirmation screens for creating and editing invitations. Email addresses which are input for invitations have input validation.  RSVP also creates an invitation url by hash value access so that invitees can click a URL and be taken directly to their invitation. For each invitation there are view, edit, manage, and send tabs. Users can manage invitees through the "manage invitees" tab. Users can also send attendees a message through the send message tab.') .'</p>';
       $output .= t('<p>You can:</p>
 <ul>
 <li>Enable the RSVP module at !admin-modules.</li>
@@ -1513,7 +1513,7 @@ function rsvp_show_attendees_form(&$form_state, $rsvp, $invite) {
     }
 
     if (user_is_anonymous()) {  
-      $content = '<br>' . theme('rsvp_event_anonymous');
+      $content = '<br />' . theme('rsvp_event_anonymous');
     }
     
     if ($are_responses_visible == true) {
@@ -1729,7 +1729,7 @@ function rsvp_add_attendees_form(&$form_state, $rsvp, $invite) {
   $form['rsvp_add_attendees']['recipients'] = array(
     '#type' => 'textarea',
     '#title' => t('Add Invitees'),
-    '#default_value' => check_plain(''),
+    '#default_value' => '',
     '#cols' => 60,
     '#rows' => 3,
     '#description' => t('Enter email addresses or usernames each in a separate line.'),
@@ -1826,7 +1826,7 @@ function _rsvp_add_attendees($rsvp, $invite, $attendee_list, $send_rsvp) {
   
   if ($send_rsvp == true) {
     // send invitations
-    $status = _rsvp_send_multiple_invitations($rsvp->rid, $invite);
+    $status = _rsvp_send_multiple_invitations($rsvp, $invite);
   }
 
   $content .= theme('rsvp_send_status', array_merge($emails, $status));
@@ -2040,7 +2040,7 @@ function rsvp_csv_hash_form_access($connector, $rsvp, $invite) {
 function rsvp_attendees_send_invites_form(&$form_state, $rsvp) {
 
   // send invitations
-  $status = _rsvp_send_multiple_invitations($rsvp->rid);
+  $status = _rsvp_send_multiple_invitations($rsvp);
   // theme the output
   $content = theme('rsvp_send_status', $status);
   drupal_set_message($content);
@@ -2113,12 +2113,13 @@ function rsvp_message_form(&$form_state, $rsvp, $node = NULL, $invite = NULL) {
   $form['rsvp_message']['subject'] = array(
     '#type' => 'textfield',
     '#title' => t('Message Subject'),
-    '#default_value' => check_plain(''),
+    '#default_value' => '',
     '#size' => 40,
     '#maxlength' => 40,
     '#description' => t('This is the subject for your email message')
   );
-  $form['rsvp_message']['body'] = array(
+  //calling the field 'recipients' will disable fck editor for this field. I hope that works for other editors as well.   
+  $form['rsvp_message']['recipients'] = array(
     '#type' => 'textarea',
     '#title' => t('Message Body'),
     '#default_value' => check_markup(''),
@@ -2149,10 +2150,13 @@ function rsvp_message_form(&$form_state, $rsvp, $node = NULL, $invite = NULL) {
 }
 
 function rsvp_message_form_submit($form, &$form_state) {
-  $status = rsvp_send_message($form_state['values']['rid'], 
+  
+	$rsvp = rsvp_load($form_state['values']['rid']);
+	
+	$status = rsvp_send_message($rsvp, 
                               $form_state['values']['status'],
                               $form_state['values']['subject'],
-                              $form_state['values']['body'],
+                              $form_state['values']['recipients'],
                               $form_state['values']['hash']);
   $content = theme('rsvp_send_status', $status);
   drupal_set_message($content);
@@ -2187,7 +2191,7 @@ function rsvp_reply_form($form_state, $invite) {
 
   if ($first_reply == false) {
     $form['rsvp_reply']['text'] = array(
-      '#value' => t('Your reply has been posted for the host.<br>Click the button below after making changes.'),
+      '#value' => t('Your reply has been posted for the host.<br />Click the button below after making changes.'),
     );
   }
   
@@ -2195,7 +2199,7 @@ function rsvp_reply_form($form_state, $invite) {
   $form['rsvp_reply']['invite_reply'] = array(
     '#type' => 'radios',
     '#title' => t('Will you attend?'),
-    '#default_value' => check_plain($invite->response),
+    '#default_value' => $invite->response,
     '#options' => $responses,
     '#description' => t('Select your response to the invitation.'),
     '#prefix' => '<div class="container-inline">',
@@ -2206,7 +2210,7 @@ function rsvp_reply_form($form_state, $invite) {
   $form['rsvp_reply']['reply'] = array(
     '#type' => 'textarea',
     '#title' => t('Your comment'),
-    '#default_value' => check_plain($invite->comment),
+    '#default_value' => $invite->comment,
     '#cols' => 30,
     '#rows' => 5,
     '#description' => t('Add a comment to your response.')
@@ -2214,7 +2218,7 @@ function rsvp_reply_form($form_state, $invite) {
   $form['rsvp_reply']['totalguests'] = array(
     '#type' => 'textfield',
     '#title' => t('Total Guests (incl. you)'),
-    '#default_value' => check_plain($invite->totalguests),
+    '#default_value' => $invite->totalguests,
     '#size' => 3,
     '#maxlength' => 3,
     '#description' => t('The number of guests you plan to bring to the event (including yourself)')
@@ -2416,7 +2420,7 @@ function rsvp_addedit_form(&$form_state, $node = NULL, $rsvp = NULL) {
   $form['name'] = array(
     '#type' => 'textfield',
     '#title' => t('Title'),
-    '#default_value' => check_plain($rsvp->name),
+    '#default_value' => $rsvp->name,
     '#required' => TRUE,
     '#size' => 80,
     '#maxlength' => 128,
@@ -2449,7 +2453,7 @@ function rsvp_addedit_form(&$form_state, $node = NULL, $rsvp = NULL) {
       '#title' => t('Event Start'),
       '#required' => TRUE,
       '#options' => array_map('check_plain', $fields),
-      '#default_value' => check_plain(isset($rsvp->startdate) ? $rsvp->startdate : 0),
+      '#default_value' => isset($rsvp->startdate) ? $rsvp->startdate : 0,
       '#description' => t('Select one of the available start dates to be used as invitation start date.'),
     );
   }
@@ -2527,7 +2531,7 @@ function rsvp_addedit_form(&$form_state, $node = NULL, $rsvp = NULL) {
   $form['rsvp_field_2']['text_whoiscoming'] = array(
     '#type' => 'textfield',
     '#title' => t('Responses'),
-    '#default_value' => check_plain($rsvp->text_whoiscoming),
+    '#default_value' => $rsvp->text_whoiscoming,
     '#required' => TRUE,
     '#size' => 80,
     '#maxlength' => 128,
@@ -2536,7 +2540,7 @@ function rsvp_addedit_form(&$form_state, $node = NULL, $rsvp = NULL) {
   $form['rsvp_field_2']['text_yes'] = array(
     '#type' => 'textfield',
     '#title' => t('Yes'),
-    '#default_value' => check_plain($rsvp->text_yes),
+    '#default_value' => $rsvp->text_yes,
     '#required' => TRUE,
     '#size' => 80,
     '#maxlength' => 128,
@@ -2545,7 +2549,7 @@ function rsvp_addedit_form(&$form_state, $node = NULL, $rsvp = NULL) {
   $form['rsvp_field_2']['text_no'] = array(
     '#type' => 'textfield',
     '#title' => t('No'),
-    '#default_value' => check_plain($rsvp->text_no),
+    '#default_value' => $rsvp->text_no,
     '#required' => TRUE,
     '#size' => 80,
     '#maxlength' => 128,
@@ -2554,7 +2558,7 @@ function rsvp_addedit_form(&$form_state, $node = NULL, $rsvp = NULL) {
   $form['rsvp_field_2']['text_maybe'] = array(
     '#type' => 'textfield',
     '#title' => t('Maybe'),
-    '#default_value' => check_plain($rsvp->text_maybe),
+    '#default_value' => $rsvp->text_maybe,
     '#required' => TRUE,
     '#size' => 80,
     '#maxlength' => 128,
@@ -2763,10 +2767,12 @@ function rsvp_delete_form_submit($form, &$form_state) {
  * Implementation of hook_mail
  * requires the following parameters:
  * -for invite_mail:
+ *    $params['rsvp']
  *    $params['invite']
  *    $params['subject']
  *    $params['sender']
  * -for message_mail:
+ *    $params['rsvp']
  *    $params['invite']
  *    $params['subject']
  *    $params['sender']
@@ -2782,11 +2788,11 @@ function rsvp_mail($key, &$message, $params) {
   switch($key) {
     case 'invite_mail':
       $message['subject'] = theme('rsvp_invite_mail_subject', $params['invite'], $params['subject']);
-      $message['body'] = drupal_html_to_text(theme('rsvp_invite_mail', $params['invite'], $params['sender']));
+      $message['body'] = drupal_html_to_text(theme('rsvp_invite_mail', $params['rsvp'], $params['invite'], $params['sender']));
       break;
     case 'message_mail':
       $message['subject'] = theme('rsvp_message_mail_subject', $params['invite'], $params['subject']);
-      $message['body'] = drupal_html_to_text(theme('rsvp_message_mail', $params['invite'], $params['sender'], $params['body']));
+      $message['body'] = drupal_html_to_text(theme('rsvp_message_mail', $params['rsvp'], $params['invite'], $params['sender'], $params['body']));
       break;
   }
 }
@@ -2795,12 +2801,12 @@ function rsvp_mail($key, &$message, $params) {
 * Sends an invitation email to one invitee.
 * Is beeing called by _rsvp_send_multiple_invitations
 * @ingroup rsvp_mail
+* @param $rsvp The rsvp object.
 * @param $invite The invite object to send the mail to.
-* @param $rid The Id of the rsvp object.
 * @param $inviter The hash of the user sending the email or NULL (if NULL, moderator sends email).
 * @return boolean. True if mail is successfully sent.
 */
-function _rsvp_send_one_invitation($invite, $rid, $inviter = NULL) {
+function _rsvp_send_one_invitation($rsvp, $invite, $inviter = NULL) {
   global $language;
 	
   // check whether the message is sent from a user who's invited
@@ -2815,32 +2821,37 @@ function _rsvp_send_one_invitation($invite, $rid, $inviter = NULL) {
     $from = _rsvp_email_getFromField($sender, $inviter->email);
   }
   
-  $rsvp = rsvp_load($rid);
-
   $u = user_load($rsvp->uid);
   $preferred_language = user_preferred_language($u);
 
   $to = $invite->email;
 
+  $params['rsvp'] = $rsvp;
   $params['invite'] = $invite;
   $params['subject'] = $rsvp->name;
   $params['sender'] = $sender;
   
-  return drupal_mail('rsvp', 'invite_mail', $to, $preferred_language, $params, $from);
+  $ret = drupal_mail('rsvp', 'invite_mail', $to, $preferred_language, $params, $from);
+
+  if ($ret == true) {
+    db_query('UPDATE {rsvp_invite} SET invited = 1 WHERE hash = \'%s\'', $invite->hash);
+  }
+  
+  return $ret;      
 }
 
 /**
 * Send a message by email to specific attendees of an rsvp instance.
 *
 * @ingroup rsvp_mail
-* @param $rid The rsvp id.
+* @param $rsvp The rsvp object.
 * @param $audience String The audience for the message (maybe, no, yes, all).
 * @param $subject String The subject you want to send.
 * @param $body String The body you want to send.
 * @param $hash The invitee hashcode of the person triggering the message. 
 * @return string of formatted recipients, or empty string depending on $confirm.
 */
-function rsvp_send_message($rid, $audience, $subject, $body, $hash = NULL) {
+function rsvp_send_message($rsvp, $audience, $subject, $body, $hash = NULL) {
 
   // check whether the message is sent from a user who's invited
   // yet allowed to message other attendees
@@ -2858,7 +2869,7 @@ function rsvp_send_message($rid, $audience, $subject, $body, $hash = NULL) {
   $status['success_send'] = array();
   $status['failed_send'] = array();
 
-  $attendees = _rsvp_get_attendees($rid);
+  $attendees = _rsvp_get_attendees($rsvp->rid);
   while ($attendee = db_fetch_object($attendees)) {
     $invite = _rsvp_get_invite_by_hash($attendee->hash);
     
@@ -2868,6 +2879,7 @@ function rsvp_send_message($rid, $audience, $subject, $body, $hash = NULL) {
 
       $preferred_language = user_preferred_language($inviteuser);
 
+      $params['rsvp'] = $rsvp;
       $params['invite'] = $attendee;
       $params['subject'] = $subject;
       $params['body'] = $body;
@@ -3684,20 +3696,18 @@ function _rsvp_is_invitation_viral($rsvp, $invite) {
 * Emails the invitation to all attendees of an rsvp instance.
 *
 * @ingroup rsvp_mail
-* @param $rid The rid of the rsvp.
+* @param $rsvp The rsvp object.
 * @param $inviter The hash of the user sending the email or NULL (if NULL, moderator sends email). 
 * @param $resend True: sends only to recipients with received flag not set. default: false.
 * @return array of status values.
 */
-function _rsvp_send_multiple_invitations($rid, $inviter = NULL, $resend = FALSE) {
+function _rsvp_send_multiple_invitations($rsvp, $inviter = NULL, $resend = FALSE) {
   $status['success_send'] = array();
   $status['failed_send'] = array();
-  $attendees = _rsvp_get_attendees($rid);
-  while ($attendee = db_fetch_object($attendees)) {
-    if (!($resend && $attendee->received) && !($attendee->invited)) {
-      $invite = _rsvp_get_invite_by_hash($attendee->hash);
-      if (_rsvp_send_one_invitation($invite, $rid, $inviter)) { 
-        db_query('UPDATE {rsvp_invite} SET invited = 1 WHERE hash = \'%s\'', $attendee->hash);
+  $invitees = _rsvp_get_attendees($rsvp->rid);
+  while ($invite = db_fetch_object($invitees)) {
+    if (!($resend && $invite->received) && !($invite->invited)) {
+      if (_rsvp_send_one_invitation($rsvp, $invite, $inviter)) { 
         $status['success_send'][] = _rsvp_getAttendeeEmail($invite);
       }
       else {
@@ -4168,7 +4178,7 @@ function _rsvp_getAttendeeEmail($attendee, $stripEmailAddress = true) {
  */
 function _rsvp_email_getFromField($username, $useremail) {
 
-  $pick_address = RSVP_EMAIL_SITEADDRESS;
+  $pick_address = RSVP_EMAIL_CREATOR;
   $from_target = $from_creator = $username .' <'. $useremail .'>';
   	
   $emailfrom = variable_get('rsvp_from_address', NULL);

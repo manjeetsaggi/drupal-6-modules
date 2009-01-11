@@ -1,5 +1,5 @@
 <?php
-// $Id: addresses_phone.module,v 1.7 2008/11/17 16:01:57 alexiswilke Exp $
+// $Id: addresses_phone.module,v 1.8 2009/01/08 07:57:45 brmassa Exp $
 /**
  * @author Bruno Massa
  * @file
@@ -80,4 +80,43 @@ function addresses_phone_addressesfieldapi($op, $fields = array(), $values = arr
 
     return $form;
   }
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function addresses_phone_theme() {
+  return array(
+    // Shows address fields
+    'addresses_field_phone' => array(
+      'arguments' => array('form'),
+//       'file'      => 'addresses_phone.theme.inc',
+    ),
+    'addresses_field_fax' => array(
+      'arguments' => array('form'),
+//       'file'      => 'addresses_phone.theme.inc',
+    ),
+  );
+}
+
+/**
+ * Print the field Phone.
+ *
+ * @param $afields
+ *   Array. All field values
+ * @ingroup themeable
+ */
+function theme_addresses_field_phone($afields) {
+  return '<dt>'. t('Phone') .': </dt><dd class="phone">'. $afields['phone'] .'</dd>';
+}
+
+/**
+ * Print the field Fax.
+ *
+ * @param $afields
+ *   Array. All field values
+ * @ingroup themeable
+ */
+function theme_addresses_field_fax($afields) {
+  return '<dt>'. t('Fax') .': </dt><dd class="fax">'. $afields['phone'] .'</dd>';
 }

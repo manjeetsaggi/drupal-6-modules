@@ -75,15 +75,43 @@ as well.
 TODO/Features for upcoming 2.0 release:
 - Tighter Integration to event nodes. Why do we need an extra Invitation page at all??
 - http://drupal.org/node/293409 : Block on the side of eventnodes with the attendees
-- http://drupal.org/node/344328 : notify admin of RSVP changes
+- http://drupal.org/node/199968 : Creating a control pannel or getting access to specific user links
+
+- http://drupal.org/node/344328 : notify creator/moderators/admin of RSVP changes
+- Integration with Action and Rules
 - http://drupal.org/node/331423 : Can RSVP and remove RSVP be exposed as Drupal Actions, so other modules like Flag could trigger this action?
   possible actions : create Invitation, add Invitees, add Invitees(simplenews), add Invitees(roles), 
                      delete Invitation, send Message, send Invitation, remove Invitee
 
-- http://drupal.org/node/180153 : Add invitations to "MyCalendar" 
+- more options about who can send messages to whom: checkboxes per group (invitee, respondent, attendees)
 
-- Add icon to send message to a specific Invitee (if allowed for user/invitees)
-- Add icon to send invitation to a specific Invitee
+- http://drupal.org/node/36118 : disable answer "maybe", allow direct registration for authorized users. 
+- http://drupal.org/node/34183 : Integrate start and enddate during invitees can reply.
+
+
+- http://drupal.org/node/344326 : replace pre-@ name with real name
+- http://drupal.org/node/180153 : Add invitations to "MyCalendar" 
+- http://drupal.org/comment/reply/356236 : Support "Basic/Advanced Settings" to honor simple users needs. 
+
+- Integration with Buddylist2/Friendlist/User Relationship/Organic Groups(See OG RSVP)/Plaxo/CiviCRM 
+  -http://drupal.org/node/84918, http://drupal.org/node/21400 : OG group integration
+  -http://drupal.org/node/180704, http://drupal.org/node/258108 : Plaxo integration
+  -http://drupal.org/node/38918, http://drupal.org/node/30522: CiviCRM integration
+  
+  
+  
+
+- Email: Send optional confirmation email to invitees when they change their response (as default option and reply box option).
+- Email: Emails should be template driven => Introduction of RSVP tokens.
+
+- Guest List: Add icon/text for the organizer(The organizer). 
+- Guest List: Add date/time as field when attendee replied.
+- Guest List: Add icon to send message to a specific Invitee (if allowed for user/invitees).
+- Guest List: Add icon to send invitation to a specific Invitee.
+- Guest List: Add icon for regular invitees to view status.
+- Guest List: Add link to user profile for regular invitees based on drupal permission.
+- Add red reply button instead of link like the event manager module has(-http://em-demo.mind-sky.com/?q=node/3).
+
 - preview option when writing an rsvp
 - automatic update of invitations startdate when startdate in node changes.
 - Allow parallel usage of event connector and date connector

@@ -1,5 +1,5 @@
 <?php
-// $Id: addresses_user.module,v 1.28 2008/11/17 16:01:57 alexiswilke Exp $
+// $Id: addresses_user.module,v 1.29 2009/01/08 08:14:55 brmassa Exp $
 /**
  * @author Bruno Massa
  * @file
@@ -139,7 +139,7 @@ function _addresses_user_form_submit($form, &$form_state) {
   }
 
   $address =& $form_state['values']['addresses'];
-//   $address['aid'] = $form_state['values']['addresses']['aid'];
+
   _addresses_user_address_save($address, $uid);
 }
 

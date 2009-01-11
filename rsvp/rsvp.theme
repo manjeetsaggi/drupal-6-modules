@@ -1,6 +1,6 @@
 <?php
 /**
- * $Id: rsvp.theme,v 1.6.2.9 2008/12/30 21:04:48 ulf1 Exp $
+ * $Id: rsvp.theme,v 1.6.2.12 2009/01/09 16:55:53 ulf1 Exp $
  
  * @addtogroup themeable
  * @{
@@ -65,10 +65,10 @@ function theme_rsvp_preview($content = NULL) {
 
 function theme_rsvp_salutation($name = NULL) {
   
-  $output = '<br>';
+  $output = '<br />';
   
   if (!is_null($name)) { 
-    $salutation = t('Dear !name!', array('!name' => $name)) . '<br>';
+    $salutation = t('Dear !name!', array('!name' => $name)) . '<br />';
     $output .= $salutation;
   }
   
@@ -107,24 +107,24 @@ function theme_rsvp_invite_mail_subject($invite = NULL, $subject = NULL) {
  * @param $invite The invite object for the user it is destined to.
  * @param $sender String The name of the sender. (already cleaned)
  */
-function theme_rsvp_invite_mail($invite = NULL, $sender = NULL) {
+function theme_rsvp_invite_mail($rsvp = NULL, $invite = NULL, $sender = NULL) {
   global $user;
   $site = variable_get("site_name", "drupal");
   //keep &nbsp; in the code. Otherwise the mail processor will remove linebreaks.
-  $body = t('Hello !uname!', array('!uname'=>_rsvp_getAttendeeEmail($invite, true))) . '<br>&nbsp;<br>';
-  $body .= t('You have been invited by !sender at !site.', array('!sender'=>$sender, '!site'=>$site)) . '<br>&nbsp;<br>';
-  $body .= t('You can view the full invitation, reply if you want to join or not, and add a comment by following this link: ');
-  $body .= url("rsvp/email/$invite->hash/view", array('absolute'=>true)) . '<br>&nbsp;<br>';
+  $output = t('Hello !uname!', array('!uname'=>_rsvp_getAttendeeEmail($invite, true))) . '<br />&nbsp;<br />';
+  $output .= t('You have been invited by !sender at !site.', array('!sender'=>$sender, '!site'=>$site)) . '<br />&nbsp;<br />';
+  $output .= t('You can view the full invitation, reply if you want to join or not, and add a comment by following this link: ');
+  $output .= url("rsvp/email/$invite->hash/view", array('absolute'=>true)) . '<br />&nbsp;<br />';
 
-  $body .= t('You can view the event by following this link: ');
-  $body .= url("node/$invite->nid", array('absolute'=>true)) . '<br>&nbsp;<br>';
+  $output .= t('You can view the event by following this link: ');
+  $output .= url("node/$invite->nid", array('absolute'=>true)) . '<br />&nbsp;<br />';
 
-  $body .= t('You also can visit the inviation by going to ') . '<i>' . t('My account') . '|' . t('Invitations') . '</i><br>&nbsp;<br>';
-  $body .= t('Please do not reply to this email.') . '<br>&nbsp;<br>&nbsp;<br>';
-  $body .= t('***************************************************') . '<br>&nbsp;<br>';
-  $body .= check_markup($invite->invite_text);
+  $output .= t('You also can visit the inviation by going to ') . '<i>' . t('My account') . '|' . t('Invitations') . '</i><br />&nbsp;<br />';
+  $output .= t('Please do not reply to this email.') . '<br />&nbsp;<br />&nbsp;<br />';
+  $output .= t('***************************************************') . '<br />&nbsp;<br />';
+  $output .= check_markup($rsvp->invite_text);
 
-  return $body;
+  return $output;
 }
 
 function theme_rsvp_message_mail_subject($invite = NULL, $subject = NULL) {
@@ -133,23 +133,23 @@ function theme_rsvp_message_mail_subject($invite = NULL, $subject = NULL) {
    return $subject;
 }
 
-function theme_rsvp_message_mail($invite = NULL, $sender = NULL, $body = NULL) {
+function theme_rsvp_message_mail($rsvp = NULL, $invite = NULL, $sender = NULL, $body = NULL) {
   global $user;
   $site = variable_get("site_name", "drupal");
 
   //keep &nbsp; in the code. Otherwise the mail processor will remove linebreaks.
-  $body = t('Hello !uname!', array('!uname'=>_rsvp_getAttendeeEmail($invite, true))) . '<br>&nbsp;<br>';
-  $body .= t('!sender at !site has sent you a message.', array('!sender'=>$sender, '!site'=>$site)) . '<br>&nbsp;<br>';
+  $output = t('Hello !uname!', array('!uname'=>_rsvp_getAttendeeEmail($invite, true))) . '<br />&nbsp;<br />';
+  $output .= t('!sender at !site has sent you a message.', array('!sender'=>$sender, '!site'=>$site)) . '<br />&nbsp;<br />';
 
-  $body .= t('You can view the full invitation, reply if you want to join or not, and add a comment by following this link: ');
-  $body .= url("rsvp/email/$invite->hash/view", array('absolute'=>true)) . '<br>&nbsp;<br>';
+  $output .= t('You can view the full invitation, reply if you want to join or not, and add a comment by following this link: ');
+  $output .= url("rsvp/email/$invite->hash/view", array('absolute'=>true)) . '<br />&nbsp;<br />';
 
-  $body .= t('You also can visit the inviation by going to ') . '<i>' . t('My account') . '|' . t('Invitations') . '</i><br>&nbsp;<br>';
-  $body .= t('Please do not reply to this email.') . '<br>&nbsp;<br>&nbsp;<br>';
-  $body .= t('***************************************************') . '<br>&nbsp;<br>';
-  $body .= check_markup($body);
+  $output .= t('You also can visit the inviation by going to ') . '<i>' . t('My account') . '|' . t('Invitations') . '</i><br />&nbsp;<br />';
+  $output .= t('Please do not reply to this email.') . '<br />&nbsp;<br />&nbsp;<br />';
+  $output .= t('***************************************************') . '<br />&nbsp;<br />';
+  $output .= check_markup($body);
 
-  return $body;
+  return $output;
 }
 
 function theme_rsvp_attendees_outertable($header = NULL, $whoiscoming = NULL, $answer_blocks = NULL, $footer = NULL) {

@@ -1,5 +1,5 @@
 <?php
-// $Id: addresses_user.inc,v 1.26 2008/11/17 16:01:57 alexiswilke Exp $
+// $Id: addresses_user.inc,v 1.27 2009/01/08 08:14:55 brmassa Exp $
 /**
  * @author Bruno Massa
  * @file
@@ -176,6 +176,7 @@ function _addresses_user_form(&$form_state, $fields = array(), $values = array()
     '#type'           => 'addresses_elements',
     '#tree'           => TRUE
   );
+  $form['#uid'] = $values['eid'];
 
   // Add the submit button
   if (empty($values['aid'])) {

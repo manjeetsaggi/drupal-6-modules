@@ -3,9 +3,9 @@ name = Beautify
 description = Processes HTML output to clean, tidy and beautify.
 core = 6.x
 
-; Information added by drupal.org packaging script on 2009-01-07
+; Information added by drupal.org packaging script on 2009-01-10
 version = "6.x-1.x-dev"
 core = "6.x"
 project = "beautify"
-datestamp = "1231286524"
+datestamp = "1231588917"
 

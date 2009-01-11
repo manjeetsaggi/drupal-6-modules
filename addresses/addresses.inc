@@ -1,5 +1,5 @@
 <?php
-// $Id: addresses.inc,v 1.56 2008/11/17 16:01:56 alexiswilke Exp $
+// $Id: addresses.inc,v 1.57 2009/01/08 07:56:26 brmassa Exp $
 /**
  * @author Bruno Massa
  * @file
@@ -681,6 +681,28 @@ function theme_addresses($afields) {
   drupal_add_css(drupal_get_path('module', 'addresses') .'/addresses.css');
 
   return $format_address;
+}
+
+/**
+ * Print the field Primary.
+ *
+ * @param $afields
+ *   Array. All field values
+ * @ingroup themeable
+ */
+function theme_addresses_field_primary($afields) {
+  return ' ('. t('default') .')';
+}
+
+/**
+ * Print the field Address name.
+ *
+ * @param $afields
+ *   Array. All field values
+ * @ingroup themeable
+ */
+function theme_addresses_field_aname($afields) {
+  return '<span class="fn org">'. theme('placeholder', $object['aname']) . $values['primary'] .'</span>';
 }
 
 /**

@@ -1,3 +1,18 @@
+01/09/2009 - ulf1
+#356421 : Translation/string issues
+
+01/08/2009 - ulf1
+- Fixed: invitation email includes "n/a" instead the invitation message
+- Fixed: check_plain for #default_value caused &amp characters showing up for some textual rsvp settings.
+
+12/31/2008 - ulf1
+#352897 : by rastatt: Added german translation.  
+
+12/30/2008 - ulf1
+- Disabled Wysiwyg editor for "send message" body field.
+- Fixed: "Send Message" email contains invitation text twice instead of the entered message.
+- Fixed: Default setting for "Sender Information" under RSVP setting was missing. Resulted in wrong email address during mail sending.
+
 12/30/2008 - ulf1
 - Improoved invitation email and message email context.
 - Fixed permission problem: Moderator can not send message emails if setting is restrictive.
