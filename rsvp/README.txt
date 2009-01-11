@@ -73,6 +73,7 @@ as well.
 
    
 TODO/Features for upcoming 2.0 release:
+--------------------------------------
 - Tighter Integration to event nodes. Why do we need an extra Invitation page at all??
 - http://drupal.org/node/293409 : Block on the side of eventnodes with the attendees
 - http://drupal.org/node/199968 : Creating a control pannel or getting access to specific user links
@@ -103,6 +104,7 @@ TODO/Features for upcoming 2.0 release:
 
 - Email: Send optional confirmation email to invitees when they change their response (as default option and reply box option).
 - Email: Emails should be template driven => Introduction of RSVP tokens.
+- Email: http://drupal.org/node/84918: Send emails via privatemsg instead by email.
 
 - Guest List: Add icon/text for the organizer(The organizer). 
 - Guest List: Add date/time as field when attendee replied.

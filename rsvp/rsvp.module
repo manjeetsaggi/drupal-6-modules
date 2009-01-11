@@ -1,5 +1,5 @@
 <?php
-// $Id: rsvp.module,v 1.17.2.20 2009/01/09 21:32:14 ulf1 Exp $
+// $Id: rsvp.module,v 1.17.2.21 2009/01/10 00:37:34 ulf1 Exp $
 
 /**
  * @module rsvp
@@ -2176,8 +2176,12 @@ function rsvp_reply_form($form_state, $invite) {
   
   $responses = array(RSVP_ATT_YES => t('Yes'), RSVP_ATT_NO => t('No'), RSVP_ATT_MAYBE => t('Maybe'));
   if ($invite->response == RSVP_ATT_NONE) {
-//    $responses[RSVP_ATT_NONE] = t('None');
+    $response_default = RSVP_ATT_YES;
     $first_reply = true;
+    //    $responses[RSVP_ATT_NONE] = t('None');
+  }
+  else {
+  	$response_default = $invite->response;
   }
 
   $form = array();
@@ -2199,7 +2203,7 @@ function rsvp_reply_form($form_state, $invite) {
   $form['rsvp_reply']['invite_reply'] = array(
     '#type' => 'radios',
     '#title' => t('Will you attend?'),
-    '#default_value' => $invite->response,
+    '#default_value' => $response_default,
     '#options' => $responses,
     '#description' => t('Select your response to the invitation.'),
     '#prefix' => '<div class="container-inline">',
