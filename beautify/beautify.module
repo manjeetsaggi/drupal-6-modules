@@ -1,5 +1,5 @@
 <?php
-// $Id: beautify.module,v 1.3.2.3 2009/01/10 10:56:27 psynaptic Exp $
+// $Id: beautify.module,v 1.3.2.4 2009/01/13 10:15:11 psynaptic Exp $
 
 /**
  * @file
@@ -35,7 +35,6 @@ function beautify_menu() {
 function beautify_perm() {
   return array(
     'administer beautify',
-    'receive processed html',
     'use beautify debug mode',
   );
 }
@@ -262,7 +261,7 @@ function beautify_get_options() {
  * Start the output buffering.
  */
 function beautify_init() {
-  if (user_access('receive processed html') && variable_get('beautify_enabled', 1)) {
+  if (variable_get('beautify_enabled', 1)) {
     // Ensure we are not serving a cached page.
     if (function_exists('drupal_set_content')) {
       ob_start();
@@ -278,7 +277,7 @@ function beautify_init() {
  * has enough CPU power).
  */
 function beautify_exit($destination = NULL) {
-  if (user_access('receive processed html') && variable_get('beautify_enabled', 1)) {
+  if (variable_get('beautify_enabled', 1)) {
     // Ensure we are not serving a cached page.
     if (function_exists('drupal_set_content') && $destination == NULL) {
       $input = ob_get_contents();
