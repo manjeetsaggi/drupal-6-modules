@@ -1,0 +1,11 @@
+; $Id: tweetbacks.info,v 1.1 2009/01/13 03:16:41 cscharabaruk Exp $
+name = Tweetbacks
+description = "Show Twitter posts referencing your site."
+core = 5.x
+
+; Information added by drupal.org packaging script on 2009-01-16
+version = "6.x-1.x-dev"
+core = "6.x"
+project = "tweetbacks"
+datestamp = "1232065076"
+
