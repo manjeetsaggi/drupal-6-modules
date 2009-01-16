@@ -1,11 +1,11 @@
-; $Id: menu_attributes.info,v 1.1 2008/12/29 05:51:00 schoonzie Exp $
+; $Id: menu_attributes.info,v 1.2 2009/01/14 22:48:50 schoonzie Exp $
 name = "Menu Attributes"
 description = "Allows administrators to specify custom attributes for menu items."
 package = "Menu"
 core = 6.x
-; Information added by drupal.org packaging script on 2008-12-29
-version = "6.x-1.0-beta1"
+; Information added by drupal.org packaging script on 2009-01-14
+version = "6.x-1.1"
 core = "6.x"
 project = "menu_attributes"
-datestamp = "1230530724"
+datestamp = "1231973730"
 
