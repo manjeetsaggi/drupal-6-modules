@@ -1,5 +1,5 @@
 /**
- * $Id: README.txt,v 1.5.2.1.2.7 2008/07/22 14:33:56 paulbooker Exp $
+ * $Id: README.txt,v 1.5.2.1.2.7.2.2 2008/12/17 17:40:19 paulbooker Exp $
  * @package OG_Forum
  * @category NeighborForge
  */
@@ -21,10 +21,7 @@ which are detailed below.
   
 --REQUIREMENTS--
   This module requires both the OG module and the Forum module from Core to be installed.
-  
-  We no longer need the OG patch as I figured another way to do the same thing. But see this:
-  http://drupal.org/node/177626
-    
+     
 --INSTALL--
   Before you post an issue to the queue with installation problems, be sure you did all
   of these things in this order:
@@ -172,13 +169,11 @@ which are detailed below.
   forum module as starting points.
   
 --CREDITS--
-  Ryan Constantine (Drupal ID rconstantine) is the current Maintainer and the fellow who
+  Ryan Constantine (Drupal ID rconstantine) & Paul Booker (Glaxstar) are the current Maintainer and the fellow who
   got OG forums working with site-wide forums, and made OG forums publicly viewable based
   on Admin and Group Owner settings.
   
   Darren Oh is the previous maintainer and current co-maintainer.
-  
-  Original author: Károly Négyesi
 
   Historical thanks to:
   Evan Leeson of Catalyst Creative for sponsorship of 4.7 port and

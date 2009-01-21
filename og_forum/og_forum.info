@@ -7,9 +7,9 @@ package = Organic groups
 dependencies[] = forum
 dependencies[] = og
 core = 6.x
-; Information added by drupal.org packaging script on 2008-11-12
-version = "6.x-1.0-beta1"
+; Information added by drupal.org packaging script on 2009-01-19
+version = "6.x-1.0-beta2"
 core = "6.x"
 project = "og_forum"
-datestamp = "1226486723"
+datestamp = "1232367932"
 

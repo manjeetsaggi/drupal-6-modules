@@ -1,5 +1,5 @@
 <?php
-// $Id: addresses.module,v 1.60 2009/01/08 07:56:26 brmassa Exp $
+// $Id: addresses.module,v 1.61 2009/01/20 20:31:42 brmassa Exp $
 /**
  * @author Bruno Massa
  * @file
@@ -237,6 +237,11 @@ function addresses_theme() {
     ),
     // Shows address form elements
     'addresses_elements' => array(
+      'arguments' => array('form'),
+      'file'      => 'addresses.settings.inc',
+    ),
+    // Shows address weight on settings page
+    'addresses_field_weight' => array(
       'arguments' => array('form'),
       'file'      => 'addresses.settings.inc',
     ),

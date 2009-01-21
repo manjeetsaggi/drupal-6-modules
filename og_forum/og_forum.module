@@ -2,7 +2,7 @@
 /**
  * @file
  * Creates a forum per organic group and restricts viewing forum nodes by group membership.
- * @version $Id: og_forum.module,v 1.11.2.11.2.18.2.7 2008/11/11 11:13:48 paulbooker Exp $
+ * @version $Id: og_forum.module,v 1.11.2.11.2.18.2.12 2009/01/09 11:05:03 paulbooker Exp $
  * @package OG_Forum
  */
 
@@ -398,8 +398,8 @@ function theme_og_forum_display($forums, $topics, $parents, $tid, $sortby, $foru
   $breadcrumb[] = l(t('Home'), NULL);
   if ($gid != NULL) {
   	$node = node_load($gid);
-  	$breadcrumb[] = l(t('Groups'), 'og');
-    $breadcrumb[] = l(t("@title", array('@title' => $node->og_groups_names[0])), 'node/'. $node->og_groups[0]);
+  	$breadcrumb[] = l(t('Groups'), 'og'); 
+    $breadcrumb[] = l(t("@title", array('@title' => $node->title)), 'node/'. $node->nid);
   }
   if ($tid) {
     $breadcrumb[] = l(t("@title", array('@title' => $title)), 'forum');
@@ -1154,7 +1154,7 @@ function og_forum_nodeapi($node, $op, $teaser = NULL, $page = NULL) {
        $node->og_groups = array_keys($node->og_groups);  
      }
   }
-} // fun/Users/paulbooker/Subversion/Development/drupal6/sites/all/modules/og/og.modulection og_forum_nodeapi()
+} 
 
 /**
  * Retrieve container for given group
@@ -1224,7 +1224,7 @@ function og_forum_retroactively_apply() {
 /**
  * Implementation of hook_form_alter().
  */
-function og_forum_form_alter(&$form, &$form_state, $form_id) {
+function og_forum_form_alter(&$form, &$form_state, $form_id) {  
   // Auto-select group's forum when adding/editing a forum topic
   if ($form_id == 'forum_node_form') { 
     $group = og_get_group_context();  
@@ -1238,14 +1238,14 @@ function og_forum_form_alter(&$form, &$form_state, $form_id) {
       }
     }
     $GID = $group->nid; 
-    if ($GID) {
+    if ($GID) {  
       $results = db_query('SELECT ot.tid, th.parent FROM {og_term} ot LEFT JOIN {term_hierarchy} th ON ot.tid = th.tid WHERE nid = %d ORDER BY tid ASC', $GID);
       while ($result = db_fetch_object($results)) {
         $all_results[$result->tid] = $result->parent;
       }
       $vid =  og_forum_get_vid(); 
       //set the forum selection drop down box 
-      if (arg(1) == 'add' && arg(3)) { 
+      if (arg(1) == 'add' && arg(3)) {    
         $term = arg(3);
         $form['taxonomy'][$vid]['#default_value'] = array($term);
       }
@@ -1267,8 +1267,7 @@ function og_forum_form_alter(&$form, &$form_state, $form_id) {
           $term = key($all_results);
           $form['taxonomy'][$vid]['#default_value'] = array($term);
         } 
-      }
-      if (!user_access('administer forums')) {   
+      } 
         foreach ($form['taxonomy'][$vid]['#options'] as $key => $the_rest) { 
           if ($key === '') {  
             continue;
@@ -1279,7 +1278,7 @@ function og_forum_form_alter(&$form, &$form_state, $form_id) {
             unset($form['taxonomy'][$vid]['#options'][$key]);
           }
         } //check to see if the audience is required or optional. if optional, don't do the following two lines
-        if (variable_get('og_audience_required', FALSE) == 1) {  
+        if (variable_get('og_audience_required', FALSE) == 1) {    
           if (count($form['og_nodeapi']['visible']['og_groups']['#default_value'])) {
             drupal_add_js(drupal_get_path('module', 'og_forum'). '/og_forum.js');
             $options = $form['og_nodeapi']['visible']['og_groups']['#options'];
@@ -1287,17 +1286,11 @@ function og_forum_form_alter(&$form, &$form_state, $form_id) {
             foreach ($groups as $key => $value) {
               $groups[$key] = (string)$value;
             }
-            unset($form['og_nodeapi']['visible']['og_groups']);
             foreach ($groups as $gid) {
               $titles[] = $options[$gid];
               $item_value = implode(', ', $titles);
             }
             $form['og_nodeapi']['visible']['og_groups_visible'] = array('#type' => 'item', '#title' => t('Audience'), '#value' => $item_value);
-            $assoc_groups = drupal_map_assoc($groups);
-            // this hidden element persists audience values during a Preview cycle. avoids errors on Preview.
-            $form['og_nodeapi']['invisible']['og_groups_hidden'] = array('#type' => 'hidden', '#value' => serialize($assoc_groups), '#attributes' => array('class' => 'og-audience-forum'));
-            // this 'value' element persists the audience value during submit process
-            $form['og_nodeapi']['invisible']['og_groups'] = array('#type' => 'value', '#value' => $assoc_groups);
             if ($form['og_nodeapi']['visible']['og_public']['#default_value'] == 1) {
               $form['og_nodeapi']['visible']['og_public']['#default_value'] = 1;
             }
@@ -1306,7 +1299,6 @@ function og_forum_form_alter(&$form, &$form_state, $form_id) {
             }
           }
         }
-      }
     }
     else { 
       $results = db_query('SELECT ot.tid, th.parent FROM {og_term} ot LEFT JOIN {term_hierarchy} th ON ot.tid = th.tid ORDER BY tid ASC');
@@ -1342,8 +1334,9 @@ function og_forum_form_alter(&$form, &$form_state, $form_id) {
         }
       }
     }
-    $groups = $form['og_nodeapi']['visible']['og_groups']; 
-    $form['og_nodeapi']['invisible']['og_groups'] = array('#type' => 'value', '#value' => $groups);
+    //TODO: removing these lines corrects the problem of  "you must join a group error when posting a forum topic to  a group" errors
+    //$groups = $form['og_nodeapi']['visible']['og_groups']; 
+    //$form['og_nodeapi']['invisible']['og_groups'] = array('#type' => 'value', '#value' => $groups);
     unset($form['og_nodeapi']['visible']['og_groups']);
     $form['taxonomy']['#collapsible'] = TRUE;
     $form['taxonomy']['#collapsed'] = TRUE;
@@ -1435,7 +1428,7 @@ function og_forum_manage($gid) {
 function og_forum_form_main($type, $group_id, $tid) {
   $edit = array('group_id' => $group_id, 'parent' => $tid);
   if ($_POST['op'] == t('Delete') || $_POST['confirm']) {
-    return drupal_get_form('og_forum_confirm_delete', $edit['tid'], $group_id);
+    return drupal_get_form('og_forum_confirm_delete', $tid, $group_id);
   } 
   switch ($type) {
     case 'add':
@@ -1524,7 +1517,7 @@ function og_forum_form_forum(&$form_state, $edit, $group_id = 0, $tid = 0) {
 /**
   * Validate group id and term id values
   */
-function og_forum_form_validate($form, &$form_state) { 
+function og_forum_form_validate($form, &$form_state) {
   global $user;
   $form_values = $form_state['values']; 
   $error = true;
@@ -1602,7 +1595,7 @@ function og_forum_taxonomy($op, $type, $obj) {
  *
  * @param $tid ID of the term to be deleted
  */
-function og_forum_confirm_delete($tid, $group_id) {
+function og_forum_confirm_delete($form_state, $tid, $group_id) {
   $term = taxonomy_get_term($tid);
   $form['tid'] = array('#type' => 'value', '#value' => $tid);
   $form['name'] = array('#type' => 'value', '#value' => $term->name);
@@ -1616,14 +1609,14 @@ function og_forum_confirm_delete($tid, $group_id) {
 /**
  * Implementation of forms api _submit call. Deletes a forum after confirmation.
  */
-function og_forum_confirm_delete_submit($form_id, $form_values) {
+function og_forum_confirm_delete_submit($form, &$form_state) {
+  $form_values = $form_state['values'];
   taxonomy_del_term($form_values['tid']);
   $group_id = og_forum_gid_from_tid($form_values['tid']);
   drupal_set_message(t('The forum %term and all sub-forums and associated posts have been deleted.', array('%term' => $form_values['name'])));
   watchdog('content', t('forum: deleted %term and all its sub-forums and associated posts.', array('%term' => $form_values['name'])));
   db_query('DELETE FROM {og_term} WHERE tid = %d', $form_values['tid']);
-  $return_address = $form_values['return'];
-  return $return_address;
+  $form_state['redirect'] = $form_values['return'];
 } // function og_forum_confirm_delete_submit()
 
 /**
@@ -1744,12 +1737,10 @@ function og_forum_is_public($tid) {
   $all_public = variable_get('forum_all_public', 0);
   $sql = "SELECT tid, public, nid FROM {og_term} WHERE tid = %d";
   $results = db_fetch_object(db_query($sql, $tid));
-  if (!empty($results) && (($results->public > PRIVATE_BY_GROUP_OWNER) || ($all_public))) {
-  //I think this was too restrictive at using: ($results->public == 0 && $all_public)
-    return 1;
-  }
-  else {
+  if (!empty($results) && ($results->public <= PRIVATE_BY_GROUP_OWNER)) {
     return 0;
+    } else {
+      return 1;
   }
 } // function og_forum_is_public()
 
