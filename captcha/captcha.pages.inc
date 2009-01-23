@@ -1,5 +1,5 @@
 <?php
-// $Id: captcha.pages.inc,v 1.7 2009/01/03 22:14:45 soxofaan Exp $
+// $Id: captcha.pages.inc,v 1.9 2009/01/10 16:10:32 soxofaan Exp $
 
 /**
  * Form alter phase of form processing for untrusted users.
@@ -94,6 +94,7 @@ function _captcha_form_alter_untrusted_user(&$form, $form_state, $form_id) {
       'type' => $captcha_point->type,
       'captcha_sid' => $captcha_sid,
       'solution' => $captcha['solution'],
+      'preprocess' => isset($captcha['preprocess'])? $captcha['preprocess'] : FALSE,
     ),
   );
 
@@ -140,7 +141,7 @@ function captcha_validate($form, &$form_state) {
   // the csid of the posted form.
   $csid = $form_state['clicked_button']['#post']['captcha_sid'];
 
-  $solution = db_result(db_query('SELECT solution FROM {captcha_sessions} WHERE csid = %d, status = %d', $csid, CAPTCHA_STATUS_UNSOLVED));
+  $solution = db_result(db_query('SELECT solution FROM {captcha_sessions} WHERE csid = %d AND status = %d', $csid, CAPTCHA_STATUS_UNSOLVED));
 
   if ($solution === FALSE) {
     // Unknown challenge_id.
