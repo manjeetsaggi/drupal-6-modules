@@ -1,5 +1,5 @@
 <?php
-// $Id: int_meta.module,v 1.1.2.8 2008/12/16 02:55:25 fractile81 Exp $
+// $Id: int_meta.module,v 1.1.2.9 2009/01/24 21:52:21 fractile81 Exp $
 // int_meta.module - Provides functionality for modules to dynamically add Metatags.
 
 // Hook Implementations ///////////////////////////////////////////////////////
@@ -20,6 +20,38 @@ function int_meta_theme() {
 			'arguments' => array('form' => NULL),
 		),
 	);
+}
+
+/**
+ * Implementation of hook_help();.
+ */
+function int_meta_help($path, $arg) {
+  $output = '';
+  switch ($path) {
+    case 'admin/help#int_meta': {
+      $output .= '<p>' . t('') . '</p>';
+      $output .= '<p>' . t('See the <a href="@readme">README.txt</a> for this module for more information.', array('@readme' => url(drupal_get_path('module', 'int_meta') . '/README.txt'))) . '</p>';
+    } break;
+    case 'admin/content/int_meta': {
+      $output .= '<p>' . t('These settings are meant to configure inheritable Metatags available for other content types to use.  If these settings are set to "enabled", and a content type is configured to "Inherit default Metatags" (go to <a href="@admin">Administer > Content management > Content types</a>, edit a content type, then click the "Metatags" tab for this option), the Metatags set on this page will be included when the content type includes its own.  Note that although these are designated as "default" Metatags, they will only be used when inherited.', array('@admin' => url('admin/content/types'))) . '</p>';
+      $output .= '<p>' . t('You can add static Metatags using the "Manual/Static Metatag entry" field, or create dynamic tags in the "Dynamic Metatags" fieldset.  Manual/Static Metatags are meant to be tags that should always be displayed, and should have a fixed name/value.  Dynamic Metatags are meant to expose data from the node, including taxonomy and user information.  If the <a href="@token">Token module</a> is enabled, you can use tokens in the "Manual/Static" field for both the &lt;name&gt; and &lt;value&gt;.', array('@token' => url('http://www.drupal.org/project/token'))) . '</p>';
+      $output .= '<p>' . t('NOTE: All Metatags, static or dynamic, will have HTML tags automaticly stripped.  Next, any run of one or more newlines/carriage returns will be replaced with a single space.') . '</p>';
+    } break;
+    case 'admin/settings/int_meta': {
+      $output .= '<p>' . t('Using this form, you can configure if and how you want to cap the length of Metatags.  Individual settings are available for the "description" tag, "keywords" tag, and all other tags.') . '</p>';
+      $output .= '<p>' . t('To enable a cap, decide which type of tag you want to cap and select from the radio buttons whether you want to cap on the number of words or characters.  Then enter an integer greater than 0 into the "number to cap at" field.  To not have a cap for a particular type of tag, make sure this field is set to 0.') . '</p>';
+      $output .= '<p>' . t('In order to create a Metatag, go to <a href="@admin">Administer > Content management > Content types</a>, edit a content type, click the "Metatags" tab at the top of the page (on the same line as the highlighted "Edit" tab), and follow the instructions on that page.', array('@admin' => url('admin/content/types'))) . '</p>';
+    } break;
+  }
+  
+  // Match for the individual content type pages
+  if (empty($output) && preg_match('!admin\/content\/node\-type\/\w+\/metatags!', $path)) {
+    $output .= '<p>' . t('On this page you configure the Metatags you want associated with this specific content type.  The available settings for this page are the same as the <a href="@default">default Metatag settings</a> (used for creating inheritable Metatags across multiple content types), with the addition of a field for inheriting all of the default tags. Each content type has its own Metatag configuration page.', array('@default' => url('admin/content/int_meta')));
+    $output .= '<p>' . t('You can add static Metatags using the "Manual/Static Metatag entry" field, or create dynamic tags in the "Dynamic Metatags" fieldset.  Manual/Static Metatags are meant to be tags that should always be displayed, and should have a fixed name/value.  Dynamic Metatags are meant to expose data from the node, including taxonomy and user information.  If the <a href="@token">Token module</a> is enabled, you can use tokens in the "Manual/Static" field for both the &lt;name&gt; and &lt;value&gt;.', array('@token' => url('http://www.drupal.org/project/token'))) . '</p>';
+    $output .= '<p>' . t('NOTE: All Metatags, static or dynamic, will have HTML tags automaticly stripped.  Next, any run of one or more newlines/carriage returns will be replaced with a single space.') . '</p>';
+  }
+  
+  return $output;
 }
 
 /**
@@ -50,16 +82,16 @@ function int_meta_menu() {
   );
   
 	// Create a Metatags local task for each content type
-	foreach (node_get_types('types', NULL, TRUE) as $type) {
-		$url_type = str_replace('_', '-', $type->type);
-		$items['admin/content/node-type/' . $url_type . '/metatags'] = array(
-			'title' => 'Metatags',
-			'type' => MENU_LOCAL_TASK,
-			'access arguments' => array('administer integrated metatags'),
-			'page callback' => 'drupal_get_form',
-			'page arguments' => array('int_meta_type_form', $type->type),
-		);
-	}
+  foreach (node_get_types() as $type) {
+    $url = str_replace('_', '-', $type->type);
+    $items['admin/content/node-type/' . $url . '/metatags'] = array(
+      'title' => 'Metatags',
+      'type' => MENU_LOCAL_TASK,
+      'access arguments' => array('administer integrated metatags'),
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('int_meta_type_form', 3),
+    );
+  }
 	return $items;
 }
 
@@ -154,15 +186,15 @@ function int_meta_settings_validate($form, &$form_state) {
   // Verify all of the cap numbers are valid
   $values = $form_state['values'];
   if (!ctype_digit($values['int_meta_keys_cap']) || $values['int_meta_keys_cap'] < 0) {
-    form_set_error('int_meta_keys_cap', 'Please enter an integer greater than or equal to 0.');
+    form_set_error('int_meta_keys_cap', t('Please enter an integer greater than or equal to 0.'));
   }
   
   if (!ctype_digit($values['int_meta_desc_cap']) || $values['int_meta_desc_cap'] < 0) {
-    form_set_error('int_meta_desc_cap', 'Please enter an integer greater than or equal to 0.');
+    form_set_error('int_meta_desc_cap', t('Please enter an integer greater than or equal to 0.'));
   }
   
   if (!ctype_digit($values['int_meta_other_cap']) || $values['int_meta_other_cap'] < 0) {
-    form_set_error('int_meta_other_cap', 'Please enter an integer greater than or equal to 0.');
+    form_set_error('int_meta_other_cap', t('Please enter an integer greater than or equal to 0.'));
   }
 }
 
@@ -400,10 +432,11 @@ function int_meta_load_type($type='') {
     'teasers' => 0,
 	);
   
+  $target = 'int_meta_info';
   if (!empty($type)) {
-    $type = '_' . $type;
+    $target .= '_' . $type;
   }
-  return variable_get('int_meta_info' . $type, $default);
+  return variable_get($target, $default);
 }
 
 /**
@@ -424,10 +457,11 @@ function int_meta_save_type($type, $status=1, $empty=1, $inherit=1, $static='', 
     'teasers' => $teasers,
 	);
   
+  $target = 'int_meta_info';
   if (!empty($type)) {
-    $type = '_' . $type;
+    $target .= '_' . $type;
   }
-  variable_set('int_meta_info' . $type, $data);
+  variable_set($target, $data);
 }
 
 /**
@@ -435,13 +469,12 @@ function int_meta_save_type($type, $status=1, $empty=1, $inherit=1, $static='', 
  * @param $type The Content Type being deleted.
  */
 function int_meta_delete_type($type) {
-	if (empty($type)) {
-		$type = '';
-	} else {
-    $type = '_' . $type;
+  $target = 'int_meta_info';
+  if (!empty($type)) {
+    $target .= '_' . $type;
   }
 	
-  variable_del('int_meta_info' . $type);
+  variable_del($target);
 }
 
 // Form Functions /////////////////////////////////////////////////////////////
@@ -453,15 +486,18 @@ function int_meta_delete_type($type) {
  * @return Retutrns a complete form with default values already entered.
  */
 function int_meta_type_form(&$form_state, $type='') {
+  // If this is coming from the URL, we need to change out all - for _
+  $type = str_replace('-', '_', $type);
+
 	$info = int_meta_load_type($type);
 	$form = array(
 		'#cache' => TRUE,
 		'type' => array('#type' => 'hidden', '#default_value' => $info->type),
 	);
 
-	$desc = 'Check to enable default Metatags.  If this is disabled, any content types that inherit these settings will also include these Metatags.';
+	$desc = 'Check to enable inherited Metatags.  When enabled, any content types set to inherit Metatags will include those on this page.';
 	if (!empty($info->type)) {
-		$desc = 'Check to enable these Metatag settings for this content type.';
+		$desc = 'Check to enable Metatags for this content type.';
 	}
 	$form['enabled'] = array(
 		'#type' => 'checkbox',
@@ -470,6 +506,15 @@ function int_meta_type_form(&$form_state, $type='') {
 		'#default_value' => $info->status,
 	);
   
+  if (!empty($info->type)) {
+		$form['inherit'] = array(
+			'#type' => 'checkbox',
+			'#title' => t('Inherit default Metatags?'),
+			'#description' => t('Check to inherit the default Metatags, which are configured at <a href="@admin">Administer > Content management > Integrated Metatags</a>.', array('@admin' => url('admin/content/int_meta'))),
+			'#default_value' => $info->inherit,
+		);
+	}
+  
 	$form['empty'] = array(
 		'#type' => 'checkbox',
 		'#title' => t('Show empty Metatags?'),
@@ -477,19 +522,10 @@ function int_meta_type_form(&$form_state, $type='') {
 		'#default_value' => $info->empty,
 	);
   
-	if (!empty($info->type)) {
-		$form['inherit'] = array(
-			'#type' => 'checkbox',
-			'#title' => t('Inherit default Metatags?'),
-			'#description' => t('Check to include the default Metatags with this content type.'),
-			'#default_value' => $info->inherit,
-		);
-	}
-  
   $form['teasers'] = array(
     '#type' => 'checkbox',
     '#title' => t('Display Metatags with teasers?'),
-    '#description' => t('By checking this box, Metatags will be shown when a node is being rendered as a teaser as well.  This setting will not inherit.'),
+    '#description' => t('By default, Metatags will only display on a node\'s full-page view.  When this box is checked, Metatags will also be shown when a node is rendered as a teaser.  This setting will not inherit.'),
     '#default_value' => $info->teasers,
   );
   
@@ -503,7 +539,7 @@ function int_meta_type_form(&$form_state, $type='') {
   
   // If the Token module is enabled, allow support for that in the static Metatags
   if (module_exists('token')) {
-    $form['static']['#description'] .= ' ' . t('You may also use any of the currently supported tokens found in the "Available Tokens" fieldset below. (e.g. [author-name])  <strong>WARNING: do not use a token that might have a new-line!</strong>');
+    $form['static']['#description'] .= ' ' . t('You may also use any of the currently supported tokens found in the "Available Tokens" fieldset below (e.g. [author-name]).');
     
     $form['tokens'] = array(
       '#type' => 'fieldset',
@@ -520,8 +556,8 @@ function int_meta_type_form(&$form_state, $type='') {
 	$form['metatags'] = array(
 		'#type' => 'fieldset',
 		'#title' => t('Dynamic Metatags'),
-		'#description' => t('For your new fields to be saved, you must click the "Add" button before saving this form.  When you select the "combine" checkbox for a field, you can collapse all like-named fields that are also set to be combined into one comma-separated Metatag.  This is good for collapsing terms and multiple CCK fields.'),
-		'#collapsible' => 0,
+		'#description' => t('To add a new Dynamic Metatag, use the last row (has the "Add" button) to: 1) combine it with other like-named Metatags, 2) select from the dropdown what data to use, and 3) give the Metatag a name.  When editing a Dynamic Metatag (any rows that are not the bottom-most), you will be able to enabled/disable it, set it to combine, mark it to be deleted once the form is saved, or change its name.  Once a Metatag has been created, you cannot change the data source for it.'),
+		'#collapsible' => 1,
 		'#collapsed' => 0,
 	);
   
@@ -535,7 +571,7 @@ function int_meta_type_form(&$form_state, $type='') {
 					// These can't be directly edited, so prepare the array to be displayed as a string
 					$name = $tag->field;
 					if (!empty($tag->name)) {
-						$name = $tag->name . '(' . $name . ')';
+						$name = $tag->name . '&lt;' . $name . '&gt;';
 					}
 					$sorted['defaults'][] = $name;
 				}
@@ -546,7 +582,7 @@ function int_meta_type_form(&$form_state, $type='') {
 	}
 	if (!empty($sorted['defaults'])) {
 		$form['metatags']['defaults'] = array(
-			'#value' => t('The following Metatags are inherited from the default configuration: ') . implode(', ', $sorted['defaults']),
+			'#value' => '<p>' . t('The following Metatags are inherited from the <a href="@default">default configuration</a>: ', array('@default' => url('admin/content/int_meta'))) . implode(', ', $sorted['defaults']) . '</p>',
 		);
 	}
 	$form['metatags']['local'] = array('#theme' => 'int_meta_form_tags', '#tree'=> TRUE, '#prefix' => '<div id="int_meta-wrapper">', '#suffix' => '</div>');
@@ -707,6 +743,13 @@ function int_meta_type_form_submit($form, &$form_state) {
 			}
 		}
 	}
+  
+  if (empty($type)) {
+    drupal_set_message(t('The global Integrated Metatag settings have been saved.'));
+  } else {
+    $content_type = node_get_types('type', $type);
+    drupal_set_message(t('The Integrated Metatag settings for the %type content type have been saved.', array('%type' => $content_type->name)));
+  }
 }
 
 /**
@@ -714,7 +757,7 @@ function int_meta_type_form_submit($form, &$form_state) {
  * @param $form The form information to render.
  */
 function theme_int_meta_form_tags($form) {
-	$header = array(t('Enabled'), t('Combine'), t('Delete'), t('Field'), t('Name'));
+	$header = array(t('Enabled'), t('Combine'), t('Delete'), t('Data'), t('Name'));
 	$rows = array();
 	foreach (element_children($form) as $key) {
 		$row = array();
@@ -989,7 +1032,6 @@ function int_meta_trim($name, $value) {
   $cap = variable_get($key . 'cap', 0);
   if (!empty($value) && $cap > 0) {
     if (variable_get($key . 'how', 'chars') == 'chars') {
-      print "chars\n";
       // Simple substring should work just fine
       $value = substr($value, 0, $cap);
     } else {

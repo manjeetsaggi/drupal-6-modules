@@ -1,6 +1,6 @@
-// $Id: COPYRIGHT.txt,v 1.1.2.3 2008/03/08 17:52:53 fractile81 Exp $
+// $Id: COPYRIGHT.txt,v 1.1.2.4 2009/01/24 21:52:21 fractile81 Exp $
 
-Integrated Metatags is Copyright 2008 by Craig A. Hancock
+Integrated Metatags is Copyright 2008-2009 by Craig A. Hancock
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

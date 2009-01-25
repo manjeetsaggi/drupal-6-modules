@@ -1,10 +1,18 @@
 Document Revision Information:
-$Id: README.txt,v 1.1.2.5 2008/12/16 02:55:25 fractile81 Exp $
+$Id: README.txt,v 1.1.2.6 2009/01/24 21:52:21 fractile81 Exp $
 
 
-Integrated Metatags
+Integrated MetatagsIntegrated Metatags
 By: Craig A. Hancock
-Copyright 2008 by Craig A. Hancock
+Copyright 2008-2009 by Craig A. Hancock
+
+
+-----------------------------------------------------------------------------
+NEW DOCUMENTATION IS COMING! I'm currently working on new documentation, that
+will also be available in an online format.  See my ticket at
+http://drupal.org/node/230753 for the current status.  Once completed, this
+document will be replaced with a text version of the new documentation.
+-----------------------------------------------------------------------------
 
 
 This README covers both the Drupal 5 and Drupal 6 branches of the Integrated
