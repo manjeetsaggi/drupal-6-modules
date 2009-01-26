@@ -1,5 +1,5 @@
 <?php
-// $Id: addresses.settings.inc,v 1.24 2009/01/20 20:39:49 brmassa Exp $
+// $Id: addresses.settings.inc,v 1.25 2009/01/22 02:52:52 brmassa Exp $
 /**
  * @author Bruno Massa
  * @file
@@ -243,6 +243,7 @@ function _addresses_settings(&$form_state) {
     $rows[] = array($columns[0][$row], $columns[1][$row], $columns[2][$row], $columns[3][$row]);
   }
   $form['addresses_format'] = array(
+    '#children'       => theme('table', array(), $rows),
     '#collapsed'      => TRUE,
     '#collapsible'    => TRUE,
     '#description'    => t('Change how the addresses are displayed, for each country. The Default is used if the country doesnt have a preset address format.'),
