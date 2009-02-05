@@ -1,5 +1,5 @@
 <?php
-// $Id: event.module,v 1.400 2008/12/30 23:54:03 killes Exp $ 
+// $Id: event.module,v 1.401 2009/02/03 00:21:19 killes Exp $ 
 
 define('EVENT_API', '5.2');
 define('EVENT_PATH', drupal_get_path('module', 'event'));
@@ -2328,7 +2328,6 @@ function event_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
         $node->event['end_exploded'] = event_explode_date($node->event['end']);
 
         $format = event_strip_time(variable_get('date_format_short', 'm/d/Y - H:i'));
-
         $node->event['start_format'] = event_format_date($node->event['start_exploded'], 'small');
         $node->event['start_date_format'] = event_format_date($node->event['start_exploded'], 'custom', $format);
         $node->event['start_time_format'] = event_format_date($node->event['start_exploded'], 'custom', (variable_get('event_ampm', '0') ? 'g:i a' : 'H:i'));
@@ -3009,7 +3008,7 @@ function event_format_date($date, $type = 'medium', $format = '') {
  */
 function event_strip_time($format) {
   $no_time_date = array();
-  foreach (array('d', 'm', 'Y', 'M', 'j') as $key) {
+  foreach (array('d', 'm', 'Y', 'M', 'j', 'n') as $key) {
     $pos = strpos($format, $key);
     if ($pos !== FALSE) {
       if ($pos > 0) {
@@ -3086,7 +3085,7 @@ function event_zonelist_by_id($id) {
  */
 function event_zone_by_name($name) {
   static $zones = array();
-  var_dump($name);
+
   if (!isset($zones[$name])) {
     $zone = db_fetch_array(db_query("SELECT * FROM {event_timezones} WHERE name = '%s'", $name));
     if ($zone) {

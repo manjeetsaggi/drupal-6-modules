@@ -1,5 +1,5 @@
 <?php
-// $Id: xmlsitemap_menu.module,v 1.1.4.14 2009/01/28 12:12:52 kiam Exp $
+// $Id: xmlsitemap_menu.module,v 1.1.4.16 2009/02/03 15:51:25 kiam Exp $
 
 /**
  * @file
@@ -66,11 +66,19 @@ function xmlsitemap_menu_xmlsitemap_sitemap_settings_alter(&$form) {
     }
   }
   if (!empty($opts)) {
-    $form['xmlsitemap_menu_menus'] = array(
+    $form['xmlsitemap_menu'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Menu settings'),
+      '#description' => t('The settings for the menus to include in the site map.'),
+      '#collapsible' => TRUE,
+    );
+
+    $form['xmlsitemap_menu']['xmlsitemap_menu_menus'] = array(
       '#type' => 'checkboxes',
       '#title' => t('Menus to include in the site map'),
       '#default_value' => $default_values,
       '#options' => $opts,
+      '#checkall' => TRUE,
     );
   }
 }

@@ -1,4 +1,33 @@
-$Id: CHANGELOG.txt,v 1.1.4.79 2009/01/29 18:44:47 kiam Exp $
+$Id: CHANGELOG.txt,v 1.1.4.93 2009/02/04 18:59:34 kiam Exp $
+
+XML Sitemap 6.x-1.x-dev, 2009-02-04
+-----------------------------------
+#369025: Ambiguous interface.
+#369006: Duplicate entry error.
+#368564: Duplicate ID.
+#368855: Node priority is not correct.
+
+XML Sitemap 6.x-1.x-dev, 2009-02-03
+-----------------------------------
+#368537: Implement the support for Checkall.
+#366973: Add an option for site map submissions based on time intervals.
+#368457: Wrong implementation of hook_exit().
+
+XML Sitemap 6.x-1.x-dev, 2009-02-02
+-----------------------------------
+#368115: SQL error during update.
+#345185: api.moreover.com.
+#312628: Table keys are not declared NOT NULL.
+
+XML Sitemap 6.x-1.x-dev, 2009-02-01
+-----------------------------------
+#367626: Don't submit on cron maintenance tasks when site is offline.
+#354462: $links_count is not initialized.
+#367395: SQL error on updating last_changed.
+
+XML Sitemap 6.x-1.x-dev, 2009-01-31
+-----------------------------------
+#367158: SQL errors when using the tools page.
 
 XML Sitemap 6.x-1.x-dev, 2009-01-29
 -----------------------------------

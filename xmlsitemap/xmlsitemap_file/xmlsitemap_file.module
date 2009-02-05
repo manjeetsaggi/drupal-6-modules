@@ -1,5 +1,5 @@
 <?php
-// $Id: xmlsitemap_file.module,v 1.1.4.13 2008/12/27 09:07:53 kiam Exp $
+// $Id: xmlsitemap_file.module,v 1.1.4.14 2009/01/31 10:38:00 kiam Exp $
 
 /**
  * @file
@@ -33,7 +33,9 @@ function xmlsitemap_file_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       case 'update':
         foreach ($node->files as $fid => $file) {
           if (!$file['remove'] && $file['list']) {
-            $result = db_fetch_object(db_query("SELECT * FROM {xmlsitemap_file} WHERE fid = %d AND nid = %d", $fid, $node->nid));
+            $result = db_fetch_object(db_query("SELECT * FROM {xmlsitemap_file} WHERE fid = %d AND nid = %d",
+              array($fid, $node->nid)
+            ));
             if ($result !== FALSE) {
               $row = $result;
               if (($changed = filemtime($file['filepath'])) > $row->changed) {

@@ -1,5 +1,5 @@
 <?php
-// $Id: xmlsitemap_menu.install,v 1.1.4.14 2008/12/24 20:04:39 kiam Exp $
+// $Id: xmlsitemap_menu.install,v 1.1.4.16 2009/02/03 15:51:25 kiam Exp $
 
 /**
  * @file
@@ -15,7 +15,12 @@
  */
 function xmlsitemap_menu_install() {
   if (db_result(db_query("SELECT menu_name FROM {menu_custom} WHERE menu_name = 'menu-xmlsitemap'")) != 'menu-xmlsitemap') {
-    db_query("INSERT INTO {menu_custom} (menu_name, title, description) VALUES ('menu-xmlsitemap', '%s', '%s')", t('XML Sitemap'), t('The menu from where <em>XML Sitemap: Menu</em> looks for the menus to add to the sitemap.'));
+    db_query("INSERT INTO {menu_custom} (menu_name, title, description) VALUES ('menu-xmlsitemap', '%s', '%s')",
+      array(
+        t('XML Sitemap'),
+        t('The menu from where <em>XML Sitemap: Menu</em> looks for the menus to add to the sitemap.'),
+      )
+    );
     menu_rebuild();
   }
 }
@@ -55,11 +60,22 @@ function xmlsitemap_menu_update_6101() {
  * Implementation of hook_update_N().
  */
 function xmlsitemap_menu_update_6102() {
-  $ret = xmlsitemap_menu_update_6000();
   $ret[] = update_sql("DELETE FROM {menu_custom} WHERE menu_name = '1'");
   return $ret;
 }
 
+/**
+ * Implementation of hook_update_N().
+ */
+function xmlsitemap_menu_update_6103() {
+  $ret = xmlsitemap_menu_update_6000();
+  menu_rebuild();
+  $ret[] = array(
+    'success' => TRUE,
+    'query' => 'UPDATE DRUPAL MENUS'
+  );
+  return $ret;
+}
 /**
  * Implementation of hook_uninstall().
  */

@@ -1,5 +1,5 @@
 <?php
-// $Id: xmlsitemap_node.module,v 1.19.2.25 2009/01/29 22:33:31 kiam Exp $
+// $Id: xmlsitemap_node.module,v 1.19.2.33 2009/02/04 11:38:08 kiam Exp $
 
 /**
  * @file
@@ -25,7 +25,12 @@ function xmlsitemap_node_comment($comment, $op) {
     case 'update':
     case 'moderate':
     case 'delete':
-      db_query("UPDATE {xmlsitemap_node} SET previous_comment = last_comment, last_comment = %d WHERE nid = %d", $comment->timestamp, $comment->nid);
+      db_query("UPDATE {xmlsitemap_node} SET previous_comment = last_comment, last_comment = %d WHERE nid = %d",
+        array(
+          $comment->timestamp,
+          $comment->nid,
+        )
+      );
       if (variable_get('xmlsitemap_node_count_comments', TRUE)) {
         xmlsitemap_update_sitemap();
       }
@@ -51,9 +56,9 @@ function xmlsitemap_node_form_alter(&$form, &$form_state, $form_id) {
       $form['xmlsitemap_node']['priority_override'] = array(
         '#type' => 'select',
         '#title' => t('Priority'),
+        '#description' => t('The default priority is %priority.', array('%priority' => $options[$default])),
         '#default_value' => $node->priority_override,
         '#options' => $options,
-        '#description' => t('The default priority is %priority.', array('%priority' => $options[$default])),
       );
     }
     else {
@@ -79,9 +84,9 @@ function xmlsitemap_node_form_alter(&$form, &$form_state, $form_id) {
           $form['xmlsitemap_node']['xmlsitemap_node_type_priority'] = array(
             '#type' => 'select',
             '#title' => t('Priority adjustment'),
+            '#description' => t('This number will be added to the priority of this content type.'),
             '#default_value' => variable_get('xmlsitemap_node_type_priority_'. $form['#node_type']->type, 0.5),
             '#options' => xmlsitemap_priority_options('exclude'),
-            '#description' => t('This number will be added to the priority of this content type.'),
           );
           $form['xmlsitemap_node']['xmlsitemap_old_priority'] = array(
             '#type' => 'value',
@@ -113,15 +118,20 @@ function xmlsitemap_node_node_type($op, $info) {
  */
 function xmlsitemap_node_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
   switch ($op) {
-    case 'load':
-      $priority = db_result(db_query("SELECT priority_override
+    case 'prepare':
+      $priority_override = db_result(db_query("SELECT priority_override
         FROM {xmlsitemap_node} WHERE nid = %d",
         $node->nid)
       );
-      return array('priority_override' => $priority !== FALSE ? $priority : -2.0);
+      $node->priority_override = $priority_override !== FALSE ? $priority_override : -2.0;
+      break;
     case 'insert':
-      db_query("INSERT INTO {xmlsitemap_node} (nid, last_changed, priority_override) VALUES (%d, %d, %s)",
-        $node->nid, $node->changed, $node->priority_override
+      db_query("INSERT INTO {xmlsitemap_node} (nid, changed, priority_override) VALUES (%d, %d, %s)",
+        array(
+          $node->nid,
+          $node->changed,
+          isset($node->priority_override) ? $node->priority_override : -2.0,
+        )
       );
       if ($node->status) {
         xmlsitemap_update_sitemap();
@@ -129,9 +139,13 @@ function xmlsitemap_node_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
       break;
     case 'update':
       db_query("UPDATE {xmlsitemap_node}
-        SET previously_changed = last_changed, last_changed = %d, priority_override = %s
+        SET previously_changed = changed, changed = %d, priority_override = %s
         WHERE nid = %d",
-        array($node->changed, $node->priority_override, $node->nid)
+        array(
+          $node->changed,
+          isset($node->priority_override) ? $node->priority_override : -2.0,
+          $node->nid
+        )
       );
       if ($node->status || $node->xmlsitemap_node_status) {
         xmlsitemap_update_sitemap();
@@ -168,11 +182,11 @@ function xmlsitemap_node_xmlsitemap_links() {
       break;
   }
   if (module_exists('comment')) {
-    $columns = 'n.nid, n.type, n.promote, n.changed, xn.previously_changed, xn.priority_override, s.comment_count, s.last_comment_timestamp, xn.previous_comment';
+    $columns = 'n.nid, n.type, n.promote, xn.changed, xn.previously_changed, xn.priority_override, s.comment_count, s.last_comment_timestamp, xn.previous_comment';
     $left_join = "LEFT JOIN {node_comment_statistics} s ON n.nid = s.nid";
   }
   else {
-    $columns = 'n.nid, n.type, n.promote, n.changed, xn.previously_changed, xn.priority_override';
+    $columns = 'n.nid, n.type, n.promote, xn.changed, xn.previously_changed, xn.priority_override';
     $left_join = '';
   }
   $query = "SELECT $columns, $coalesce(ua.dst) AS alias FROM {node} n
@@ -193,9 +207,11 @@ function xmlsitemap_node_xmlsitemap_links() {
   $result = db_query(db_rewrite_sql($query), $query_args);
   while ($node = db_fetch_object($result)) {
     db_query("INSERT INTO {xmlsitemap} (loc, lastmod, changefreq, priority) VALUES ('%s', %d, %d, %f)",
-      xmlsitemap_url('node/'. $node->nid, $node->alias, NULL, NULL, TRUE),
-      variable_get('xmlsitemap_node_count_comments', TRUE) ? max($node->changed, $node->last_comment_timestamp) : $node->changed,
-      xmlsitemap_node_frequency($node), xmlsitemap_node_priority($node)
+      array(
+        xmlsitemap_url('node/'. $node->nid, $node->alias, NULL, NULL, TRUE),
+        variable_get('xmlsitemap_node_count_comments', TRUE) ? max($node->changed, $node->last_comment_timestamp) : $node->changed,
+        xmlsitemap_node_frequency($node), xmlsitemap_node_priority($node),
+      )
     );
   }
 }
@@ -204,31 +220,32 @@ function xmlsitemap_node_xmlsitemap_links() {
  * Implementation of hook_xmlsitemap_sitemap_settings_alter().
  */
 function xmlsitemap_node_xmlsitemap_sitemap_settings_alter(&$form) {
+  $options = xmlsitemap_priority_options();
+  $form['general']['priority']['xmlsitemap_node_promote_priority'] = array(
+    '#type' => 'select',
+    '#title' => t('Promotion adjustment'),
+    '#description' => t('This number will be added to the priority of each post that is promoted to the front page.'),
+    '#default_value' => variable_get('xmlsitemap_node_promote_priority', 0.3),
+    '#options' => $options,
+  );
+  $form['general']['priority']['xmlsitemap_node_comment_priority'] = array(
+    '#type' => 'select',
+    '#title' => t('Comment ratio weight'),
+    '#description' => t("This number will be added to the priority of the post with the highest number of comments. This doesn't apply if the maximum number of comments is one."),
+    '#default_value' => variable_get('xmlsitemap_node_comment_priority', 0.2),
+    '#options' => $options,
+  );
   $form['xmlsitemap_node'] = array(
     '#type' => 'fieldset',
     '#title' => t('Content settings'),
     '#description' => t('The settings for the content to include in the site map.'),
     '#collapsible' => TRUE,
   );
-  $form['xmlsitemap_node']['xmlsitemap_node_promote_priority'] = array(
-    '#type' => 'select',
-    '#title' => t('Promotion adjustment'),
-    '#default_value' => variable_get('xmlsitemap_node_promote_priority', 0.3),
-    '#options' => xmlsitemap_priority_options(),
-    '#description' => t('This number will be added to the priority of each post that is promoted to the front page.'),
-  );
-  $form['xmlsitemap_node']['xmlsitemap_node_comment_priority'] = array(
-    '#type' => 'select',
-    '#title' => t('Comment ratio weight'),
-    '#default_value' => variable_get('xmlsitemap_node_comment_priority', 0.2),
-    '#options' => xmlsitemap_priority_options(),
-    '#description' => t("This number will be multiplied by the ratio of the number of comments on a post to the highest number of comments. This doesn't apply if the maximum number of comments is one."),
-  );
   $form['xmlsitemap_node']['xmlsitemap_node_count_comments'] = array(
     '#type' => 'checkbox',
     '#title' => t('Count comments in change date and frequency'),
-    '#default_value' => variable_get('xmlsitemap_node_count_comments', TRUE),
     '#description' => t('If enabled, the frequency of comments on a post will affect its change frequency and last modification date.'),
+    '#default_value' => variable_get('xmlsitemap_node_count_comments', TRUE),
   );
 }
 
@@ -390,20 +407,38 @@ function _xmlsitemap_node_module_table_add_rows(&$context) {
  *  The context parameter passed from batch_process().
  */
 function _xmlsitemap_node_module_table_delete_rows(&$context) {
-  $context['results']['deleted'] = (integer) db_result(db_query('SELECT COUNT(xn.nid)
-    FROM {xmlsitemap_node} xn
-    LEFT JOIN {node} n ON n.nid = xn.nid
-    WHERE n.nid IS NULL')
-  );
-  db_query('DELETE FROM {xmlsitemap_node} xn
-    WHERE xn.nid IN (
-      SELECT xn.nid
+  if (!isset($context['sandbox']['progress'])) {
+    $context['sandbox']['current_node'] = 0;
+    $context['sandbox']['max'] = (integer) db_result(db_query('SELECT COUNT(xn.nid)
+      FROM {xmlsitemap_node} xn
+      LEFT JOIN {node} n ON n.nid = xn.nid
+      WHERE n.nid IS NULL')
+    );
+    $context['sandbox']['progress'] = 0;
+  }
+  if ($context['sandbox']['max']) {
+    $nid = db_result(
+      db_query("SELECT xn.nid
         FROM {xmlsitemap_node} xn
         LEFT JOIN {node} n ON n.nid = xn.nid
         WHERE n.nid IS NULL
-      )'
-  );
-  $context['finished'] = 1;
+          AND xn.nid > %d",
+        $context['sandbox']['current_node']
+      )
+    );
+    if ($nid === FALSE) {
+      $context['finished'] = 1;
+    }
+    else {
+      db_query('DELETE FROM {xmlsitemap_node} WHERE nid = %d', $nid);
+      $context['sandbox']['progress']++;
+      $context['sandbox']['current_node'] = $nid;
+      $context['results']['deleted'] = $context['sandbox']['progress'];
+      if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
+        $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
+      }
+    }
+  }
 }
 
 /**
@@ -434,7 +469,7 @@ function _xmlsitemap_node_module_table_update_rows(&$context) {
       drupal_write_record('xmlsitemap_node', $row, 'nid');
       $context['sandbox']['progress']++;
       $context['sandbox']['current_node'] = $row->nid;
-      $context['results']['update'] = $context['sandbox']['progress'];
+      $context['results']['updated'] = $context['sandbox']['progress'];
     }
     if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
       $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
