@@ -1,5 +1,5 @@
 <?php
-// $Id: xmlsitemap_menu.module,v 1.1.4.16 2009/02/03 15:51:25 kiam Exp $
+// $Id: xmlsitemap_menu.module,v 1.1.4.17 2009/02/06 00:02:30 kiam Exp $
 
 /**
  * @file
@@ -14,6 +14,14 @@
 /*****************************************************************************
  * Drupal hooks.
  ****************************************************************************/
+
+/**
+ * Implementation of hook_xmlsitemap_description().
+ */
+function xmlsitemap_menu_xmlsitemap_description() {
+  return '<dt>'. t('XML Sitemap: Menu') .'</dt>'.
+    '<dd>'. t('The module allows menu items to be added to the site map. You can choose the menus to include on the XML Sitemap administration page and can add and remove menu items on the <a href="@menu">menu administration</a> page. The priority of a menu item is determined by its weight.', array('@menu' => url('admin/build/menu'))) .'</dd>';
+}
 
 /**
  * Implementation of hook_xmlsitmap_links().

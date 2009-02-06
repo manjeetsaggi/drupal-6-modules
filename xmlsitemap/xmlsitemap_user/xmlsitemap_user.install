@@ -1,5 +1,5 @@
 <?php
-// $Id: xmlsitemap_user.install,v 1.6.2.18 2009/02/02 09:52:08 kiam Exp $
+// $Id: xmlsitemap_user.install,v 1.6.2.19 2009/02/05 13:49:46 kiam Exp $
 
 /*****************************************************************************
  * Drupal hooks.
@@ -37,7 +37,7 @@ function xmlsitemap_user_schema() {
     'primary key' => array('uid'),
   );
   $schema['xmlsitemap_user_role'] = array(
-    'description' => 'The base table for xmlsitemap.',
+    'description' => 'The user roles settings table.',
     'fields' => array(
       'rid' => array(
         'description' => 'The role ID.',

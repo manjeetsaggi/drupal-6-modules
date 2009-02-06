@@ -1,4 +1,8 @@
-$Id: CHANGELOG.txt,v 1.1.4.93 2009/02/04 18:59:34 kiam Exp $
+$Id: CHANGELOG.txt,v 1.1.4.94 2009/02/05 22:58:37 kiam Exp $
+
+XML Sitemap 6.x-1.x-dev, 2009-02-05
+-----------------------------------
+#369907: Tools tab needs some help text.
 
 XML Sitemap 6.x-1.x-dev, 2009-02-04
 -----------------------------------

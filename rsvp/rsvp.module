@@ -1,5 +1,5 @@
 <?php
-// $Id: rsvp.module,v 1.17.2.21 2009/01/10 00:37:34 ulf1 Exp $
+// $Id: rsvp.module,v 1.17.2.22 2009/01/17 20:54:07 ulf1 Exp $
 
 /**
  * @module rsvp
@@ -1177,6 +1177,9 @@ function rsvp_overview_form_access($connector, $usr, $node) {
   
   if (is_null($usr)) {
     //implies that $node must be valid.
+    if (user_is_anonymous())
+      return false;
+  	
     global $user;
     $_user = $user;
     $_node = $node;

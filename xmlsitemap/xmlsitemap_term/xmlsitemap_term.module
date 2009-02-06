@@ -1,5 +1,5 @@
 <?php
-// $Id: xmlsitemap_term.module,v 1.11.2.19 2009/02/03 14:15:57 kiam Exp $
+// $Id: xmlsitemap_term.module,v 1.11.2.20 2009/02/06 00:02:31 kiam Exp $
 
 /**
  * @file
@@ -183,6 +183,14 @@ function xmlsitemap_term_taxonomy($op, $type, $array = NULL) {
     }
     xmlsitemap_update_sitemap();
   }
+}
+
+/**
+ * Implementation of hook_xmlsitemap_description().
+ */
+function xmlsitemap_term_xmlsitemap_description() {
+  return '<dt>'. t('XML Sitemap: Term') .'</dt>'.
+    '<dd>'. t('The module adds <a href="@terms">taxonomy terms</a> (categories) to the site map. You can change the default priority when you add or edit a vocabulary, and you can override the default priority when you add or edit individual terms.', array('@terms' => url('admin/content/taxonomy'))) .'</dd>';
 }
 
 /**

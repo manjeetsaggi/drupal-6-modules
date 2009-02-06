@@ -1,5 +1,5 @@
 <?php
-// $Id: xmlsitemap_user.module,v 1.12.2.21 2009/02/03 14:15:57 kiam Exp $
+// $Id: xmlsitemap_user.module,v 1.12.2.22 2009/02/06 00:02:31 kiam Exp $
 
 /**
  * @file
@@ -163,6 +163,14 @@ function xmlsitemap_user_user($op, &$edit, &$account, $category = NULL) {
       xmlsitemap_update_sitemap();
       break;
   }
+}
+
+/**
+ * Implementation of hook_xmlsitemap_description().
+ */
+function xmlsitemap_user_xmlsitemap_description() {
+  return '<dt>'. t('XML Sitemap: User') .'</dt>'.
+    '<dd>'. t('The module adds user profiles to the site map. The <em>anonymous user</em> role must have permission to access user profiles on the <a href="@access">access control page</a>. You can change the default user priority on the <a href="@user_settings">user settings</a> page. The <a href="@user">user role priority</a> will override the default user priority. You can override both the default priority and the role priority when you add or edit a user.', array('@access' => url('admin/user/access'), '@user_settings' => url('admin/user/settings'), '@user_role' => url('admin/user/roles'))) .'</dd>';
 }
 
 /**
