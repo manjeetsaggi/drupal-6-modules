@@ -1,0 +1,38 @@
+<?php
+// $Id: syntaxhighlighter.install,v 1.2 2009/02/11 22:52:25 mattyoung Exp $
+
+/**
+ * @file
+ * Syntax highlighter module installation file.
+ */
+
+function syntaxhighlighter_uninstall() {
+  variable_del('syntaxhighlighter_enabled_languages');
+  variable_del('syntaxhighlighter_theme');
+  variable_del('syntaxhighlighter_tagname');
+  variable_del('syntaxhighlighter_legacy_mode');
+}
+
+/**
+ * Make sure the user has installed the 'SyntaxHighlighter' library
+ */
+function syntaxhighlighter_requirements($phase) {
+  $requirements = array();
+
+  if ($phase == 'runtime') {
+    // Raise warning if there the syntaxhighlighter script file is not install
+    $file = drupal_get_path('module', 'syntaxhighlighter') .'/syntaxhighlighter/scripts/shCore.js';
+    if (!file_exists($file)) {
+      $requirements['syntaxhighlighter'] = array(
+        'title' => t('Syntax highlighter module'),
+        'description' => t('The required Syntax Highlighter Javascript library has not been installed.  Please see README.txt.'),
+        'severity' => REQUIREMENT_ERROR,
+        'value' => t('Required dp.SyntaxHighlighter JS lib not installed'),
+      );
+    }
+  }
+
+  return $requirements;
+}
+
+

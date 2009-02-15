@@ -1,0 +1,87 @@
+<?php
+// $Id: syntaxhighlighter.module,v 1.4 2009/02/12 18:20:49 mattyoung Exp $
+
+/**
+ * @file
+ * Add syntax highlighter javascript to pages
+ *
+ * Adds the required Javascript files
+ * to enable code list syntax highlight.
+ 
+ * See http://alexgorbatchev.com/wiki/SyntaxHighlighter
+ *
+ * @author: Matthew Young <www.hddigitalworks.com/contact>
+ */
+
+function syntaxhighlighter_menu() {
+  $items['admin/settings/syntaxhighlighter'] = array(
+    'title' => 'Syntax highlighter',
+    'description' => 'Configure syntax highlighter',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('syntaxhighlighter_settings_form'),
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'syntaxhighlighter.admin.inc',
+  );
+  
+  return $items;
+}
+
+
+function syntaxhighlighter_theme() {
+  return array(
+    'syntaxhighlighter_css' => array('arguments' => array()),
+  );
+}
+
+
+function syntaxhighlighter_init() {
+  $styles_path = drupal_get_path('module', 'syntaxhighlighter') .'/syntaxhighlighter/styles/';
+  drupal_add_css($styles_path .'shCore.css', 'module');
+	theme('syntaxhighlighter_css');
+  $scripts_path = drupal_get_path('module', 'syntaxhighlighter') .'/syntaxhighlighter/scripts/';
+  drupal_add_js($scripts_path .'shCore.js', 'module');
+  if (variable_get('syntaxhighlighter_legacy_mode', 0)) {
+    drupal_add_js($scripts_path .'shLegacy.js', 'module');
+  }
+  $enabled_languages = variable_get('syntaxhighlighter_enabled_languages', array('shBrushPhp.js'));
+  foreach ($enabled_languages as $lang) {
+  	if (!empty($lang)) {
+      drupal_add_js($scripts_path . $lang, 'module');
+  	}
+  }
+  $tag_name = variable_get('syntaxhighlighter_tagname', 'pre');
+  if ($tag_name !== 'pre') {
+    $code[] = "SyntaxHighlighter.config.tagName = '$tag_name';";
+  }
+  
+  $code[] = 'SyntaxHighlighter.config.strings.expandSource = "'. t('+ expand source') .'";';
+  $code[] = 'SyntaxHighlighter.config.strings.viewSource = "'. t('view source') .'";';
+  $code[] = 'SyntaxHighlighter.config.strings.copyToClipboard = "'. t('copy to clipboard') .'";';
+  $code[] = 'SyntaxHighlighter.config.strings.copyToClipboardConfirmation = "'. t('The code is in your clipboard now') .'";';
+  $code[] = 'SyntaxHighlighter.config.strings.print = "'. t('print') .'";';
+  $code[] = 'SyntaxHighlighter.config.strings.help = "'. t('?') .'";';
+  $code[] = 'SyntaxHighlighter.config.strings.alert = "'. t('SyntaxHighlighter\n\n') .'";';
+  $code[] = 'SyntaxHighlighter.config.strings.noBrush = "'. t('Can\'t find brush for: ') .'";';
+  $code[] = 'SyntaxHighlighter.config.strings.brushNotHtmlScript = "'. t('Brush wasn\'t made for html-script option: ') .'";';
+  
+  $code[] = "SyntaxHighlighter.config.clipboardSwf = '/$scripts_path"."clipboard.swf';";
+  $code[] = '$(function () {';
+  $code[] = "  SyntaxHighlighter.highlight();";
+  if (variable_get('syntaxhighlighter_legacy_mode', 0)) {
+    $code[] = "  dp.SyntaxHighlighter.HighlightAll('code');";
+  }
+  $code[] = '});';
+  drupal_add_js(join("\n", $code), 'inline');
+}
+
+
+/**
+ * Allow theme to supply different css files.
+ * @return unknown_type
+ */
+function theme_syntaxhighlighter_css() {
+  $path = drupal_get_path('module', 'syntaxhighlighter') .'/syntaxhighlighter/styles/';
+  $theme = variable_get('syntaxhighlighter_theme', 'shThemeDefault.css');
+  drupal_add_css($path . $theme, 'module');
+}
