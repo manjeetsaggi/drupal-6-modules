@@ -1,5 +1,5 @@
 <?php
-// $Id: rules.events.inc,v 1.1.2.7 2008/08/21 13:20:24 fago Exp $
+// $Id: rules.events.inc,v 1.1.2.8 2009/01/15 17:19:31 fago Exp $
 /**
  * @file rules Invokes events for supported modules. Usually this should be directly
  *   in the module providing rules integration instead.
@@ -65,5 +65,15 @@ function rules_comment($comment, $op) {
       $comment = (object)$comment;
     }
     rules_invoke_event('comment_'. $op, $comment);
+  }
+}
+
+/**
+ * Implementation of hook_taxonomy().
+ */
+function rules_taxonomy($op, $type, $array) {
+  if ($type == 'term' && in_array($op, array('insert', 'update'))) {
+    $taxonomy_object = (object) $array;
+    rules_invoke_event('taxonomy_term_'. $op, $taxonomy_object);
   }
 }

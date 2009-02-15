@@ -1,5 +1,5 @@
 <?php
-// $Id: rules.admin.inc,v 1.1.2.56 2008/09/24 16:49:13 fago Exp $
+// $Id: rules.admin.inc,v 1.1.2.63 2008/12/29 19:35:18 fago Exp $
 
 /**
  * @file Rules Admin UI
@@ -143,7 +143,7 @@ function rules_admin_configuration_status($status) {
     return '<span title="'. $help .'">'. t('Modified'). '</span>';
   }
   else if ($status == 'fixed') {
-    $help = t('This rule has been provided by a module and can\'t be customized.');
+    $help = t("This rule has been provided by a module and can't be customized.");
     return '<span title="'. $help .'">'. t('Fixed') .'</span>';
   }
   else if ($status == 'custom') {
@@ -325,13 +325,30 @@ function rules_admin_form_add(&$form_state, $proxy, $type, $parent_id = NULL) {
  */
 function rules_admin_form_add_action(&$form_state, &$element) {
   $vars = $form_state['proxy']->get_available_variables();
-  $actions = rules_admin_filter_info($vars, rules_get_actions());
+  $all_actions = rules_get_actions();
+  $satisfied_actions = rules_admin_filter_info($vars, $all_actions);
+  $unsatisfied_actions = array_filter(array_diff_assoc($all_actions, $satisfied_actions), 'rules_admin_element_filter');
   $form['name'] = array(
     '#type' => 'select',
     '#title' => t('Select an action to add'),
-    '#options' => rules_admin_get_grouped_labels($actions),
+    '#options' => rules_admin_get_grouped_labels($satisfied_actions),
     '#required' => TRUE,
   );
+  if (!empty($unsatisfied_actions)){
+    // Hold all the actions that are disabled because argument(s) are missing.
+    $form['unsatisfied'] = array(
+      '#type' => 'fieldset',
+      '#title' => format_plural(count($unsatisfied_actions), '1 action is not configurable', '@count actions are not configurable'),
+      '#description' => t("The following actions aren't available in this context because they require arguments that don't exist in your rule. If you want to use any of these actions, you must first add some action that adds variables of this kind, or have an event that passes the required variables."),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+    );
+    $form['unsatisfied']['items'] = array(
+      '#type' => 'item',
+      '#unsatisfied_grouped_options' => $unsatisfied_actions,
+      '#theme' => 'rules_admin_unsatisfied_elements',
+    );
+  }
   $form['submit'] = array(
     '#type' => 'submit',
     '#weight' => 10,
@@ -348,13 +365,30 @@ function rules_admin_form_add_condition(&$form_state, &$element, $parent) {
 
   if (!isset($parent['#type']) || isset($parent['#logical_op']) && $parent['#logical_op']) {
     $vars = $form_state['proxy']->get_available_variables(0);
-    $conditions = rules_admin_filter_info($vars, rules_get_conditions());
+    $all_conditions = rules_get_conditions();
+    $satisfied_conditions = rules_admin_filter_info($vars, $all_conditions);
+    $unsatisfied_conditions = array_filter(array_diff_assoc($all_conditions, $satisfied_conditions), 'rules_admin_element_filter');
     $form['name'] = array(
       '#type' => 'select',
       '#title' => t('Select the condition to add'),
-      '#options' => rules_admin_get_grouped_labels($conditions),
+      '#options' => rules_admin_get_grouped_labels($satisfied_conditions),
       '#required' => TRUE,
     );
+    if (!empty($unsatisfied_conditions)){
+    // Hold all the actions that are disabled because argument(s) are missing.
+    $form['unsatisfied'] = array(
+      '#type' => 'fieldset',
+      '#title' => format_plural(count($unsatisfied_conditions), '1 condition is not configurable', '@count conditions are not configurable'),
+      '#description' => t("The following conditions aren't available in this context because they require arguments that don't exist in your rule. If you want to use any of these conditions, you must first add some action that adds variables of this kind in a previous rule, or have an event that passes the required variables."),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+    );
+    $form['unsatisfied']['items'] = array(
+      '#type' => 'item',
+      '#unsatisfied_grouped_options' => $unsatisfied_conditions,
+      '#theme' => 'rules_admin_unsatisfied_elements',
+    );
+  }
     $form['submit'] = array(
       '#type' => 'submit',
       '#weight' => 10,
@@ -461,7 +495,7 @@ function rules_admin_form_edit_action(&$form_state, $element) {
     '#title' => t('Label'),
     '#type' => 'textfield',
     '#description' => t('Customize the label for this action.'),
-    '#default_value' => $label,
+    '#default_value' => isset($form_state['values']['label']) ? $form_state['values']['label'] : $label,
     '#required' => TRUE,
     '#weight' => -5,
   );
@@ -519,7 +553,7 @@ function rules_admin_form_edit_condition(&$form_state, $element) {
     '#title' => t('Label'),
     '#type' => 'textfield',
     '#description' => t('Customize the label for this condition.'),
-    '#default_value' => $label,
+    '#default_value' => isset($form_state['values']['label']) ? $form_state['values']['label'] : $label,
     '#required' => TRUE,
     '#weight' => -5,
   );
@@ -710,6 +744,8 @@ function rules_admin_new_variables_form(&$form, &$form_state, $element) {
         '#title' => t('Variable @label settings', array('@label' => $var['label'])),
         '#collapsible' => TRUE,
       );
+      // Make sure the variable label is in lower case.
+      $var['label'] = drupal_strtolower(drupal_substr($var['label'], 0, 1)) . drupal_substr($var['label'], 1);
       $form['new'][$name]['label'] = array(
         '#type' => 'textfield',
         '#title' => t('Label'),
@@ -749,7 +785,7 @@ function rules_admin_new_variables_form_submit(&$form, &$form_state, &$element) 
 
       //handle the label
       $info = &$element['#info']['new variables'][$old_name];
-      $info = _rules_admin_get_label($form_state, $info, $element, $values['label']) + $info;
+      $info = _rules_admin_get_label($form_state, $info, $element, $values['label'], FALSE) + $info;
 
       if ($old_name != $values['name']) {
         //add it to the argument map
@@ -773,18 +809,18 @@ function rules_admin_default_argument_form(&$form, &$form_state, $element) {
   $form['map'] = array('#tree' => TRUE);
 
   $function = $element['#name']. '_form';
-  $info = rules_get_element_info($element);
+  $info = rules_retrieve_element_info($element);
 
   if (isset($info['arguments']) && count($info['arguments'])) {
     $variables = $form_state['proxy']->get_available_variables($element['#id']);
 
     foreach ($info['arguments'] as $name => $arg_info) {
       $arg = rules_get_data_object($arg_info);
-      if (!$arg->is_identifiable()) {
+      if ($arg->uses_input_form()) {
         $value = isset($element['#settings'][$name]) ? $element['#settings'][$name] : NULL;
-        $form['settings'][$name] = $arg->get_default_input_form($arg_info, $value);
+        $form['settings'][$name] = $arg->get_default_input_form($arg_info, $value, $form_state);
       }
-      if (empty($form['settings'][$name])) {
+      else {
         $args = rules_admin_map_get_possible_arguments($arg_info, $variables);
         $form['map'][$name] = array(
           '#type' => 'select',
@@ -832,7 +868,7 @@ function rules_admin_map_get_configured_argument($name, $element) {
  * Shows the element help
  */
 function rules_admin_element_help(&$form, $element) {
-  $info = rules_get_element_info($element);
+  $info = rules_retrieve_element_info($element);
   if (isset($info['help']) || isset($element['help'])) {
     $help = isset($element['help']) ? t($element['help']) : t($info['help']);
   }
@@ -1037,20 +1073,26 @@ function _rules_admin_element_is_logical_op($element) {
 
 /**
  * Filters the info about elements (actions, conditions), so that only elements
- * compatible with the given variables are kept, which means suiting variables for all arguments
- * are available, so that the action/condition can be configured
+ * compatible with the given variables are kept, which means suiting variables
+ * for all arguments are available, so that the action/condition can be
+ * configured.
+ * Additionally, arguments having no suiting variables are recorded
+ * in the 'unsatisfied arguments' slot of the element in $infos.
  */
-function rules_admin_filter_info($variables, $infos) {
+function rules_admin_filter_info($variables, &$infos) {
   $filtered = array();
   foreach ($infos as $key => $info) {
     if (isset($info['arguments']) && is_array($info['arguments'])) {
       foreach ($info['arguments'] as $name => $argument_info) {
         if (!rules_admin_argument_satisifable($argument_info, $variables)) {
-          // Skip this element
-          continue 2;
+          // Get the unsatisfied arguments.
+          $infos[$key] += array('unsatisfied arguments' => array());
+          $infos[$key]['unsatisfied arguments'][$name] = $argument_info['label'];
         }
       }
-      $filtered[$key] = $info;
+      if (empty($infos[$key]['unsatisfied arguments'])) {
+        $filtered[$key] = $info;
+      }
     }
     else {
       $filtered[$key] = $info;
@@ -1068,7 +1110,8 @@ function rules_admin_argument_satisifable($info, $variables) {
     return TRUE;
   }
   if (($type_info = rules_get_data_types($info['type']))) {
-    if (isset($type_info['identifiable']) && !$type_info['identifiable']) {
+    // For backward compatibility use_input_form is interpreted as !identifiable if it's unset.
+    if (!empty($type_info['use_input_form']) || (!isset($type_info['use_input_form']) && empty($type_info['identifiable']))) {
       // Argument value will be set on configuration time.
       return TRUE;
     }
@@ -1090,6 +1133,41 @@ function rules_admin_map_get_possible_arguments($arg_info, $variables) {
     }
   }
   return $matches;
+}
+
+/**
+ * Themes the a list of actions or conditions, that are not satisfiable.
+ */
+function theme_rules_admin_unsatisfied_elements($element) {
+  $output = '';
+  $output .= '<div class="rules-unsatisfied-arguments">';
+  foreach (rules_admin_get_grouped_labels($element['#unsatisfied_grouped_options']) as $grouped_rules) {
+    $output .= theme('rules_admin_unsatisfied_elements_group', $grouped_rules, $element['#unsatisfied_grouped_options']);
+  }
+  $output .= '</div>';
+  return $output;
+}
+
+/**
+ * Themes not satisifable elements of a group.
+ */
+function theme_rules_admin_unsatisfied_elements_group($grouped_rules, $elements) {
+  $output = '<dl>';
+  foreach ($grouped_rules as $name => $value) {
+    $fieldset = array(
+      '#type' => 'fieldset',
+      '#title' => t('@group module', array('@group' => $elements[$name]['module'])),
+      '#collapsible' => FALSE,
+    );
+    $output .= '<dt>'. check_plain($elements[$name]['label']) .'</dt>';
+    $output .= '<dd><em>'. format_plural(count($elements[$name]['unsatisfied arguments']), 'Unavailable argument: @arguments', 'Unavailable arguments: @arguments', array('@arguments' => implode(', ', $elements[$name]['unsatisfied arguments']))) .'</em></dd>';
+  }
+  $output .= '</dl>';
+  $fieldset['items'] = array(
+    '#type' => 'markup',
+    '#value' => $output,
+  );
+  return drupal_render($fieldset);
 }
 
 /**
@@ -1120,8 +1198,8 @@ function _rules_admin_rule_get_new_unique_name() {
  * Saves the element label.
  */
 function rules_admin_save_element_label($form, &$form_state, &$element) {
-  $info = _rules_admin_get_label($form_state, rules_get_element_info($element), $element, $form_state['values']['label']);
-  //this makes sure we don't save the applied defaults
+  $info = _rules_admin_get_label($form_state, rules_get_element_info($element), $element, $form_state['values']['label'], TRUE);
+  // This makes sure we don't save the applied defaults
   $element['#info'] = $info + $element['#info'];
 }
 
@@ -1129,9 +1207,11 @@ function rules_admin_save_element_label($form, &$form_state, &$element) {
  * Gets the label for the info of the given element by apply label callbacks.
  * Note that this is also used for argument infos.
  *
+ * @param $cfirst
+ *   If TRUE, capitalize the first letter, if FALSE lower case the first letter.
  * @return An array of changed properties of the given info
  */
-function _rules_admin_get_label(&$form_state, $info, &$element, $value) {
+function _rules_admin_get_label(&$form_state, $info, $element, $value, $cfirst = NULL) {
   $info_changes = array();
   if ($info['label'] != $value) {
     //label has been customized
@@ -1141,6 +1221,10 @@ function _rules_admin_get_label(&$form_state, $info, &$element, $value) {
   else if (isset($info['label callback']) && $info['label callback'] && function_exists($info['label callback'])) {
     $argument_labels = rules_admin_get_argument_labels($form_state['proxy'], $element);
     $info_changes['label'] = $info['label callback']($element['#settings'], $argument_labels, $element);
+    if (isset($cfirst)) {
+      $function = $cfirst ? 'drupal_strtoupper' : 'drupal_strtolower';
+      $info_changes['label'] = $function(drupal_substr($info_changes['label'], 0, 1)) . drupal_substr($info_changes['label'], 1);
+    }
   }
   return $info_changes;
 }

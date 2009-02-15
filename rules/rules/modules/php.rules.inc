@@ -1,5 +1,5 @@
 <?php
-// $Id: php.rules.inc,v 1.1.2.7 2008/08/25 15:29:08 fago Exp $
+// $Id: php.rules.inc,v 1.1.2.8 2008/11/06 19:33:29 fago Exp $
 /**
  * @file rules integration for the php module
  * This provides an php input evaluator as well as a execute php code action.
@@ -58,7 +58,7 @@ function rules_input_evaluator_php_apply($string, $data = NULL, &$state, $return
   $vars = array();
 
   if ($data) {
-    $vars = rules_get_variables($data, $state);
+    $vars = rules_get_variables(drupal_map_assoc($data), $state);
     if (!$vars) {
       rules_log(t('PHP is not evaluated as there are not all necessary variables available.'));
       return FALSE;

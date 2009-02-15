@@ -1,5 +1,5 @@
 <?php
-// $Id: user.rules.inc,v 1.1.2.11 2008/09/29 16:29:34 fago Exp $
+// $Id: user.rules.inc,v 1.1.2.13 2008/10/17 10:34:06 fago Exp $
 /**
  * @file rules integration for the user module
  */
@@ -27,8 +27,8 @@ function user_rules_event_info() {
     'user_view' => array(
       'label' => t('User page has been viewed'),
       'module' => 'User',
-      'description' => t('Note that if drupal\'s page cache is enabled, this event won\'t be generated for pages served from cache.'),
       'arguments' => rules_events_hook_user_arguments(t('viewed user')),
+      'help' => t("Note that if drupal's page cache is enabled, this event won't be generated for pages served from cache."),
     ),
     'user_delete' => array(
       'label' => t('User has been deleted'),
@@ -93,7 +93,7 @@ function user_rules_condition_info() {
         'user1' => array('type' => 'user', 'label' => t('User account 1')),
         'user2' => array('type' => 'user', 'label' => t('User account 2')),
       ),
-      'help' => 'Evaluates to TRUE, if both given user accounts are the same.',
+      'help' => t('Evaluates to TRUE, if both given user accounts are the same.'),
       'module' => 'User',
     ),
     'rules_condition_user_hasrole' => array(
@@ -101,7 +101,7 @@ function user_rules_condition_info() {
       'arguments' => array(
         'user' => array('type' => 'user', 'label' => t('User')),
       ),
-      'help' => 'Whether the user has the selected role(s).',
+      'help' => t('Whether the user has the selected role(s).'),
       'module' => 'User',
     ),
   );
@@ -163,9 +163,27 @@ function user_rules_action_info() {
       'new variables' => array(
         'user_loaded' => array('type' => 'user', 'label' => t('Loaded user')),
       ),
-      'help' => 'Enter an id or a name of the user to load.',
+      'help' => t('Enter an id or a name of the user to load.'),
       'module' => 'User',
-     ),
+    ),
+    'rules_action_user_create' => array(
+      'label' => t('Create User'),
+      'arguments' => array(
+        'username' => array('type' => 'string', 'label' => t('User name')),
+        'email' => array('type' => 'string', 'label' => t("User's E-mail")),
+        ),
+      'new variables' => array(
+        'user_added' => array(
+          'type' => 'user',
+          'label' => t('New user'),
+        ),
+        'user_added_pw' => array(
+          'type' => 'string',
+          'label' => t("New user's password"),
+        ),
+      ),  
+      'module' => 'User',
+    ),
   );
 }
 
@@ -176,7 +194,7 @@ function rules_action_user_addrole($user, $settings) {
   if ($user->uid) {
     // Get role list (minus the anonymous)
     $role_list = user_roles(TRUE);
-  
+
     foreach ($settings['roles'] as $rid) {
       $user->roles[$rid] = $role_list[$rid];
     }
@@ -209,6 +227,45 @@ function rules_action_load_user($settings) {
   $userarray = array('name' => $settings['username'], 'uid' => $settings['userid']);
   return array('user_loaded' => user_load(array_filter($userarray)));
 }
+
+/**
+  * Creates a user
+  */
+function rules_action_user_create($user_name, $user_mail)  {
+  $password = user_password();
+  $user_data = array(
+    'name' => $user_name,
+    'mail' => $user_mail,
+    'status' => 1,
+    'pass' => $password,
+  );
+  //validate name input                
+  if (user_validate_name($user_data['name'])) {
+    rules_log(t('No appropriate user name. No user has been created.'));
+  }
+  else if (drupal_is_denied('user', $user_data['name'])) {
+    rules_log(t('The name %name has been denied access. No user has been created.', array('%name' => $user_data['name'])));
+  }
+  else if ($account = user_load(array('name' => $user_data['name']))) {
+    rules_log(t('User !name already exists. No user has been created.', array('!name' => $user_data['name'])));
+  }
+  //validate e-mail
+  else if ($error = user_validate_mail($user_data['mail'])) {
+    rules_log(t('No appropriate mail address. No user has been created.'));
+  }
+  else if (drupal_is_denied('mail', $user_data['mail'])) {
+    rules_log(t('The e-mail address %email has been denied access. No user has been created.', array('%email' => $user_data['mail'])));
+  }
+  else if ($account = user_load(array('mail' => $user_data['mail']))) {
+     rules_log(t('The e-mail address %email is already registered. No user has been created.', array('%email' => $user_data['mail'])));
+  }
+  else {
+    $user = user_save(NULL, $user_data);
+    return array('user_added' => $user, 'user_added_pw' => $password);
+  }
+  
+}
+
 
 /**
  * Implementation of hook_rules_data_type_info().
@@ -255,3 +312,5 @@ function user_rules_action_info_alter(&$actions) {
   // This action can be configured to other users than the current one, so improve the label.
   $actions['rules_core_user_block_user_action']['label'] = t('Block a user');
 }
+
+

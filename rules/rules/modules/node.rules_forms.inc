@@ -1,5 +1,5 @@
 <?php
-// $Id: node.rules_forms.inc,v 1.1.2.13 2008/08/19 09:12:03 fago Exp $
+// $Id: node.rules_forms.inc,v 1.1.2.14 2008/10/28 15:03:35 fago Exp $
 /**
  * @file Rules configuration forms for the node module
  */
@@ -40,6 +40,12 @@ function rules_condition_content_is_promoted_label($settings, $argument_labels) 
  */
 function rules_action_node_set_author_label($settings, $argument_labels) {
   return t('Set the author of @node to @author', $argument_labels);
+}
+/**
+ * Action set node title - Label callback
+ */
+function rules_action_set_node_title_label($settings, $argument_labels) {
+  return t("Set @node's title", $argument_labels);
 }
 
 /**

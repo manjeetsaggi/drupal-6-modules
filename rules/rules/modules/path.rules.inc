@@ -1,5 +1,5 @@
 <?php
-// $Id: path.rules.inc,v 1.1.2.3 2008/08/29 12:02:55 fago Exp $
+// $Id: path.rules.inc,v 1.1.2.4 2008/10/03 10:21:04 fago Exp $
 
 /**
  * @file Rules integration for the path module
@@ -51,7 +51,7 @@ function path_rules_action_info() {
       'eval input' => array('src', 'dst'),
     ),
     'rules_action_node_path_alias' => array(
-      'label' => t('Create or delete a content\'s URL alias'),
+      'label' => t("Create or delete a content's URL alias"),
       'arguments' => array(
         'node' => array('type' => 'node', 'label' => t('Content')),
       ),

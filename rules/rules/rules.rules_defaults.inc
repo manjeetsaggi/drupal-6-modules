@@ -1,5 +1,5 @@
 <?php
-// $Id: rules.rules_defaults.inc,v 1.1.2.7 2008/08/13 14:52:12 fago Exp $
+// $Id: rules.rules_defaults.inc,v 1.1.2.8 2009/02/05 10:54:33 fago Exp $
 /**
  * @file Rules default rules
  */
@@ -90,7 +90,7 @@ array (
           ),
           '#info' =>
           array (
-            'label' => 'Publish viewed viewed content',
+            'label' => 'Publish viewed content',
             'module' => 'Node',
             'arguments' =>
             array (

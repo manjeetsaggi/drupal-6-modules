@@ -1,5 +1,5 @@
 <?php
-// $Id: rules.rules.inc,v 1.1.2.23 2008/08/29 12:02:55 fago Exp $
+// $Id: rules.rules.inc,v 1.1.2.29 2009/02/05 10:18:38 fago Exp $
 /**
  * @file rules integration for the rules module
  */
@@ -60,7 +60,7 @@ class rules_data_type_string extends rules_data_type {
     return array(
       '#type' => $info['long'] ? 'textarea' : 'textfield',
       '#title' => $info['label'],
-      '#description' => t($info['description']),
+      '#description' => $info['description'],
       '#required' => $info['required'],
       '#default_value' => $value,
     );
@@ -87,7 +87,7 @@ class rules_data_type_date extends rules_data_type_string {
   function get_default_input_form($info, $value) {
     $info += array('long' => FALSE, 'required' => TRUE, 'description' => '');
     $value = isset($value) ? $value : date('Y-m-d H:i:s', time() + 86400);
-    $info['description'] = t($info['description']) .' '. t('Format: %format or other values known by the PHP !strtotime function like "+1 day". ', array('%format' => date('Y-m-d H:i:s', time() + 86400), '!strtotime' => l('strtotime()', 'http://php.net/strtotime')));
+    $info['description'] = $info['description'] .' '. t('Format: %format or other values known by the PHP !strtotime function like "+1 day". ', array('%format' => date('Y-m-d H:i:s', time() + 86400), '!strtotime' => l('strtotime()', 'http://php.net/strtotime')));
     $info['description'] .= '<br />'. t('You may also enter a timestamp in GMT. E.g. use !code together with the PHP input evalutor to specify a date one day after the evaluation time. ', array('!code' => '<pre>'. check_plain('<?php echo time() + 86400 * 1; ?>'). '</pre>'));
     return array(
       '#type' => $info['long'] ? 'textarea' : 'textfield',
@@ -125,7 +125,7 @@ class rules_data_type_boolean extends rules_data_type_string {
 
   function get_default_input_form($info, $value) {
     $info += array('long' => FALSE, 'required' => TRUE, 'description' => '');
-    $info['description'] = t($info['description']) .' '. t('Just enter 1 for TRUE, 0 for FALSE or make use of an input evaluator.');
+    $info['description'] = $info['description'] .' '. t('Just enter 1 for TRUE, 0 for FALSE or make use of an input evaluator.');
     return array(
       '#type' => $info['long'] ? 'textarea' : 'textfield',
       '#title' => $info['label'],
@@ -149,7 +149,7 @@ function rules_rules_condition_info() {
         'text1' => array('label' => t('Text 1'), 'type' => 'string'),
         'text2' => array('label' => t('Text 2'), 'type' => 'string'),
       ),
-      'help' => 'TRUE is returned, if both texts are equal.',
+      'help' => t('TRUE is returned, if both texts are equal.'),
       'module' => 'Rules',
     ),
     'rules_condition_number_compare' => array(
@@ -158,7 +158,7 @@ function rules_rules_condition_info() {
         'number1' => array('label' => t('Number 1'), 'type' => 'number'),
         'number2' => array('label' => t('Number 2'), 'type' => 'number'),
       ),
-      'help' => 'Select greater than, less than or equal to.',
+      'help' => t('Select greater than, less than or equal to.'),
       'module' => 'Rules',
     ),
     'rules_condition_check_boolean' => array(
@@ -223,7 +223,7 @@ function rules_rules_action_info() {
     $type_map = rules_gather_data('rules_action_type_map');
     $items[ 'rules_core_'. $name ] = rules_core_action_transform_info($name, $core_action_info, $type_map);
   }
-  array_filter($items);
+  $items = array_filter($items);
 
   // Add an action to add a new variable for all not identifiable data types
   foreach (rules_get_data_types() as $name => $type_info) {
@@ -231,7 +231,7 @@ function rules_rules_action_info() {
       $items[ 'rules_add_var_'. $name ] = array(
         'module' => 'Rules',
         'base' => 'rules_action_save_variable',
-        'label' => t('Add a new @type variable', array('@type' => strtolower($type_info['label']))),
+        'label' => t('Add a new @type variable', array('@type' => drupal_strtolower($type_info['label']))),
         'arguments' => array(
           'var_name' => array('type' => 'value', 'default value' => $name),
           $name => array('type' => $name, 'label' => $type_info['label']),
@@ -251,7 +251,7 @@ function rules_rules_action_info() {
       $items[ 'rules_save_var_'. $name ] = array(
         'module' => isset($type_info['module']) ? $type_info['module'] : 'Rules',
         'base' => 'rules_action_save_variable',
-        'label' => t('Save @type', array('@type' => $type_info['label'])),
+        'label' => t('Save a @type', array('@type' => drupal_strtolower($type_info['label']))),
         'arguments' => array(
           'var_name' => array('type' => 'value', 'default value' => $name),
           $name => array('type' => $name, 'label' => $type_info['label']),
@@ -290,15 +290,13 @@ function rules_action_save_variable($name, $variable) {
  * If the action should not be used by the rules modules, an empty array is returned.
  */
 function rules_core_action_transform_info($name, $core_action_info, $type_map) {
+  // If there is no entry in the type map or we should ignore it, we don't use this action.
+  if (!empty($core_action_info['rules_ignore']) || !isset($type_map[$core_action_info['type']])) {
+    return array();
+  }
 
-  if (isset($core_action_info['rules_ignore']) && $core_action_info['rules_ignore']) {
-    return array();
-  }
   $info = $type_map[$core_action_info['type']];
-  // If there is no entry in the type map, so we don't use this action.
-  if (!isset($info)) {
-    return array();
-  }
+
   // Make sure there is a object.
   $info += array('arguments' => array('object' => array('type' => 'value', 'default value' => NULL)));
 
@@ -358,6 +356,17 @@ function rules_core_action_execute_form($settings, &$form, &$form_state) {
 }
 
 /**
+ * Apply the core actions form validation
+ */
+function rules_core_action_execute_validate(&$form, &$form_state) {
+  $element = $form_state['element'];
+  $info = rules_get_element_info($element);
+  if ($info['configurable'] && function_exists($function = $info['action_name']. '_validate')) {
+    $function($form['settings'], $form_state);
+  }
+}
+
+/**
  * Action form submit implementation: Apply the core actions form submit
  */
 function rules_core_action_execute_submit(&$settings, &$form, &$form_state) {
@@ -405,9 +414,6 @@ function rules_rules_action_type_map() {
           'type' => 'user',
         ),
       ),
-    ),
-    'system' => array(
-      'module' => 'System',
     ),
   );
 }

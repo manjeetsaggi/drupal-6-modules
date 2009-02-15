@@ -1,5 +1,10 @@
 <?php
-// $Id: xmlsitemap_node.install,v 1.9.2.15 2009/02/02 09:52:08 kiam Exp $
+// $Id: xmlsitemap_node.install,v 1.9.2.22 2009/02/14 15:45:30 kiam Exp $
+
+/**
+ * @file
+ * Installation file for XML Sitemap: Node.
+ */
 
 /*****************************************************************************
  * Drupal hooks.
@@ -19,21 +24,32 @@ function xmlsitemap_node_schema() {
         'not null' => TRUE,
         'default' => 0,
       ),
+      'vid' => array(
+        'description' => 'The current node revision ID.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
       'changed' => array(
         'description' => 'The Unix timestamp of the last change.',
         'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
       ),
       'previously_changed' => array(
         'description' => 'The Unix timestamp of the previous change.',
         'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
       ),
-      'last_comment' => array(
-        'description' => 'The Unix timestamp of the last added comment.',
-        'type' => 'int',
-      ),
-      'previous_comment' => array(
-        'description' => 'The Unix timestamp of the previously added comment.',
-        'type' => 'int',
+      'comment_ratio' => array(
+        'description' => 'The ratio between the node comments and the maximum number of comments added to a node.',
+        'type' => 'float',
+        'not null' => TRUE,
+        'default' => 0.0,
       ),
       'priority_override' => array(
         'description' => 'The priority of the node in the site map.',
@@ -42,6 +58,7 @@ function xmlsitemap_node_schema() {
         'default' => -2.0,
       ),
     ),
+    'unique keys' => array('vid' => array('vid')),
     'primary key' => array('nid'),
   );
 
@@ -53,6 +70,7 @@ function xmlsitemap_node_schema() {
  */
 function xmlsitemap_node_install() {
   drupal_install_schema('xmlsitemap_node');
+  db_query("UPDATE {system} SET weight = 5 WHERE name = 'xmlsitemap_node'");
 }
 
 /**
@@ -87,19 +105,87 @@ function xmlsitemap_node_update_6000() {
         array('primary key' => array('nid'))
       );
     }
+    else {
+      db_add_field($ret, 'xmlsitemap_node', 'nid',
+        array(
+          'description' => 'The node ID.',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+        ),
+        array('primary key' => array('nid'))
+      );
+    }
+    if (!db_column_exists('xmlsitemap_node', 'vid')) {
+      db_add_field($ret, 'xmlsitemap_node', 'vid',
+        array(
+          'description' => 'The current node revision ID.',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+        )
+      );
+    }
     if (db_column_exists('xmlsitemap_node', 'last_changed')) {
       db_change_field($ret, 'xmlsitemap_node', 'last_changed', 'changed',
         array(
           'description' => 'The Unix timestamp of the last change.',
           'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
         )
       );
     }
-    if (!db_column_exists('xmlsitemap_node', 'changed')) {
-      db_add_field($ret, 'xmlsitemap_node', 'changed',
+    else {
+      if (db_column_exists('xmlsitemap_node', 'changed')) {
+        db_change_field($ret, 'xmlsitemap_node', 'changed', 'changed',
+          array(
+            'description' => 'The Unix timestamp of the last change.',
+            'type' => 'int',
+            'unsigned' => TRUE,
+            'not null' => TRUE,
+            'default' => 0,
+          )
+        );
+      }
+      else {
+        db_add_field($ret, 'xmlsitemap_node', 'changed',
+          array(
+            'description' => 'The Unix timestamp of the last change.',
+            'type' => 'int',
+            'unsigned' => TRUE,
+            'not null' => TRUE,
+            'default' => 0,
+          )
+        );
+      }
+    }
+    if (db_column_exists('xmlsitemap_node', 'last_comment')) {
+      db_drop_field($ret, 'xmlsitemap_node', 'last_comment');
+    }
+    if (db_column_exists('xmlsitemap_node', 'previous_comment')) {
+      db_drop_field($ret, 'xmlsitemap_node', 'previous_comment');
+    }
+    if (!db_column_exists('xmlsitemap_node', 'comment_ratio')) {
+      db_add_field($ret, 'xmlsitemap_node', 'comment_ratio',
         array(
-          'description' => 'The Unix timestamp of the last change.',
-          'type' => 'int',
+          'description' => 'The ratio between the node comments and the maximum number of comments added to a node.',
+          'type' => 'float',
+          'not null' => TRUE,
+          'default' => 0.0,
+        )
+      );
+    }
+    else {
+      db_change_field($ret, 'xmlsitemap_node', 'comment_ratio', 'comment_ratio',
+        array(
+          'description' => 'The ratio between the node comments and the maximum number of comments added to a node.',
+          'type' => 'float',
+          'not null' => TRUE,
+          'default' => 0.0,
         )
       );
     }
@@ -125,22 +211,35 @@ function xmlsitemap_node_update_6000() {
             'description' => 'The node ID.',
             'type' => 'int',
             'unsigned' => TRUE,
+            'not null' => TRUE,
+            'default' => 0,
+          ),
+          'vid' => array(
+            'description' => 'The current node revision ID.',
+            'type' => 'int',
+            'unsigned' => TRUE,
+            'not null' => TRUE,
+            'default' => 0,
           ),
           'changed' => array(
             'description' => 'The Unix timestamp of the last change.',
             'type' => 'int',
+            'unsigned' => TRUE,
+            'not null' => TRUE,
+            'default' => 0,
           ),
           'previously_changed' => array(
             'description' => 'The Unix timestamp of the previous change.',
             'type' => 'int',
+            'unsigned' => TRUE,
+            'not null' => TRUE,
+            'default' => 0,
           ),
-          'last_comment' => array(
-            'description' => 'The Unix timestamp of the last added comment.',
-            'type' => 'int',
-          ),
-          'previous_comment' => array(
-            'description' => 'The Unix timestamp of the previously added comment.',
-            'type' => 'int',
+          'comment_ratio' => array(
+            'description' => 'The ratio between the node comments and the maximum number of comments added to a node.',
+            'type' => 'float',
+            'not null' => TRUE,
+            'default' => 0.0,
           ),
           'priority_override' => array(
             'description' => 'The priority of the node in the site map.',
@@ -209,6 +308,47 @@ function xmlsitemap_node_update_6104() {
  *
  */
 function xmlsitemap_node_update_6105() {
+  return array();
+}
+
+/**
+ * Implementation of hook_update_N().
+ *
+ */
+function xmlsitemap_node_update_6106() {
+  $ret[] = update_sql("UPDATE {system} SET weight = 5 WHERE name = 'xmlsitemap_node'");
+  return $ret;
+}
+
+/**
+ * Implementation of hook_update_N().
+ *
+ */
+function xmlsitemap_node_update_6107() {
+  return array();
+}
+
+/**
+ * Implementation of hook_update_N().
+ *
+ */
+function xmlsitemap_node_update_6108() {
+  return array();
+}
+
+/**
+ * Implementation of hook_update_N().
+ *
+ */
+function xmlsitemap_node_update_6109() {
+  return array();
+}
+
+/**
+ * Implementation of hook_update_N().
+ *
+ */
+function xmlsitemap_node_update_6110() {
   return xmlsitemap_node_update_6000();
 }
 

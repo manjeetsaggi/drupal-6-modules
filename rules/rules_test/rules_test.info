@@ -5,9 +5,9 @@ package = Rules
 dependencies[] = simpletest
 dependencies[] = rules
 core = 6.x
-; Information added by drupal.org packaging script on 2008-09-29
-version = "6.x-1.0-beta3"
+; Information added by drupal.org packaging script on 2009-02-06
+version = "6.x-1.0-beta4"
 core = "6.x"
 project = "rules"
-datestamp = "1222706456"
+datestamp = "1233920142"
 

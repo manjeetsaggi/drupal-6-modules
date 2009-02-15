@@ -1,5 +1,5 @@
 <?php
-// $Id: select.inc,v 1.22.2.25 2009/01/11 22:58:41 quicksketch Exp $
+// $Id: select.inc,v 1.22.2.27 2009/02/14 22:21:23 quicksketch Exp $
 
 /**
  * @file
@@ -48,6 +48,7 @@ function _webform_edit_select($currfield) {
     '#rows' => 5,
     '#weight' => -2,
     '#required' => TRUE,
+    '#element_validate' => array('_webform_edit_validate_select'),
   );
   $edit_fields['value'] = array(
     '#type' => 'textfield',
@@ -83,9 +84,48 @@ function _webform_edit_select($currfield) {
   return $edit_fields;
 }
 
-function _webform_edit_validate_select($form_values) {
-  // Currently no validation for selects.
-  // TODO: Validate e-mail addresses when used as keys?
+/**
+ * Element validation callback. Ensure keys are not duplicated.
+ */
+function _webform_edit_validate_select($element, $form_state) {
+  // TODO: Validate e-mail addresses when used as keys?\
+
+  // Check for duplicate key values to prevent unexpected data loss.
+  if (!empty($element['#value'])) {
+    $lines = explode("\n", $element['#value']);
+    $existing_keys = array();
+    $duplicate_keys = array();
+    $group = '';
+    foreach ($lines as $line) {
+      $matches = array();
+      $line = trim($line);
+      if (preg_match('/^\<([^>]*)\>$/', $line, $matches)) {
+        $group = $matches[1];
+        $key = NULL; // No need to store group names.
+      }
+      elseif (preg_match('/^([^|]+)\|(.*)$/', $line, $matches)) {
+        $key = $matches[1];
+      }
+      else {
+        $key = $line;
+      }
+
+      if (isset($key)) {
+        if (isset($existing_keys[$group][$key])) {
+          $duplicate_keys[$key] = $key;
+        }
+        else {
+          $existing_keys[$group][$key] = $key;
+        }
+      }
+    }
+
+    if (!empty($duplicate_keys)) {
+      form_error($element, t('Options within the select list must be unique. The following keys have been used multiple times:') . theme('item_list', $duplicate_keys));
+    }
+
+  }
+
   return TRUE;
 }
 
@@ -254,7 +294,7 @@ function _webform_submit_select(&$data, $component) {
  */
 function theme_webform_mail_select($data, $component) {
   // Convert submitted 'safe' values to un-edited, original form.
-  $options = _webform_select_options($component['extra']['items']);
+  $options = _webform_select_options($component['extra']['items'], TRUE);
 
   // Generate the output.
   $output = '';
@@ -309,7 +349,7 @@ function _webform_theme_select() {
  *   submissions.
  */
 function _webform_analysis_rows_select($component) {
-  $options = _webform_select_options($component['extra']['items']);
+  $options = _webform_select_options($component['extra']['items'], TRUE);
 
   $query = 'SELECT data, count(data) as datacount '.
     ' FROM {webform_submitted_data} '.
@@ -378,7 +418,7 @@ function _webform_csv_headers_select($component) {
   if ($component['extra']['multiple']) {
     $headers[0][] = '';
     $headers[1][] = $component['name'];
-    $items = _webform_select_options($component['extra']['items']);
+    $items = _webform_select_options($component['extra']['items'], TRUE);
     $count = 0;
     foreach ($items as $key => $item) {
       // Empty column per sub-field in main header.
@@ -410,11 +450,12 @@ function _webform_csv_headers_select($component) {
  */
 function _webform_csv_data_select($data, $component) {
   $value = _webform_filter_values($component['value'], NULL, NULL, FALSE);
-  $options = _webform_select_options($component['extra']['items']);
+  $options = _webform_select_options($component['extra']['items'], TRUE);
   $return = array();
 
   if ($component['extra']['multiple']) {
     foreach ($options as $key => $item) {
+      
       if (in_array($key, (array)$data['value']) === TRUE) {
         $return[] = 'X';
       }

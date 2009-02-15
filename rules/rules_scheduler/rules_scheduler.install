@@ -1,5 +1,5 @@
 <?php
-// $Id: rules_scheduler.install,v 1.1.2.2 2008/08/14 15:43:55 fago Exp $
+// $Id: rules_scheduler.install,v 1.1.2.3 2008/10/03 10:21:04 fago Exp $
 
 
 /**
@@ -35,7 +35,7 @@ function rules_scheduler_schema() {
         'length' => '255',
         'default' => '',
         'not null' => TRUE,
-        'description' => t('The scheduled rule set\'s name.'),
+        'description' => t("The scheduled rule set's name."),
       ),
       'date' => array(
         'type' => 'datetime',

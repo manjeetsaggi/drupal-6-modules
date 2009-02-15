@@ -1,9 +1,9 @@
 <?php
-// $Id: xmlsitemap_menu.install,v 1.1.4.16 2009/02/03 15:51:25 kiam Exp $
+// $Id: xmlsitemap_menu.install,v 1.1.4.18 2009/02/12 11:20:04 kiam Exp $
 
 /**
  * @file
- * Install file for XML Sitemap: Menu
+ * Install file for XML Sitemap: Menu.
  */
 
 /*****************************************************************************
@@ -22,6 +22,7 @@ function xmlsitemap_menu_install() {
       )
     );
     menu_rebuild();
+    db_query("UPDATE {system} SET weight = 5 WHERE name = 'xmlsitemap_menu'");
   }
 }
 
@@ -68,12 +69,20 @@ function xmlsitemap_menu_update_6102() {
  * Implementation of hook_update_N().
  */
 function xmlsitemap_menu_update_6103() {
+  return array();
+}
+
+/**
+ * Implementation of hook_update_N().
+ */
+function xmlsitemap_menu_update_6104() {
   $ret = xmlsitemap_menu_update_6000();
   menu_rebuild();
   $ret[] = array(
     'success' => TRUE,
     'query' => 'UPDATE DRUPAL MENUS'
   );
+  $ret[] = update_sql("UPDATE {system} SET weight = 5 WHERE name = 'xmlsitemap_menu'");
   return $ret;
 }
 /**

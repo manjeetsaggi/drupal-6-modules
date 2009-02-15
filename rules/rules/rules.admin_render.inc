@@ -1,5 +1,5 @@
 <?php
-// $Id: rules.admin_render.inc,v 1.1.2.5 2008/08/21 10:24:08 fago Exp $
+// $Id: rules.admin_render.inc,v 1.1.2.6 2008/10/17 12:46:42 fago Exp $
 
 /**
  * @file
@@ -120,7 +120,7 @@ function theme_rules_operation($element) {
   foreach (element_children($element) as $key) {
     $content[] = drupal_render($element[$key]);
   }
-  $print_op = theme('rules_logical_operation_label', strtolower($element['#label']), $element['#label']);
+  $print_op = theme('rules_logical_operation_label', drupal_strtolower($element['#label']), $element['#label']);
   return implode($print_op, $content);
 }
 

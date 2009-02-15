@@ -1,5 +1,5 @@
 <?php
-// $Id: node.rules.inc,v 1.1.2.27 2008/08/29 12:02:55 fago Exp $
+// $Id: node.rules.inc,v 1.1.2.30 2008/12/29 19:35:18 fago Exp $
 /**
  * @file rules integration for the node module
  */
@@ -13,25 +13,25 @@ function node_rules_event_info() {
     'node_insert' => array(
       'label' => t('After saving new content'),
       'module' => 'Node',
-      'arguments' => rules_events_node_arguments(t('created content'), t('content\'s author')),
+      'arguments' => rules_events_node_arguments(t('created content'), t("content's author")),
       'redirect' => TRUE,
     ),
     'node_update' => array(
       'label' => t('After updating existing content'),
       'module' => 'Node',
-      'arguments' => rules_events_node_arguments(t('updated content'), t('content\'s author'), TRUE),
+      'arguments' => rules_events_node_arguments(t('updated content'), t("content's author"), TRUE),
       'redirect' => TRUE,
     ),
     'node_presave' => array(
       'label' => t('Content is going to be saved'),
       'module' => 'Node',
-      'arguments' => rules_events_node_arguments(t('saved content'), t('content\'s author'), TRUE),
+      'arguments' => rules_events_node_arguments(t('saved content'), t("content's author"), TRUE),
       'redirect' => TRUE,
     ),
     'node_view' => array(
       'label' => t('Content is going to be viewed'),
       'module' => 'Node',
-      'help' => 'Note that if drupal\'s page cache is enabled, this event won\'t be generated for pages served from cache.',
+      'help' => t("Note that if drupal's page cache is enabled, this event won't be generated for pages served from cache."),
       'arguments' => rules_events_node_arguments(t('viewed content'), t('content author')) + array(
         'teaser' => array('type' => 'boolean', 'label' => t('Content is displayed as teaser')),
         'page' => array('type' => 'boolean', 'label' => t('Content is displayed as page')),
@@ -72,7 +72,7 @@ function rules_events_node_arguments($node_label, $author_label, $update = FALSE
       ),
       'author_unchanged' => array(
         'type' => 'user',
-        'label' => t('unchanged content\'s author'),
+        'label' => t("unchanged content's author"),
         'handler' => 'rules_events_argument_unchanged_node_author',
       ),
     );
@@ -117,7 +117,7 @@ function node_rules_condition_info() {
   );
   $items['rules_condition_content_is_type'] = $defaults + array(
     'label' => t('Content has type'),
-    'help' => 'Evaluates to TRUE, if the given content has one of the selected content types.',
+    'help' => t('Evaluates to TRUE, if the given content has one of the selected content types.'),
   );
   $items['rules_condition_content_is_published'] = $defaults + array(
     'label' => t('Content is published'),
@@ -170,14 +170,22 @@ function node_rules_action_info() {
       'label' => t('Set the content author'),
       'arguments' => array(
         'node' => array('type' => 'node', 'label' => t('Content')),
-        'author' => array('type' => 'user', 'label' => t('User, which is set as author')),
+        'author' => array('type' => 'user', 'label' => t('User, who is set as author')),
+      ),
+      'module' => 'Node',
+    ),
+    'rules_action_set_node_title' => array(
+      'label' => t('Set content title'),
+      'arguments' => array(
+        'node' => array('type' => 'node', 'label' => t('Content')),
+        'title' => array('type' => 'string', 'label' => t('Title')),
       ),
       'module' => 'Node',
     ),
     'rules_action_add_node' => array(
       'label' => t('Add new content'),
       'arguments' => array(
-        'author' => array('type' => 'user', 'label' => t('User, which is set as author')),
+        'author' => array('type' => 'user', 'label' => t('User, who is set as author')),
         'title' => array(
           'type' => 'string',
           'label' => t('Title'),
@@ -201,7 +209,7 @@ function node_rules_action_info() {
         'vid' => array(
           'type' => 'number',
           'label' => t('Content Revision ID'),
-          'description' => t('If you want to load a specific revision, specify it\'s revision id. Else leave it empty to load the current revision.'),
+          'description' => t("If you want to load a specific revision, specify it's revision id. Else leave it empty to load the current revision."),
           'required' => FALSE,
         ),
       ),
@@ -224,6 +232,14 @@ function node_rules_action_info() {
 function rules_action_node_set_author($node, $author) {
   $node->uid = $author->uid;
   $node->name = $author->name;
+  return array('node' => $node);
+}
+
+/**
+ * Sets the content title
+ */
+function rules_action_set_node_title($node, $title) {
+  $node->title = $title;
   return array('node' => $node);
 }
 

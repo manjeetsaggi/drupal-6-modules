@@ -1,5 +1,5 @@
 <?php
-// $Id: system.rules.inc,v 1.1.2.7 2008/08/29 12:02:55 fago Exp $
+// $Id: system.rules.inc,v 1.1.2.10 2008/10/17 10:28:25 fago Exp $
 
 /**
  * @file rules integration for the system module
@@ -14,7 +14,6 @@ function system_rules_event_info() {
     'init' => array(
       'label' => t('User is going to view a page'),
       'module' => 'System',
-      'description' => t('Note that if drupal\'s page cache is enabled, this event won\'t be generated for pages served from cache.'),
       'arguments' => rules_events_global_user_argument(),
     ),
     'cron' => array(
@@ -125,7 +124,7 @@ function rules_action_mail_to_user($user, $settings) {
 function rules_mail($key, &$message, $settings) {
 
   $message['subject'] .= str_replace(array("\r", "\n"), '', $settings['subject']);
-  $message['body'][] = drupal_html_to_text($settings['message']);
+  $message['body'][] = $settings['message'];
 }
 
 
@@ -198,17 +197,3 @@ function rules_action_watchdog($settings) {
   watchdog($settings['type'], $settings['message'], NULL, $settings['severity'], $settings['link']);
 }
 
-/**
- * Implementation of hook_rules_action_info_alter().
- *
- * Adapts the action info of the core actions to better fit for rules.
- * @ingroup rules
- */
-function system_rules_action_info_alter(&$actions) {
-  // The goto action doesn't work (object!?) and is dangeroures - so we provide our own.
-  unset($actions['rules_core_system_goto_action']);
-  // The next two rely heavily on contexts - which we handle already in rules.
-  // So we provide our own actions.
-  unset($actions['rules_core_system_message_action']);
-  unset($actions['rules_core_system_send_email_action']);
-}
