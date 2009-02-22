@@ -1,0 +1,112 @@
+<?php
+// $Id: user_quota.install,v 1.6 2008/12/19 23:28:40 greggles Exp $
+
+/**
+ * @file
+ * Installer for the user_quota module to create database tables.
+ */
+
+/**
+ * Implementation of hook_schema().
+ */
+function user_quota_schema() {
+  $schema['user_quota'] = array(
+    'description' => t('Current information about uids and the number of nodes they are allowed to create.'),
+    'fields' => array(
+      'uid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => t("User's {users}.uid."),
+      ),
+      'current_limit' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => t('Rather than storing the quota here we store the remaining limit  See {user_quota_history} for the quota(s) for a user/type.'),
+      ),
+      'type' => array(
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => t('Node type being limited.'),
+      ),
+    ),
+  );
+  $schema['user_quota_history'] = array(
+    'description' => t('Historial information about users alterations to their quota.'),
+    'fields' => array(
+      'uid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => t("User's {users}.uid."),
+      ),
+      'quota' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => t('Store id ({node}.nid) for the store.'),
+      ),
+      'type' => array(
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => t('Node type being limited.'),
+      ),
+      'created' => array(
+        'description' => t('The Unix timestamp when the alteration was made.'),
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'message' => array(
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => TRUE,
+        'default' => '',
+        'description' => t('Any relevant message about this change.'),
+      ),
+      'altering_uid' => array(
+        'type' => 'int',
+        'description' => t("The {users}.uid that corresponds to the user performing the action that creates this record."),
+      ),
+    ),
+    'indexes' => array(
+      'uqh_uid' => array('uid'),
+      'uqh_altering_uid' => array('altering_uid'),
+    ),
+  );
+
+  return $schema;
+}
+
+/**
+ * Implementation of hook_install().
+ */
+function user_quota_install() {
+  drupal_install_schema('user_quota');
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function user_quota_uninstall() {
+  drupal_uninstall_schema('user_quota');
+}
+
+
+/**
+ * Implementation of hook_update().
+ *
+ * Add some columns for auditing information.
+ */
+function user_quota_update_1() {
+  $ret = array();
+  db_add_field(&$ret, 'user_quota_history', 'message', array('type' => 'text', 'size' => 'big', 'not null' => TRUE, 'default' => ''));
+  db_add_field(&$ret, 'user_quota_history', 'altering_uid', array('type' => 'int'), array('uqh_uid'));
+
+  return $ret;
+}

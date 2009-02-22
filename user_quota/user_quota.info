@@ -1,0 +1,11 @@
+; $id$
+name = User quota
+description = "Restrict access to create content based on a per user quota."
+core = 6.x
+
+; Information added by drupal.org packaging script on 2008-12-20
+version = "6.x-1.0-beta1"
+core = "6.x"
+project = "user_quota"
+datestamp = "1229731531"
+

@@ -1,0 +1,280 @@
+<?php
+/**
+ * @file
+ *  The user_quota module which provides per user, per content type quotas.
+ */
+
+/**
+ * Implementation of hook_menu().
+ *
+ * @return array An array of menu items
+ */
+function user_quota_menu() {
+
+  $item['admin/user/user_quota'] = array(
+    'title' => 'User quota',
+    'description' => 'View and manage user quotas.',
+    'page callback' => 'user_quota_settings',
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  $item['admin/user/user_quota/manage'] = array(
+    'title' => 'Manage a quota',
+    'description' => 'Manage the quota for a user or add a new quota for a user',
+    'page callback' => 'user_quota_manage',
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  return ($item);
+}
+
+/**
+ * This function prints up a report of users and their quotas
+ *
+ * @return string The content to display in the browser.
+ */
+function user_quota_settings() {
+  $output = t('<p>This page shows an overall report of quotas for all users.  Click on the "Details and manage" link for a specific user to see the history of their quota.  You can also <a href="!uri">create a new quota for a user</a>.</p>', array('!uri' => url('admin/user/user_quota/manage/')));
+
+  $limit = 100;
+  $query = 'SELECT uq.uid, name, current_limit, type FROM {user_quota} uq INNER JOIN {users} u ON uq.uid = u.uid ORDER BY uid, type';
+  $results = pager_query($query, $limit);
+  $rows = array();
+  while ($result = db_fetch_object($results)) {
+    $rows[] = array(l($result->name, 'user/'. $result->uid), check_plain($result->current_limit), check_plain($result->type), l('Details and manage', 'admin/user/user_quota/manage/'. $result->uid));
+  }
+
+  $header = array(array('data' => 'User'), array('data' => 'Quota'), array('data' => 'Type'), array('data' => 'Operations'));
+
+  $output .= theme('table', $header, $rows);
+  $output .= theme('pager', NULL, $limit, 0);
+  return $output;
+}
+
+/**
+ * A page callback to manage user's accounts.
+ * @param $uid
+ *   Optional user id.
+ *
+ */
+function user_quota_manage($uid = NULL) {
+  $output = '';
+  if (isset($uid)) {
+    $account = user_load(array('uid' => $uid));
+    if ($account->uid) {
+      drupal_set_title(t('Manage quota for %user', array('%user' => $account->name)));
+      $output .= drupal_get_form('user_quota_manage_form', $account);
+
+      // Get current quota limits.
+      $current = db_query("SELECT current_limit, type FROM {user_quota} WHERE uid = %d", $uid);
+      $current_header = array(array('data' => t('Quota')),
+                              array('data' => t('Content type'))
+      );
+      while ($current_result = db_fetch_object($current)) {
+        $current_rows[] = array($current_result->current_limit, check_plain($current_result->type));
+      }
+      if (isset($current_rows)) {
+        $output .= t('<h3>Current quotas</h3>');
+        $output .= theme('table', $current_header, $current_rows);
+      }
+
+      // Get historic quota alterations.
+      $history = db_query("SELECT quota, type, uqh.created, message, u.name, altering_uid FROM {user_quota_history} uqh LEFT JOIN {users} u ON uqh.altering_uid = u.uid WHERE uqh.uid = %d ORDER BY created DESC", $uid);
+      $history_header = array(array('data' => t('Quota')),
+                              array('data' => t('Content type')),
+                              array('data' => t('Date')),
+                              array('data' => t('Altering user')),
+                              array('data' => t('Message')),
+
+      );
+      while ($history_result = db_fetch_object($history)) {
+        $history_rows[] = array($history_result->quota, check_plain($history_result->type), format_date($history_result->created), l($history_result->name, 'user/'. $history_result->altering_uid), check_markup($history_result->message));
+      }
+      if (isset($history_rows)) {
+        $output .= t('<h3>Quota modification history</h3>');
+        $output .= theme('table', $history_header, $history_rows);
+      }
+    }
+    else {
+      drupal_set_message(t("Invalid URL argument, proceeding with the default form."));
+      $output .= drupal_get_form('user_quota_manage_form');
+    }
+  }
+  else {
+    $output .= drupal_get_form('user_quota_manage_form');
+  }
+  return $output;
+}
+
+/**
+ * A form to manage a user's quota.
+ */
+function user_quota_manage_form($form_state, $account = NULL) {
+  $form['user_quota_form'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Modify quota'),
+    '#collapsible' => TRUE,
+    '#collapsed' => empty($account) ? FALSE : TRUE,
+  );
+  // The username
+  $form['user_quota_form']['username'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Username'),
+    '#default_value' => isset($account->name) ? check_plain($account->name): '',
+    '#size' => 60,
+    '#autocomplete_path' => 'user/autocomplete',
+    '#maxlength' => 64,
+    '#required' => TRUE,
+  );
+
+  // The content type to limit
+  $types = node_get_types();
+  foreach ($types as $machine => $type) {
+    $options[$machine] = $type->name;
+  }
+  $form['user_quota_form']['node_type'] = array(
+    '#type' => 'select',
+    '#title' => t('Content type to limit'),
+    '#options' => $options,
+    '#default_value' => 'product',
+  );
+
+  // The limit number
+  $form['user_quota_form']['quota'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Amount to alter quota (add or decrease)'),
+    '#default_value' => 0,
+    '#size' => 60,
+    '#maxlength' => 64,
+    '#required' => TRUE,
+    '#description' => t('Negative values will decrease the quota.  It is possible for a user to have a negative quota.'),
+  );
+
+  // An optional message
+  $form['user_quota_form']['message'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Modification message'),
+    '#description' => t('Provide a motivation for your change.'),
+    '#cols' => 60,
+    '#rows' => 2,
+    '#description' => t('Negative values will decrease the quota.  It is possible for a user to have a negative quota.'),
+  );
+
+  // And go!
+  $form['user_quota_form']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save'),
+  );
+
+  return $form;
+}
+
+function user_quota_manage_form_validate($form, &$form_state) {
+  // Is it a non-zero number?
+  if (!is_numeric($form['user_quota_form']['quota']['#value']) || $form['user_quota_form']['quota']['#value'] == 0) {
+    form_set_error('quota', t('Please enter a non-zero number'));
+  }
+  // Is it a real user?
+  $account = user_load(array('name' => $form['user_quota_form']['username']['#value']));
+  if (!$account->uid) {
+    form_set_error('username', t('Please select a valid username'));
+  }
+}
+
+function user_quota_manage_form_submit($form, &$form_state) {
+  $account = user_load(array('name' => $form['user_quota_form']['username']['#value']));
+  global $user;
+  user_quota_set_user_quota($account->uid, $form['user_quota_form']['quota']['#value'], $form['user_quota_form']['node_type']['#value'], $form['user_quota_form']['message']['#value'], $user->uid);
+  drupal_set_message(t('Quota updated for %user', array('%user' => $account->name)));
+  $form_state['redirect'] = url('admin/user/user_quota/manage/'. $account->uid, array('absolute' => TRUE));
+}
+
+/**
+ * Implementation of hook_nodeapi().
+ *
+ */
+function user_quota_nodeapi(&$node, $op, $a3, $a4) {
+  // Catches creating new posts
+  if (empty($node->nid) && ($op == 'prepare' || $op == 'validate')) {
+    global $user;
+    user_quota_check_limit($node, $user);
+  }
+  elseif ($op == 'insert') {
+    // Decrement any records by the value set during form_alter
+    // Slightly sneaky use of UPDATE: if they are not in a quota it will affect 0 rows.
+    db_query("UPDATE {user_quota} SET current_limit = current_limit - %d WHERE uid = %d AND type = '%s'", $node->user_quota_decrement, $node->uid, $node->type);
+    if (db_affected_rows()) {
+      // If rows are affected then they have a quota, so log it in the history table.
+      global $user;
+      $message = t('Created @type content <a href="!uri">@title</a>.', array('@user-name' => $user->name, '@type' => $node->type, '!uri' => url('node/'. $node->nid), '@title' => $node->title));
+      db_query("INSERT INTO {user_quota_history} (uid, quota, type, created, message, altering_uid) VALUES (%d, %d, '%s', %d, '%s', %d)", $node->uid, -$node->user_quota_decrement, $node->type, time(), $message, $user->uid);
+    }
+  }
+}
+
+/**
+ * Check their quota for this node type.
+ *
+ * @param object $user
+ * The $user object
+ * @param string $type
+ * The node type
+ */
+function user_quota_check_limit(&$node, $user) {
+  $limit = user_quota_get_limit($node->type, $user);
+  if ($limit === 'unlimited') {
+    return TRUE;
+  }
+  elseif ($limit > 0) {
+    return $limit;
+  }
+  else {
+      form_set_error('', t('You currently may not create another %type.  You must first gain more credits.', array('%type' => $node->type)));
+  }
+}
+
+function user_quota_get_limit($type, $user = FALSE) {
+  if (!$user) {
+    global $user;
+  }
+  $limit = db_result(db_query("SELECT current_limit FROM {user_quota} WHERE uid = %d AND type = '%s'", $user->uid, $type));
+  if (is_numeric($limit)) {
+    return $limit;
+  }
+  else {
+    return 'unlimited';
+  }
+}
+
+/**
+ * Implementation of hook_form_alter().
+ *
+ * We always decrement by 1, another module can override that.
+ */
+function user_quota_form_alter(&$form, $form_state, $form_id) {
+  // It is possible for a separate module to create fancier rules than just "decrement by 1 each time"
+  // That module would just have to set it's system.weight heavier than 0 and alter the
+  // node form to change this to a different value.
+  if ($form['#id'] == 'node-form' && empty($form['nid']['#value'])) {
+    $form['user_quota_decrement'] = array(
+      '#type' => 'hidden',
+      '#default_value' => 1,
+    );
+  }
+}
+
+/**
+ * Helper function to create a quota entry.
+ */
+function user_quota_set_user_quota($uid, $limit, $type, $message, $altering_uid) {
+  // Log it in the history table.
+  db_query("INSERT INTO {user_quota_history} (uid, quota, type, created, message, altering_uid) VALUES (%d, %d, '%s', %d, '%s', %d)", $uid, $limit, $type, time(), $message, $altering_uid);
+
+  // Update it, if that doesn't change anything then add it.
+  db_query("UPDATE {user_quota} SET current_limit = current_limit + %d WHERE uid = %d AND type = '%s'", $limit, $uid, $type);
+  if (!db_affected_rows()) {
+    db_query("INSERT INTO {user_quota} (uid, current_limit, type) VALUES (%d, %d, '%s')", $uid, $limit, $type);
+  }
+}
