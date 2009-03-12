@@ -1,5 +1,5 @@
 <?php
-// $Id: location.inc,v 1.95 2008/12/10 19:30:30 bdragon Exp $
+// $Id: location.inc,v 1.95.2.1 2009/01/09 17:34:39 bdragon Exp $
 
 /**
  * @defgroup Location Location: An API for working with locations.
@@ -628,7 +628,7 @@ function location_get_iso3166_list($upper = FALSE) {
     'cn' => t('China'),
     'co' => t('Colombia'),
     'cr' => t('Costa Rica'),
-    'cs' => t('Serbia And Montenegro'),
+    'cs' => t('Serbia And Montenegro'), // Transitional reservation
     'cu' => t('Cuba'),
     'cv' => t('Cape Verde'),
     'cx' => t('Christmas Island'),

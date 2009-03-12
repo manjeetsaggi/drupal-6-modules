@@ -1,5 +1,5 @@
 <?php
-// $Id: xmlsitemap_node.install,v 1.9.2.22 2009/02/14 15:45:30 kiam Exp $
+// $Id: xmlsitemap_node.install,v 1.9.2.46 2009/03/11 16:01:03 kiam Exp $
 
 /**
  * @file
@@ -11,6 +11,22 @@
  ****************************************************************************/
 
 /**
+ * Implementation of hook_enable().
+ */
+function xmlsitemap_node_enable() {
+  drupal_load('module', 'xmlsitemap_helper');
+  xmlsitemap_helper_update_sitemap('xmlsitemap_node');
+}
+
+/**
+ * Implementation of hook_disable().
+ */
+function xmlsitemap_node_disable() {
+  drupal_load('module', 'xmlsitemap_helper');
+  xmlsitemap_helper_update_sitemap('xmlsitemap_node');
+}
+
+/**
  * Implementation of hook_schema().
  */
 function xmlsitemap_node_schema() {
@@ -19,13 +35,6 @@ function xmlsitemap_node_schema() {
     'fields' => array(
       'nid' => array(
         'description' => 'The node ID.',
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 0,
-      ),
-      'vid' => array(
-        'description' => 'The current node revision ID.',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
@@ -58,7 +67,6 @@ function xmlsitemap_node_schema() {
         'default' => -2.0,
       ),
     ),
-    'unique keys' => array('vid' => array('vid')),
     'primary key' => array('nid'),
   );
 
@@ -117,16 +125,8 @@ function xmlsitemap_node_update_6000() {
         array('primary key' => array('nid'))
       );
     }
-    if (!db_column_exists('xmlsitemap_node', 'vid')) {
-      db_add_field($ret, 'xmlsitemap_node', 'vid',
-        array(
-          'description' => 'The current node revision ID.',
-          'type' => 'int',
-          'unsigned' => TRUE,
-          'not null' => TRUE,
-          'default' => 0,
-        )
-      );
+    if (db_column_exists('xmlsitemap_node', 'vid')) {
+      db_drop_field($ret, 'xmlsitemap_node', 'vid');
     }
     if (db_column_exists('xmlsitemap_node', 'last_changed')) {
       db_change_field($ret, 'xmlsitemap_node', 'last_changed', 'changed',
@@ -190,7 +190,7 @@ function xmlsitemap_node_update_6000() {
       );
     }
     $ret[] = update_sql("UPDATE {xmlsitemap_node}
-      SET priority_override = -2
+      SET priority_override = -2.0
       WHERE priority_override IS NULL"
     );
     db_change_field($ret, 'xmlsitemap_node', 'priority_override', 'priority_override',
@@ -209,13 +209,6 @@ function xmlsitemap_node_update_6000() {
         'fields' => array(
           'nid' => array(
             'description' => 'The node ID.',
-            'type' => 'int',
-            'unsigned' => TRUE,
-            'not null' => TRUE,
-            'default' => 0,
-          ),
-          'vid' => array(
-            'description' => 'The current node revision ID.',
             'type' => 'int',
             'unsigned' => TRUE,
             'not null' => TRUE,
@@ -252,7 +245,6 @@ function xmlsitemap_node_update_6000() {
       )
     );
   }
-  $ret[] = update_sql("UPDATE {system} SET weight = 7 WHERE name = 'xmlsitemap_node'");
   if (variable_get('xmlsitemap_node_comment_priority', 0.5) == 0.5) {
     variable_set('xmlsitemap_node_comment_priority', 0.2);
     $ret[] = array(
@@ -349,7 +341,70 @@ function xmlsitemap_node_update_6109() {
  *
  */
 function xmlsitemap_node_update_6110() {
+  return array();
+}
+
+/**
+ * Implementation of hook_update_N().
+ *
+ */
+function xmlsitemap_node_update_6111() {
+  return array();
+}
+
+/**
+ * Implementation of hook_update_N().
+ *
+ */
+function xmlsitemap_node_update_6112() {
   return xmlsitemap_node_update_6000();
+}
+
+/**
+ * Implementation of hook_update_N().
+ *
+ */
+function xmlsitemap_node_update_6113() {
+  return array();
+}
+
+/**
+ * Implementation of hook_update_N().
+ *
+ */
+function xmlsitemap_node_update_6114() {
+  return array();
+}
+
+/**
+ * Implementation of hook_update_N().
+ *
+ */
+function xmlsitemap_node_update_6115() {
+  return array();
+}
+
+/**
+ * Implementation of hook_update_N().
+ *
+ */
+function xmlsitemap_node_update_6116() {
+  module_load_include('inc', 'xmlsitemap_helper', 'includes/xmlsitemap_helper.install');
+  xmlsitemap_helper_add_database_batch_operation(
+    drupal_get_path('module', 'xmlsitemap_node') .'/xmlsitemap_node.install',
+    '_xmlsitemap_node_update_database_batch'
+  );
+  $ret[] = array(
+    'success' => TRUE,
+    'query' => 'UPDATE {xmlsitemap_node} TABLE',
+  );
+  drupal_load('module', 'xmlsitemap_helper');
+  xmlsitemap_helper_update_sitemap('xmlsitemap_node');
+  $ret[] = array(
+    'success' => TRUE,
+    'query' => 'FORCE SITEMAP UPDATE',
+  );
+  return $ret;
 }
 
 /**
@@ -358,4 +413,68 @@ function xmlsitemap_node_update_6110() {
 function xmlsitemap_node_uninstall() {
   drupal_uninstall_schema('xmlsitemap_node');
   db_query("DELETE FROM {variable} WHERE name LIKE 'xmlsitemap\_node\_%'");
+}
+
+/*****************************************************************************
+ * Private functions.
+ ****************************************************************************/
+
+/**
+ * Batch function to update the xmlsitemap_node table.
+ */
+function _xmlsitemap_node_update_database_batch(&$context) {
+  if (!isset($context['sandbox']['progress'])) {
+    $context['sandbox']['progress'] = 0;
+    if (!($context['sandbox']['max'] = (integer) db_result(db_query('SELECT COUNT(nid) FROM {node}')))) {
+      return;
+    }
+    $context['sandbox']['nid'] = 0;
+    if (module_exists('comment')) {
+      $context['sandbox']['maxcomments'] = (integer) db_result(db_query('SELECT MAX(comment_count) FROM {node_comment_statistics}'));
+    }
+  }
+  $nid = db_result(
+    db_query('SELECT nid FROM {node}
+      WHERE nid > %d', $context['sandbox']['nid']
+    )
+  );
+  if ($nid !== FALSE && ($node = node_load($nid, NULL, TRUE))) {
+    $result = db_fetch_object(
+      db_query('SELECT nid, changed, previously_changed, comment_ratio, priority_override
+        FROM {xmlsitemap_node}
+        WHERE nid = %d', $nid
+      )
+    );
+    if ($result === FALSE) {
+      $row = new stdClass();
+      $row->nid = $nid;
+      $row->changed = $node->changed;
+      $row->previously_changed = $node->created;
+    }
+    else {
+      $row = $result;
+      if ($node->changed > $row->changed) {
+        $row->previously_changed = $row->changed;
+        $row->changed = $node->changed;
+      }
+    }
+    if (isset($context['sandbox']['maxcomments']) && $context['sandbox']['maxcomments'] > 1) {
+      $comments = (integer) db_result(db_query('SELECT comment_count
+        FROM {node_comment_statistics}
+        WHERE nid = %d', $nid)
+      );
+      $row->comment_ratio = $comments / $context['sandbox']['maxcomments'];
+    }
+    drupal_write_record('xmlsitemap_node', $row, $result === FALSE ? NULL : 'nid');
+    $context['sandbox']['nid'] = $nid;
+    $context['message'] = t('Updating %title', array('%title' => $node->title));
+  }
+  $context['sandbox']['progress']++;
+  if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
+    $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
+  }
+  else {
+    drupal_load('module', 'xmlsitemap_helper');
+    xmlsitemap_helper_update_sitemap('xmlsitemap_node');
+  }
 }

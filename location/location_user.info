@@ -5,9 +5,9 @@ dependencies[] = location
 package = Location
 core = 6.x
 
-; Information added by drupal.org packaging script on 2008-12-12
-version = "6.x-3.0"
+; Information added by drupal.org packaging script on 2009-03-03
+version = "6.x-3.1-rc1"
 core = "6.x"
 project = "location"
-datestamp = "1229117725"
+datestamp = "1236112547"
 

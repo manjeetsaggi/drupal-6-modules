@@ -1,7 +1,7 @@
 <?php
-// $Id: syntaxhighlighter.admin.inc,v 1.2 2009/02/11 22:52:25 mattyoung Exp $
+// $Id: syntaxhighlighter.admin.inc,v 1.3 2009/02/17 21:01:15 mattyoung Exp $
 
-/*
+/**
  * @file
  * Syntax highlighter module admin form
  *

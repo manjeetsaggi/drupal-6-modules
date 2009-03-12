@@ -1,4 +1,4 @@
-# $Id: de.po,v 1.1.2.3 2009/01/09 21:32:15 ulf1 Exp $
+# $Id: de.po,v 1.2 2009/01/11 06:10:28 ulf1 Exp $
 #
 # German translation of Drupal (general)
 # Copyright YEAR NAME <EMAIL@ADDRESS>

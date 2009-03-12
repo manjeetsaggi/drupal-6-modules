@@ -1,5 +1,5 @@
 <?php
-// $Id: syntaxhighlighter.module,v 1.4 2009/02/12 18:20:49 mattyoung Exp $
+// $Id: syntaxhighlighter.module,v 1.5 2009/02/17 21:01:15 mattyoung Exp $
 
 /**
  * @file
@@ -28,17 +28,12 @@ function syntaxhighlighter_menu() {
 }
 
 
-function syntaxhighlighter_theme() {
-  return array(
-    'syntaxhighlighter_css' => array('arguments' => array()),
-  );
-}
-
-
 function syntaxhighlighter_init() {
   $styles_path = drupal_get_path('module', 'syntaxhighlighter') .'/syntaxhighlighter/styles/';
   drupal_add_css($styles_path .'shCore.css', 'module');
-	theme('syntaxhighlighter_css');
+  $theme = variable_get('syntaxhighlighter_theme', 'shThemeDefault.css');
+  drupal_add_css($styles_path . $theme, 'module');
+
   $scripts_path = drupal_get_path('module', 'syntaxhighlighter') .'/syntaxhighlighter/scripts/';
   drupal_add_js($scripts_path .'shCore.js', 'module');
   if (variable_get('syntaxhighlighter_legacy_mode', 0)) {
@@ -46,9 +41,9 @@ function syntaxhighlighter_init() {
   }
   $enabled_languages = variable_get('syntaxhighlighter_enabled_languages', array('shBrushPhp.js'));
   foreach ($enabled_languages as $lang) {
-  	if (!empty($lang)) {
+    if (!empty($lang)) {
       drupal_add_js($scripts_path . $lang, 'module');
-  	}
+    }
   }
   $tag_name = variable_get('syntaxhighlighter_tagname', 'pre');
   if ($tag_name !== 'pre') {
@@ -66,22 +61,11 @@ function syntaxhighlighter_init() {
   $code[] = 'SyntaxHighlighter.config.strings.brushNotHtmlScript = "'. t('Brush wasn\'t made for html-script option: ') .'";';
   
   $code[] = "SyntaxHighlighter.config.clipboardSwf = '/$scripts_path"."clipboard.swf';";
-  $code[] = '$(function () {';
+  $code[] = 'jQuery(function ($) {';
   $code[] = "  SyntaxHighlighter.highlight();";
   if (variable_get('syntaxhighlighter_legacy_mode', 0)) {
     $code[] = "  dp.SyntaxHighlighter.HighlightAll('code');";
   }
   $code[] = '});';
   drupal_add_js(join("\n", $code), 'inline');
-}
-
-
-/**
- * Allow theme to supply different css files.
- * @return unknown_type
- */
-function theme_syntaxhighlighter_css() {
-  $path = drupal_get_path('module', 'syntaxhighlighter') .'/syntaxhighlighter/styles/';
-  $theme = variable_get('syntaxhighlighter_theme', 'shThemeDefault.css');
-  drupal_add_css($path . $theme, 'module');
 }

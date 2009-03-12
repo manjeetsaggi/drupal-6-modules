@@ -1,5 +1,5 @@
 <?php
-// $Id: rules.variables.inc,v 1.1.2.23 2008/11/06 19:33:29 fago Exp $
+// $Id: rules.variables.inc,v 1.1.2.26 2009/02/25 16:27:35 fago Exp $
 
 /**
  * @file Provides functions and classes for handling variables
@@ -58,22 +58,42 @@ function _rules_initialize_variables(&$state, $args) {
 function rules_get_variables($names, &$state, $force = TRUE, $element = NULL) {
   $args = array();
   foreach ($names as $key => $name) {
-    if (isset($state['variables'][$name])) {
+    if (($var = rules_get_element_variable($element, $name)) !== NULL) {
+      $args[$key] = $var;
+    }
+    elseif (isset($state['variables'][$name])) {
       $args[$key] = &$state['variables'][$name]->get($force);
     }
-    else if (isset($element['#settings'][$name]) && isset($element['#info']['arguments'][$name])) {
-      $object = rules_get_data_object($element['#info']['arguments'][$name]);
-      $args[$key] = $object->check_value($element['#info']['arguments'][$name], $element['#settings'][$name]);
-    }
-    else if (isset($element['#info']['arguments'][$name]) && array_key_exists('default value', $element['#info']['arguments'][$name])) {
+    elseif (isset($element['#info']['arguments'][$name]) && array_key_exists('default value', $element['#info']['arguments'][$name])) {
       $args[$key] = $element['#info']['arguments'][$name]['default value'];
     }
     // Use array_key_exists, so that NULL default values are allowed!
     if (!array_key_exists($key, $args)) {
+      rules_log(t('Warning: Unable to get variable %name.', array('%name' => $key)));
       return FALSE;
     }
   }
   return $args;
+}
+
+/**
+ * Gets a variable for the given element which uses an own input form.
+ *
+ * @param $element
+ *   The element to get the variable for.
+ * @param $name
+ *   The name of the variable to get.
+ * @return The variable, if available.
+ */
+function rules_get_element_variable($element, $name) {
+  if (isset($element['#settings'][$name]) && isset($element['#info']['arguments'][$name])) {
+    $object = rules_get_data_object($element['#info']['arguments'][$name]);
+    if ($object->uses_input_form()) {
+      // Only return the variable if it really uses an input form, as the name might clash with
+      // an usual state variable not using an input form.
+      return $object->check_value($element['#info']['arguments'][$name], $element['#settings'][$name]);
+    }
+  }
 }
 
 /**
@@ -86,13 +106,14 @@ function rules_get_variables($names, &$state, $force = TRUE, $element = NULL) {
  */
 function rules_get_mapped_argument_names($element) {
   $element_info = rules_get_element_info($element);
-  $reverse_map = array_flip($element['#settings']['#argument map']);
+  $element['#settings'] += array('#argument map' => array());
+  $map = $element['#settings']['#argument map'];
 
   if ($element_info) {
     //get the right execution variables by applying the argument map of this element
     $mapped_args = array();
     foreach ($element_info['arguments'] as $argument_name => $info) {
-      $mapped_args[$argument_name] = isset($reverse_map[$argument_name]) ? $reverse_map[$argument_name] : $argument_name;
+      $mapped_args[$argument_name] = isset($map[$argument_name]) ? $map[$argument_name] : $argument_name;
     }
     return $mapped_args;
   }
@@ -117,7 +138,6 @@ function rules_get_execution_arguments(&$element, &$state) {
     return FALSE;
   }
 
-  $element['#settings'] += array('#argument map' => array());
   //first off map the names to the argument names of the evaluated set
   $names = rules_get_mapped_argument_names($element);
   $exec_args = rules_get_variables($names, $state, TRUE, $element);
@@ -139,22 +159,22 @@ function rules_get_execution_arguments(&$element, &$state) {
  */
 function rules_save_variables($element, $result, &$state) {
   $element_info = rules_get_element_info($element);
-  $reverse_map = array_flip($element['#settings']['#argument map']);
+  $map = $element['#settings']['#argument map'];
   foreach (element_children($result) as $argument_name) {
-    $reverse_map += array($argument_name => $argument_name);
+    $map += array($argument_name => $argument_name);
 
-    if (isset($state['variables'][ $reverse_map[$argument_name] ])) {
+    if (isset($state['variables'][ $map[$argument_name] ])) {
       //variable exists, so update it
-      $variable = &$state['variables'][ $reverse_map[$argument_name] ];
+      $variable = &$state['variables'][ $map[$argument_name] ];
       $variable->update( $result[$argument_name] );
       $variable->save();
     }
-    else if (isset($element_info['new variables'][ $reverse_map[$argument_name] ])) {
+    else if (isset($element_info['new variables'][ $map[$argument_name] ])) {
       //it is a new variable, so add it
-      $info = $element_info['new variables'][ $reverse_map[$argument_name] ];
+      $info = $element_info['new variables'][ $map[$argument_name] ];
 
       $variable = new rules_variable;
-      $variable->construct($state, $reverse_map[$argument_name], $result[$argument_name], $info);
+      $variable->construct($state, $map[$argument_name], $result[$argument_name], $info);
       if (isset($info['save']) && $info['save']) {
         $variable->save();
       }

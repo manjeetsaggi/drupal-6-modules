@@ -1,5 +1,5 @@
 <?php
-// $Id: system.rules.inc,v 1.1.2.10 2008/10/17 10:28:25 fago Exp $
+// $Id: system.rules.inc,v 1.1.2.11 2009/02/19 11:05:27 fago Exp $
 
 /**
  * @file rules integration for the system module
@@ -19,7 +19,7 @@ function system_rules_event_info() {
     'cron' => array(
       'label' => t('Cron maintenance tasks are performed'),
       'module' => 'System',
-      'arguments' => array(),
+      'arguments' => rules_events_global_user_argument(),
     ),
   );
 }

@@ -1,5 +1,5 @@
 <?php
-// $Id: content_complete.admin.inc,v 1.2 2009/02/01 21:02:50 pvhee Exp $ 
+// $Id: content_complete.admin.inc,v 1.1.2.1 2009/03/09 05:03:33 pvhee Exp $ 
 
 /** 
  *@file 
@@ -33,17 +33,17 @@ function content_complete_admin_settings_form() {
     $id = $content_type;
     
     $form[$id] = array(
-      '#title' => $content_name, 
-		  '#type' => 'fieldset', 
+      '#title' => $content_name,
+      '#type' => 'fieldset',
       '#description' => t('If one or more fields are selected, completeness checks will be run for this content type.'),
-    	'#collapsible' => TRUE, 
-		  '#collapsed' => ! $type_set 
+      '#collapsible' => TRUE, 
+      '#collapsed' => ! $type_set 
     );
-    
+
     $form[$id]['fields'] = array(
       '#type' => 'checkboxes', 
-		  '#options' => $data['options'], 
-		  '#default_value' => $data['default']['fields'] 
+      '#options' => $data['options'], 
+      '#default_value' => $data['default']['fields'] 
     );
   
   }

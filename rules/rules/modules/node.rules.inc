@@ -1,5 +1,5 @@
 <?php
-// $Id: node.rules.inc,v 1.1.2.30 2008/12/29 19:35:18 fago Exp $
+// $Id: node.rules.inc,v 1.1.2.31 2009/02/25 20:50:07 fago Exp $
 /**
  * @file rules integration for the node module
  */
@@ -174,6 +174,20 @@ function node_rules_action_info() {
       ),
       'module' => 'Node',
     ),
+    'rules_action_node_load_author' => array(
+      'label' => t('Load the content author'),
+      'arguments' => array(
+        'node' => array('type' => 'node', 'label' => t('Content')),
+      ),
+      'new variables' => array(
+        'author' => array(
+          'type' => 'user',
+          'label' => t('Content author'),
+          'label callback' => 'rules_action_node_load_author_variable_label',
+        ),
+      ),
+      'module' => 'Node',
+    ),
     'rules_action_set_node_title' => array(
       'label' => t('Set content title'),
       'arguments' => array(
@@ -233,6 +247,13 @@ function rules_action_node_set_author($node, $author) {
   $node->uid = $author->uid;
   $node->name = $author->name;
   return array('node' => $node);
+}
+
+/**
+ * Loads the content author
+ */
+function rules_action_node_load_author($node) {
+  return array('author' => user_load($node->uid));
 }
 
 /**

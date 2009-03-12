@@ -1,4 +1,4 @@
-// $Id: README.txt,v 1.1 2009/01/22 15:08:57 pvhee Exp $
+// $Id: README.txt,v 1.1.2.1 2009/03/09 05:03:33 pvhee Exp $
 
 -- SUMMARY --
 
@@ -13,6 +13,10 @@ which implements similar functionality for user profiles. This module is an exce
 alternative when CCK is used to maintain user profiles, and at the same time can be reused in other situations. For
 example, you might have a 'settings' content type on your website with configuration settings. You could show
 the administrator how much fields there are left to complete the settings using a block.
+
+Rules integration is provided with a rule "Content Complete % is >= than x". For more information about rules
+see http://drupal.org/project/rules. Modules which provide integration with rules are listed here:
+http://groups.drupal.org/node/10270/rules-modules
 
 For a full description of the module, visit the project page:
   http://drupal.org/project/content_complete
@@ -53,6 +57,8 @@ CCK.
 
 * Customize the settings in Administer >> Site Configuration >> Content Complete.
   A block will be created for every content type added to check for completeness.
+  
+* Rules integration is provided with a rule "Content Complete % is >= than x". 
 
 
 -- CUSTOMIZATION --

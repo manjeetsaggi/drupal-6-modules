@@ -1,5 +1,5 @@
 <?php
-// $Id: rules.events.inc,v 1.1.2.8 2009/01/15 17:19:31 fago Exp $
+// $Id: rules.events.inc,v 1.1.2.9 2009/02/19 10:48:46 fago Exp $
 /**
  * @file rules Invokes events for supported modules. Usually this should be directly
  *   in the module providing rules integration instead.
@@ -26,7 +26,7 @@ function rules_user($op, &$edit, &$account, $category = NULL) {
   // We don't support updates for other categories than 'account'
   if ($op == 'update' && $category == 'account') {
     // Save the unchanged account for the use with op after_update.
-    $account_unchanged = $account;
+    $account_unchanged = drupal_clone($account);
   }
   else if ($op == 'after_update' && $category == 'account') {
     rules_invoke_event('user_update', array('account' => &$account, 'account_unchanged' => $account_unchanged));

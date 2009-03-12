@@ -1,5 +1,5 @@
 <?php
-// $Id: location_handler_field_location_distance.inc,v 1.2 2008/12/03 22:51:23 bdragon Exp $
+// $Id: location_handler_field_location_distance.inc,v 1.2.2.1 2009/01/21 21:39:16 bdragon Exp $
 
 /**
  * @file
@@ -109,10 +109,10 @@ class location_handler_field_location_distance extends views_handler_field {
 
     if (empty($latitude) && empty($longitude)) {
       // We don't know the distance.
-      $this->field_alias = $this->query->add_field(NULL, "'Unknown'", $this->table_alias .'_'. $this->field);
+      $this->field_alias = $this->query->add_field(NULL, "'Unknown'", "{$this->table_alias}_{$this->field}_{$this->position}");
     }
     else {
-      $this->field_alias = $this->query->add_field(NULL, earth_distance_sql($longitude, $latitude, $this->table_alias), $this->table_alias .'_'. $this->field);
+      $this->field_alias = $this->query->add_field(NULL, earth_distance_sql($longitude, $latitude, $this->table_alias), "{$this->table_alias}_{$this->field}_{$this->position}");
     }
   }
 }

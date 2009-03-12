@@ -1,100 +1,93 @@
-01/17/2009 - ulf1
-#360151 : Invitation(RSVP) for un-registered users
+03/10/09: fixed by ulf1- [#396464] Enabling of RSVP module sets event connector by default, and enabling the date connector will 
+                                   fail because of that.
 
+03/07/09: fixed by ulf1- [#360151] Users can see other guests complete emailaddress in guest list. Only first part should be visible.
+          fixed by ulf1- [#360151] anonymous guests can not see their invitation (Access denied).
+          Updated: Improved messages: Open invitation signup works only for authenticated users. Anonymous users are not permitted.
+          fixed by ulf1- Host and Guest Toolbox/"Export Guest list" visible to non moderators
+          fixed by ulf1- Guest list shows empty braces for guests that selected more then one "total guests".
+          
 
-01/09/2009 - ulf1
-#356421 : Translation/string issues
-#356737 : An illegal choice has been detected. Please contact the site administrator
+03/04/09: fixed by ulf1- changed stylesheets a bit to make output more consistent.
 
-01/08/2009 - ulf1
-- Fixed: invitation email includes "n/a" instead the invitation message
-- Fixed: check_plain for #default_value caused &amp characters showing up for some textual rsvp settings.
+03/03/09: fixed by ulf1- blocks were not visible
+                         removed references to array_combine to make rsvp work with PHP4
+                         guest list does not show correct guests with PHP4.
+                                                  
+03/03/09,
+03/01/09: improved date calculation/extraction in date connector
+          date_connector requires now date version 6.x-2.0
 
-12/31/2008 - ulf1
-#352897 : by rastatt: Added german translation.  
+2/27/09: fixed by ulf1- [#385794]
+                        [#385834]
 
-12/30/2008 - ulf1
-- Disabled Wysiwyg editor for "send message" body field.
-- Fixed: "Send Message" email contains invitation text twice instead of the entered message.
-- Fixed: Default setting for "Sender Information" under RSVP setting was missing. Resulted in wrong email address during mail sending.
+2/25/09: fixed by ulf1- [#383186]
+Cleanup: Associations are now being handled through the content type form under admin/content/types
 
-12/30/2008 - ulf1
-- Improoved invitation email and message email context.
-- Fixed permission problem: Moderator can not send message emails if setting is restrictive.
+2/18/09: fixed by ulf1- permission issue for moderators to view/access the admin/content/rsvp tab ("RSVP Management")  
+
+2/16/09: fixed by ulf1- fixed a style issue with right blocks not being displayed correctly when reply box is visible.
  
+2/11/09: fixed by ulf1- [#371238]
 
-12/29/2008 - ulf1
-#351880 : Added logic to avoid enabling multiple rsvp connectors.
-- Fixed logic in status dialog: If response is "no", do not print "Attendee will bring a total of 1 guests".
-- Reply box was not visible if an invitee has "rsvp moderator permissions".
-- Edit icon was missing in distribution
-- Fixed permission problem: guest list displays no responses for moderators, if detail level is restrictive, but 
-  moderators should always see responses.
-- Fixed problem with "current user" icon in guest list displayed in front of the wrong user.   
+2/09/09: fixed by ulf1- added missing t() at some places to allow translation of module.
 
-12/25/2008 - ulf1
-- Fixed a problem during hook_uninstall of rsvp
-- More cleanup of the User Interface.
+2/08/09: fixed by ulf1- [#371193]
 
-12/20/2008 - ulf1
-- Fixed a problem that Invitation tab was not visible on nodes. Creation of Invitations was not possible.
+Compared with RSVP 1.0, the following changes have been integrated
 
-12/19/2008 - ulf1
-- Fixed problem that anonymous user can view and reply to Invitations
+New Features:
+-------------
 
-12/18/2008 - ulf1
-- Added more fine-grained control.
-    - Distinguish now between invitees, respondents and attendees
-    - Control now over "view invitation" and "view guest list"
-- More cleanup of the User Interface. The synonym RSVP has been removed from user accessible pages.
+Added: RSVP now include blocks: ("host toolbox", "guest toolbox", "guest list") [#293409]
+Added: RSVP now has a control panel (use user/%uid/rsvp) [#199968]
+
+Added: RSVP now supports "expert" and "basic" options to make life easier for non technical users. [#356236]
+Added: default values for invitations.
 
 
-12/17/2008 - ulf1
-#344324 : Adding RSVP admin per event
-#263777 : Added a new role based option for each RSVP who is allowed to view an RSVP and the Invitation list
-- Added new abstraction for rsvp permission system
-- Improved RSVP overview page.
-- Improved settings page with better descriptions.
+Added: Guest list- Marking for the organizer (The organizer).
+Added: Guest list- Icon to send message to a specific guest (for moderators).
+Added: Guest list- Icon to send invitation to a specific guest (for moderators).
+Added: Guest list- link to user profile for regular guests based on drupal permission.
+Added: Guest list- Current date/time as field when guest replied, and last access date in guest list.
+Added: Guest list- Sort order by Date and Alphabeticaly.
+Added: Guest list- Show all feature.
 
-12/09/2008 - ulf1
-#344338 : Fixed emails sent have \n\r in front of each line
--Fixed a problem with attendees not having their emails properly stored which generates issues
-when sending invitations.
+Added: Guests can store their real name in the invitation system if they want to. [#344326]
 
-12/05/2008 - ulf1
-#344083 : Fixed RSVP tab visible on other users user page 
-#344334 : Fixed anon users can view and alter other RSVPs
 
-12/04/2008 - ulf1
-- port to drupal 6.0
-- Now supports Drupal 6 and Date or Event.
-- Now View 2 complient files. (removed contributes directory).
-- Cleanup: Removed also rsvp.mysql
-- Added a new permission "maintain rsvp"
-- Added a page for admins/maintainers to manage all RSVPs.
-- Added supports "Invitation Links" in Nodes.
-- Added general RSVP setting to choose which email address to use.
-- Added specific RSVP option to show attendees or just a summary.
-- Added specific RSVP option to show responses only after reply.
-- Added Comment field for attendees.
-- Added completed abstraction of response list output using theme hooks.
-- Added icons.
-- It is now possible to create multiple rsvp's for the same start date (on same node).
-- Attendees added by other people then the owner are now marked as such in the response list.
-- Added configurable response text per rsvp.
-- Added field for number of guests to invitation reply.
+Added: Automatic removale of guests uid from invitations if user is being removed.
 
-3/25/05 - crunchywelch
-- port to 4.6
-- complete reworking of UI to include tabs
-- better confirmation screens for creating and editing
-- better hook_help implementation
-- update hook_link to work with new 4.6 event module
-- remove db tables rsvp_event and rsvp_user_prefs
-- rename db table rsvp_to_user to rsvp_invite
-- removed user preferences in favor of good defaults
-- user permissions audit
-- better email address input validation
-- invitation url by hash value access is always allowed
-- all html broken out into rsvp.theme file and theme functions
-- pruned rsvp.css
+Added: Actions [#331423]
+  current actions : add invitation, remove invitation, add Invitees, send Message, send Invitation, remove Invitee
+***  functionality is not well tested though
+
+Added: First version of a RSVP API 
+
+
+Added: RSVP Option: Disable answer "maybe".  [#36118] 
+Added: RSVP Option: Allow "open invitation" for authorized users [#36118]
+Added: RSVP Option: Send optional confirmation email to guests and owner when guests change their response. [#344328]
+Added: RSVP Option: Integrate start and enddate during which guests can reply. [#34183]
+
+
+Added: General setting to permit invitations on already expired events 
+Added: General setting, Emails are now templates and can be changed.
+
+
+Added: RSVP Handling: Proper Captcha positioning for reply box. [#360253]
+Added: Integration with Buddylist2
+Added: Integration with Friendlist
+Added: Integration with User Relationship
+Added: Integration with Plaxo Address Select widget [#180704], [#258108]
+Added: Integration with Organic Groups [#84918], [#21400]
+Added: Integration with Signup [#67928]
+ 
+ 
+Fixed problems:
+---------------
+Fixed: When moderator and adding guests (through our hash), force adding the guests as moderator to avoid the "Added by guest" flag in the guest list.
+Fixed: Last access time for guests has not been updated properly.
+Fixed: Guest List. number of guest calculation was wrong when guests bring more then one person.
+ 

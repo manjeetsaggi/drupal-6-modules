@@ -1,5 +1,5 @@
 <?php
-// $Id: content_complete.install,v 1.1 2009/01/22 15:08:57 pvhee Exp $
+// $Id: content_complete.install,v 1.1.2.1 2009/03/09 05:03:33 pvhee Exp $
 
 /**
  * @file
@@ -19,12 +19,13 @@ function content_complete_install() {
 function content_complete_schema() {
   $schema['content_complete'] = array(
     'description' => t('Stores content types and their fields that will be checked for completeness.'), 'fields' => array(
-    'type' => array(
-    'type' => 'varchar', 'length' => '127', 'not null' => TRUE, 'default' => '', 'description' => t('{content_node_field}.type') 
-  ), 'field_name' => array(
-    'type' => 'varchar', 'length' => '32', 'not null' => TRUE, 'default' => '', 'description' => t('{content_node_field}.field_name') 
-  ) 
-  ) 
+      'type' => array(
+        'type' => 'varchar', 'length' => '127', 'not null' => TRUE, 'default' => '', 'description' => t('{content_node_field}.type') 
+      ), 
+      'field_name' => array(
+        'type' => 'varchar', 'length' => '32', 'not null' => TRUE, 'default' => '', 'description' => t('{content_node_field}.field_name') 
+      ) 
+    ) 
   );
   
   return $schema;

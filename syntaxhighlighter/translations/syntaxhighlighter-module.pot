@@ -1,18 +1,19 @@
-# $Id: syntaxhighlighter-module.pot,v 1.2 2009/02/11 22:52:25 mattyoung Exp $
+# $Id: syntaxhighlighter-module.pot,v 1.3 2009/02/17 20:57:23 mattyoung Exp $
 #
 # LANGUAGE translation of Drupal (general)
 # Copyright YEAR NAME <EMAIL@ADDRESS>
 # Generated from files:
-#  syntaxhighlighter.admin.inc,v 1.1 2009/02/09 23:20:28 mattyoung
-#  syntaxhighlighter.module,v 1.2 2009/02/11 03:08:10 mattyoung
+#  syntaxhighlighter.potx.php: n/a
+#  syntaxhighlighter.admin.inc,v 1.2 2009/02/11 22:52:25 mattyoung
+#  syntaxhighlighter.module,v 1.4 2009/02/12 18:20:49 mattyoung
 #  syntaxhighlighter.info,v 1.5 2009/02/11 18:20:30 mattyoung
-#  syntaxhighlighter.install,v 1.1 2009/02/09 23:20:28 mattyoung
+#  syntaxhighlighter.install,v 1.2 2009/02/11 22:52:25 mattyoung
 #
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
-"POT-Creation-Date: 2009-02-11 14:50-0800\n"
+"POT-Creation-Date: 2009-02-17 12:47-0800\n"
 "PO-Revision-Date: YYYY-mm-DD HH:MM+ZZZZ\n"
 "Last-Translator: NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <EMAIL@ADDRESS>\n"
@@ -20,6 +21,102 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: syntaxhighlighter.potx.php:18
+msgid "Bash"
+msgstr ""
+
+#: syntaxhighlighter.potx.php:19
+msgid "CSharp"
+msgstr ""
+
+#: syntaxhighlighter.potx.php:20
+msgid "Cpp"
+msgstr ""
+
+#: syntaxhighlighter.potx.php:21
+msgid "Css"
+msgstr ""
+
+#: syntaxhighlighter.potx.php:22
+msgid "Delphi"
+msgstr ""
+
+#: syntaxhighlighter.potx.php:23
+msgid "Diff"
+msgstr ""
+
+#: syntaxhighlighter.potx.php:24
+msgid "Groovy"
+msgstr ""
+
+#: syntaxhighlighter.potx.php:25;26
+msgid "JScript"
+msgstr ""
+
+#: syntaxhighlighter.potx.php:27
+msgid "Java"
+msgstr ""
+
+#: syntaxhighlighter.potx.php:28
+msgid "OCaml"
+msgstr ""
+
+#: syntaxhighlighter.potx.php:29
+msgid "Perl"
+msgstr ""
+
+#: syntaxhighlighter.potx.php:30
+msgid "Php"
+msgstr ""
+
+#: syntaxhighlighter.potx.php:31
+msgid "Plain"
+msgstr ""
+
+#: syntaxhighlighter.potx.php:32
+msgid "Python"
+msgstr ""
+
+#: syntaxhighlighter.potx.php:33
+msgid "Ruby"
+msgstr ""
+
+#: syntaxhighlighter.potx.php:34
+msgid "Sql"
+msgstr ""
+
+#: syntaxhighlighter.potx.php:35
+msgid "Vb"
+msgstr ""
+
+#: syntaxhighlighter.potx.php:36
+msgid "Xml"
+msgstr ""
+
+#: syntaxhighlighter.potx.php:38
+msgid "Default"
+msgstr ""
+
+#: syntaxhighlighter.potx.php:39
+msgid "Django"
+msgstr ""
+
+#: syntaxhighlighter.potx.php:40
+msgid "Emacs"
+msgstr ""
+
+#: syntaxhighlighter.potx.php:41
+msgid "FadeToGrey"
+msgstr ""
+
+#: syntaxhighlighter.potx.php:42
+msgid "Midnight"
+msgstr ""
+
+#: syntaxhighlighter.potx.php:43
+msgid "RDark"
+msgstr ""
 
 #: syntaxhighlighter.admin.inc:24
 msgid "Syntax highlighter enabled languages"
@@ -61,39 +158,39 @@ msgstr ""
 msgid "Enabled"
 msgstr ""
 
-#: syntaxhighlighter.module:56
+#: syntaxhighlighter.module:53
 msgid "+ expand source"
 msgstr ""
 
-#: syntaxhighlighter.module:57
+#: syntaxhighlighter.module:54
 msgid "view source"
 msgstr ""
 
-#: syntaxhighlighter.module:58
+#: syntaxhighlighter.module:55
 msgid "copy to clipboard"
 msgstr ""
 
-#: syntaxhighlighter.module:59
+#: syntaxhighlighter.module:56
 msgid "The code is in your clipboard now"
 msgstr ""
 
-#: syntaxhighlighter.module:60
+#: syntaxhighlighter.module:57
 msgid "print"
 msgstr ""
 
-#: syntaxhighlighter.module:61
+#: syntaxhighlighter.module:58
 msgid "?"
 msgstr ""
 
-#: syntaxhighlighter.module:62
+#: syntaxhighlighter.module:59
 msgid "SyntaxHighlighter\\n\\n"
 msgstr ""
 
-#: syntaxhighlighter.module:63
+#: syntaxhighlighter.module:60
 msgid "Can't find brush for: "
 msgstr ""
 
-#: syntaxhighlighter.module:64
+#: syntaxhighlighter.module:61
 msgid "Brush wasn't made for html-script option: "
 msgstr ""
 
@@ -118,7 +215,7 @@ msgid "The required Syntax Highlighter Javascript library has not been installed
 msgstr ""
 
 #: syntaxhighlighter.install:30
-msgid "Required dp.SyntaxHighlighter JS lib not installed"
+msgid "Required SyntaxHighlighter JS lib not installed"
 msgstr ""
 
 #: syntaxhighlighter.info:0

@@ -1,14 +1,13 @@
 <?php
-// $Id: rsvp_eventconnector.module,v 1.1.2.1 2008/12/05 06:56:59 ulf1 Exp $
+// $Id: rsvp_eventconnector.module,v 1.2.2.3 2009/03/01 22:54:10 ulf1 Exp $
 
 class RsvpEventConnectorImpl extends RsvpConnectorImpl {
 
-  //returns a unix date (int) as String. (and already converted to the correct timezone).
-//  function print_unixDateAsString($unixdate)
-//  {  
-//    return $unixdate;
-//  } 
-	
+  function get_event_field($field_name, $content_type) {
+    return array();
+  }
+  
+  
   function get_datecount($node, $field) {
     return 1;
   }
@@ -35,6 +34,21 @@ class RsvpEventConnectorImpl extends RsvpConnectorImpl {
     return $unixutc;
   }
   
+  function format_date($node, $field, $pos, $include_to_date = FALSE) {
+
+    $date_out = $node->event['start'];
+
+    if ($include_to_date) {
+      $eventend = $node->event['end'];
+      
+      if ($eventend) {
+        $date_out .= t(' to ') . $eventend;
+      }
+    }
+    return $date_out;    
+    
+  }
+  
   /*
    * PRIVATE METHOD. Do not use outside. Return type is based on used connector.
    * returns time zone offset according to Event API. 
@@ -50,12 +64,6 @@ class RsvpEventConnectorImpl extends RsvpConnectorImpl {
   }
   
   function is_event_enabled($contenttype) {
-  	
-    $rsvp_content_types = variable_get('rsvp_content_types', array());
-    if (!isset ($rsvp_content_types['event'])) {
-      return false;
-    }
-  	
     return event_is_enabled($contenttype);
   }
   

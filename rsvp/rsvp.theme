@@ -1,365 +1,64 @@
 <?php
 /**
- * $Id: rsvp.theme,v 1.6.2.12 2009/01/09 16:55:53 ulf1 Exp $
+ * $Id: rsvp.theme,v 1.9 2009/02/05 02:25:44 ulf1 Exp $
  
  * @addtogroup themeable
- * @{
+ *
  */
 
-function theme_rsvp_send_status($status = NULL) {
+function theme_rsvp_status($status = NULL) {
   if(count($status) == 0) {
-    $content .= '<div class="title">'. t('No invitees found.') .'</div>';
+    $content .= '<div class="title">'. t('No guests found.') .'</div>';
   }
   if(count($status['invalid'])) {
-    $content .= '<div class="title">'. t('The following invitees are invalid:') .'</div>';
+    $content .= '<div class="title">'. t('The following guests are invalid:') .'</div>';
     $content .= theme('item_list', $status['invalid']);
   }
   if(count($status['existing'])) {
-    $content .= '<div class="title">'. t('The following invitees could not be added, because they already have been added earlier:') .'</div>';
+    $content .= '<div class="title">'. t('The following guests could not be added, because they have been added earlier:') .'</div>';
     $content .= theme('item_list', $status['existing']);
   }
+  if(count($status['failed_remove'])) {
+    $content .= '<div class="title">'. t('Failed removing these guests:') .'</div>';
+    $content .= theme('item_list', $status['failed_remove']);
+  }
   if(count($status['failed_add'])) {
-    $content .= '<div class="title">'. t('Failed adding these invitees:') .'</div>';
+    $content .= '<div class="title">'. t('Failed adding these guests:') .'</div>';
     $content .= theme('item_list', $status['failed_add']);
   }
-  if(count($status['failed_send'])) {
-    $content .= '<div class="title">'. t('Failed sending email to these invitees:') .'</div>';
-    $content .= theme('item_list', $status['failed_send']);
+  if(count($status['failed_send_message'])) {
+    $content .= '<div class="title">'. t('Failed sending message to these guests:') .'</div>';
+    $content .= theme('item_list', $status['failed_send_message']);
+  }
+  if(count($status['failed_send_invitation'])) {
+    $content .= '<div class="title">'. t('Failed sending invitation to these guests:') .'</div>';
+    $content .= theme('item_list', $status['failed_send_invitation']);
+  }
+  if(count($status['success_remove'])) {
+    $content .= '<div class="title">'. t('Successfully removed these guests:') .'</div>';
+    $content .= theme('item_list', $status['success_remove']);
   }
   if(count($status['success_add'])) {
-    $content .= '<div class="title">'. t('Successfully added these invitees:') .'</div>';
+    $content .= '<div class="title">'. t('Successfully added these guests:') .'</div>';
     $content .= theme('item_list', $status['success_add']);
   }
-  if(count($status['success_send'])) {
-    $content .= '<div class="title">'. t('Successfully sent email to these invitees:') .'</div>';
-    $content .= theme('item_list', $status['success_send']);
+  if(count($status['success_send_message'])) {
+    $content .= '<div class="title">'. t('Successfully sent message to these guests:') .'</div>';
+    $content .= theme('item_list', $status['success_send_message']);
+  }
+  if(count($status['success_send_invitation'])) {
+    $content .= '<div class="title">'. t('Successfully sent invitation to these guests:') .'</div>';
+    $content .= theme('item_list', $status['success_send_invitation']);
   }
   return '<div class="rsvpmailstatus">'. $content .'</div>';
-}
-
-function theme_rsvp_event($node = NULL, $startdate = NULL) {
-  $content .= '<div>Event: ' . l(check_plain($node->title), 'node/'. $node->nid);
-  $content .= '<br />Eventdate: ' . check_plain($startdate) . '</div><br />';
-  return $content;
-}
-
-function theme_rsvp_event_anonymous() {
-  $content = '<div>' . t('Please sign-in to display eventually more details about other invitees.') . '</div><br />';
-  return $content;
-}
-
-function theme_rsvp_invite($invite = NULL, $rsvp = NULL, $content = NULL) {
-  $output = '<div class="rsvpbox">';
-  $output .= check_markup($content);
-  $output .= '</div>';
-  return $output;
-}
-
-function theme_rsvp_preview($content = NULL) {
-  $output = '<div class="rsvppreviewbox">';
-  $output .= '<div class="title">Invite Preview</div>';
-  $output .= '<div class="rsvpbox">'. check_markup($content) .'</div>';
-  $output .= '</div>';
-  return $output;
-}
-
-function theme_rsvp_salutation($name = NULL) {
-  
-  $output = '<br />';
-  
-  if (!is_null($name)) { 
-    $salutation = t('Dear !name!', array('!name' => $name)) . '<br />';
-    $output .= $salutation;
-  }
-  
-  return $output;
-}
-
-//$name and $content has been cleaned
-function theme_rsvp($rsvp = NULL, $name = NULL, $content = NULL) {
-  $u = user_load(array('uid' => $rsvp->uid));
-  $title = theme('rsvp_salutation', $name);
-  $title .= t('!name has invited you to "%title"', array('!name' => l(check_plain($u->name), 'user/'. $u->uid), '%title' => $rsvp->name));
-
-  $output = theme('box', $title, $content);
-  return $output;
-}
-
-function theme_rsvp_invite_action($content = NULL) {
-  $output = '<div class="rsvpactionbox">';
-  $output .= check_markup($content);
-  $output .= '</div>';
-  return $output;
 }
 
 function theme_rsvp_help($content = NULL) {
   return '<div id="help">'. $content .'</div>';
 }
 
-function theme_rsvp_invite_mail_subject($invite = NULL, $subject = NULL) {
-   $site = variable_get("site_name", "drupal");
-   $subject = "[" . check_plain($site) ."] ". t('Invitation - ') . check_plain($subject);
-   return $subject;
-}
-
-/**
- * generates the body for the invitation email 
- * @param $invite The invite object for the user it is destined to.
- * @param $sender String The name of the sender. (already cleaned)
- */
-function theme_rsvp_invite_mail($rsvp = NULL, $invite = NULL, $sender = NULL) {
-  global $user;
-  $site = variable_get("site_name", "drupal");
-  //keep &nbsp; in the code. Otherwise the mail processor will remove linebreaks.
-  $output = t('Hello !uname!', array('!uname'=>_rsvp_getAttendeeEmail($invite, true))) . '<br />&nbsp;<br />';
-  $output .= t('You have been invited by !sender at !site.', array('!sender'=>$sender, '!site'=>$site)) . '<br />&nbsp;<br />';
-  $output .= t('You can view the full invitation, reply if you want to join or not, and add a comment by following this link: ');
-  $output .= url("rsvp/email/$invite->hash/view", array('absolute'=>true)) . '<br />&nbsp;<br />';
-
-  $output .= t('You can view the event by following this link: ');
-  $output .= url("node/$invite->nid", array('absolute'=>true)) . '<br />&nbsp;<br />';
-
-  $output .= t('You also can visit the inviation by going to ') . '<i>' . t('My account') . '|' . t('Invitations') . '</i><br />&nbsp;<br />';
-  $output .= t('Please do not reply to this email.') . '<br />&nbsp;<br />&nbsp;<br />';
-  $output .= t('***************************************************') . '<br />&nbsp;<br />';
-  $output .= check_markup($rsvp->invite_text);
-
-  return $output;
-}
-
-function theme_rsvp_message_mail_subject($invite = NULL, $subject = NULL) {
-   $site = variable_get("site_name", "drupal");
-   $subject = "[" . check_plain($site) ."] ". t('Invitation - ') . check_plain($subject);
-   return $subject;
-}
-
-function theme_rsvp_message_mail($rsvp = NULL, $invite = NULL, $sender = NULL, $body = NULL) {
-  global $user;
-  $site = variable_get("site_name", "drupal");
-
-  //keep &nbsp; in the code. Otherwise the mail processor will remove linebreaks.
-  $output = t('Hello !uname!', array('!uname'=>_rsvp_getAttendeeEmail($invite, true))) . '<br />&nbsp;<br />';
-  $output .= t('!sender at !site has sent you a message.', array('!sender'=>$sender, '!site'=>$site)) . '<br />&nbsp;<br />';
-
-  $output .= t('You can view the full invitation, reply if you want to join or not, and add a comment by following this link: ');
-  $output .= url("rsvp/email/$invite->hash/view", array('absolute'=>true)) . '<br />&nbsp;<br />';
-
-  $output .= t('You also can visit the inviation by going to ') . '<i>' . t('My account') . '|' . t('Invitations') . '</i><br />&nbsp;<br />';
-  $output .= t('Please do not reply to this email.') . '<br />&nbsp;<br />&nbsp;<br />';
-  $output .= t('***************************************************') . '<br />&nbsp;<br />';
-  $output .= check_markup($body);
-
-  return $output;
-}
-
-function theme_rsvp_attendees_outertable($header = NULL, $whoiscoming = NULL, $answer_blocks = NULL, $footer = NULL) {
-
-  $output  = '<table>';
-  $output .= '<tbody>';
-  if (!is_null($header))
-    $output .= $header;
-  if (!is_null($whoiscoming))
-    $output .= $whoiscoming;
-    
-  if (!is_null($answer_blocks)) {
-    foreach ($answer_blocks as $block) {
-      $output .= $block;
-    }
-  }
-  if (!is_null($footer))
-    $output .= $footer;
-  $output .= '</tbody>';
-  $output .= '</table>';
-  
-  return $output;
-}
-
-function theme_rsvp_attendees_header($connector = NULL, $rsvp = NULL, $invite = NULL) {
-
-  $output  = '<tr>';
-  $output .= '<td>';
-  $output .= '<div class="rsvp_attendees_header_left">';
-  $output .= '<b>' . t('GUEST LIST') . '</b>';
-  $output .= '</div>';
-  $output .= '<div class="rsvp_attendees_header_print">';
-  if (rsvp_csv_hash_form_access($connector, $rsvp, $invite) == true) { 
-    if (!is_null($invite))
-      $output .= l('Export guest list', 'rsvp/email/' . $invite->hash . '/csv');
-    else
-      $output .= l('Export guest list', 'rsvp/' . $rsvp->rid . '/attendees/csv');
-  }
-  $output .= '</div>';
-  $output .= '</td>';
-  $output .= '</tr>';
-
-  return $output;
-}
-
-function theme_rsvp_attendees_whoiscoming($whoiscomingtext = NULL, $totalsarray = NULL, $currentdate = NULL, $are_responses_visible = NULL) {
-
-  $imgpath = drupal_get_path('module', 'rsvp') . '/icons/';
-  
-  $output  = '<tr>';
-  $output .= '<td>';
-  $output .= '<div class="rsvp_attendees_whoiscoming">';
-  $output .= '<b>' . t($whoiscomingtext). '</b><br />';
-
-  if (is_null($are_responses_visible) || $are_responses_visible == false) {
-    $output .= '<b>' . check_plain($totalsarray[RSVP_ATT_ALL]) . '</b> ';
-    $output .= theme('image', $imgpath . 'not.gif', 'All', '', array('width' => 17, 'height' => 17));
-  }
-  else {
-    $output .= '<b>' . check_plain($totalsarray[RSVP_ATT_YES]) . '</b> ';
-    $output .= theme('image', $imgpath . 'yes.gif', 'Yes', '', array('width' => 17, 'height' => 17));
-
-    $output .= '<b>' . check_plain($totalsarray[RSVP_ATT_MAYBE]) . '</b> ';
-    $output .= theme('image', $imgpath . 'maybe.gif', 'Maybe', '', array('width' => 17, 'height' => 17));
-
-    $output .= '<b>' . check_plain($totalsarray[RSVP_ATT_NO]) . '</b> ';
-    $output .= theme('image', $imgpath . 'no.gif', 'No', '', array('width' => 17, 'height' => 17));
-
-    $output .= '<b>' . check_plain($totalsarray[RSVP_ATT_NONE]) . '</b> ';
-    $output .= theme('image', $imgpath . 'not.gif', 'No response', '', array('width' => 17, 'height' => 17));
-  }
 
 
-
-  $output .= '<br />';
-  $output .= t('As of ') . check_plain($currentdate);
-  $output .= '<br />';
-
-  $output .= '</div>';
-  $output .= '</td>';
-  $output .= '</tr>';
-  
-  return $output;
-}
-
-function theme_rsvp_attendees_answer_block($header = NULL, $body = NULL) {
-
-  $output .= '<tr>';
-  $output .= '<td>';
-  $output .= $header;
-  $output .= $body;
-  $output .= '</td>';
-  $output .= '</tr>';
-  
-  return $output;
-}
-
-/* @param $answertext Filter outside because it could also be a link.
-*/
-function theme_rsvp_attendees_answer_header($gif = NULL, $answertext = NULL, $totals = NULL, $class = NULL) {
-
-  $imgpath = drupal_get_path('module', 'rsvp') . '/icons/';
-
-  $output  = '<table border="0" cellpadding="0" cellspacing="0" width="100%">';
-  $output .= '<tbody>';
-  $output .= '<tr>';
-  $output .= '<td class="' .$class. '" width="20">';
-  $output .= theme('image', $imgpath . $gif, $answertext, '', array('width' => 17, 'height' => 17));
-  $output .= '</td>';
-  $output .= '<td>';
-  $output .= '<b>' . $answertext . ' (' . check_plain($totals) . ')' . '</b>';
-  $output .= '</td>';
-  $output .= '</tr>';
-  $output .= '</tbody>';
-  $output .= '</table>';
-
-  return $output;
-}  
-
-function theme_rsvp_attendees_answer_body($itemlist = NULL) {
-
-  $imgpath = drupal_get_path('module', 'rsvp');
-
-  $output  = '<table border="0" cellpadding="0" cellspacing="0" width="99%">';
-  $output .= '<tbody>';
-  $output .= '<tr>';
-  $output .= '<td>';
-  $output .= '<ul>';
-  
-  foreach($itemlist as $item) {
-    $output .= $item;
-  }
-  
-  $output .= '</ul>';
-  $output .= '</td>';
-  $output .= '</tr>';
-  $output .= '</tbody>';
-  $output .= '</table>';
-
-  return $output;
-
-}
-
-function theme_rsvp_attendees_answer_body_item($item = NULL, $ismoderator = NULL, $activeuser = NULL, $nameonly = NULL) {
-
-  $imgpath = drupal_get_path('module', 'rsvp') . '/icons/';
-  
-  $totalguests = $item['attendee']->totalguests; 
-  $viral = '';
-  $active = '';
-
-  if (isset($item['attendee']->inviteehash) && (strlen($item['attendee']->inviteehash) > 0)) {
-    $viral = theme('image', $imgpath . 'viral.gif', 'Invited by an attendee', 'Invited by an attendee', array('width' => 17, 'height' => 17));
-  }
-
-  if (!is_null($activeuser) && ($activeuser == true)) {
-    $active = theme('image', $imgpath . 'current.gif', 'Active user', 'Active user', array('width' => 17, 'height' => 17));
-  }
-
-  $name = check_plain($item['name']) . '  ';
-  if ($totalguests > 1) {    
-    $name .= '('  . $totalguests . ')  ';
-  }
-
-
-  $output .= '<li>';
-  if (is_null($ismoderator) || $ismoderator == false) {
-    $output .= $active;
-    $output .= '<b>' . $name . '</b>';
-    $output .= $viral;
-  }
-  else {
-    $output .= $active;
-    $output .= l($name, $item['href'], array('attributes' => array('title' => t('The profile of the user that has been invited.'))));
-    $output .= $viral;
-
-    $img1 = theme('image', $imgpath . 'edit.gif', 'edit', '', array('width' => 17, 'height' => 17));
-    $output .= '  ' . l($img1, 'rsvp/email/'. $item['attendee']->hash .'/view', array('html' => true, 'attributes' => array('title' => t('Edit invitation'))));
-    
-    $img2 = theme('image', $imgpath . 'profile.gif', 'status', '', array('width' => 17, 'height' => 17));
-    $output .= '  ' . l($img2, 'rsvp/email/'. $item['attendee']->hash .'/status', array('html' => true, 'attributes' => array('title' => t('View status of invitation'))));
-      
-    $img3 = theme('image', $imgpath . 'delete.gif', 'remove', '', array('width' => 17, 'height' => 17));
-    $output .= '  ' . l($img3, 'rsvp/email/'. $item['attendee']->hash .'/remove', array('html' => true, 'attributes' => array('title' => t('Remove attendee from invitation list'))));
-
-  }
-    
-  $output .= '<br />';
-  if (!is_null($nameonly) && ($nameonly == false)) {
-    $output .= check_plain($item['attendee']->comment);
-  }
-  $output .= '</li>';
-
-  return $output;
-
-}
-
-function theme_rsvp_attendees_footer() {
-
-  $imgpath = drupal_get_path('module', 'rsvp') . '/icons/';
-
-  $output  = '<tr>';
-  $output .= '<td height="30">';
-  $output .= theme('image', $imgpath . 'viral.gif', 'Invited by an attendee', 'Invited by an attendee', array('width' => 17, 'height' => 17));
-  $output .= t('=Invited by an attendee.');
-  $output .= '</td>';
-  $output .= '</tr>';
-
-  return $output;
-}
 
 
  /** @} End of addtogroup themeable */

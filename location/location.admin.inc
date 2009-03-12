@@ -1,5 +1,5 @@
 <?php
-// $Id: location.admin.inc,v 1.17 2008/12/11 20:33:35 bdragon Exp $
+// $Id: location.admin.inc,v 1.17.2.2 2009/03/02 20:42:46 bdragon Exp $
 
 /**
  * @file
@@ -43,7 +43,7 @@ function location_admin_settings() {
     '#type'           => 'checkbox',
     '#title'          => t('Use a Google Map to set latitude and longitude '),
     '#default_value'  => variable_get('location_usegmap', FALSE),
-    '#description'    => t('If the gmap.module is installed and <a href="@enabled">enabled</a>, and this is setting is turned on, users that are allowed to manually enter latitude/longitude coordinates will be able to do so with an interactive Google Map.  You should also make sure you have entered a <a href="@google_maps_api_key">Google Maps API key</a> into your <a href="@gmap_module_settings">gmap module settings</a>.', array('@enabled' => url('admin/build/modules'), '@google_maps_api_key' => 'http://www.google.com/apis/maps', '@gmap_module_settings' => url('admin/settings/gmap'))),
+    '#description'    => t('If the gmap.module is installed and <a href="@enabled">enabled</a>, and this setting is also turned on, users that are allowed to manually enter latitude/longitude coordinates will be able to do so with an interactive Google Map.  You should also make sure you have entered a <a href="@google_maps_api_key">Google Maps API key</a> into your <a href="@gmap_module_settings">gmap module settings</a>.', array('@enabled' => url('admin/build/modules'), '@google_maps_api_key' => 'http://www.google.com/apis/maps', '@gmap_module_settings' => url('admin/settings/gmap'))),
 // @@@ megapatch This is an idea, but I'd opt more for a warning here...
 //    '#disabled'       => !module_exists('gmap'),
   );
@@ -55,6 +55,13 @@ function location_admin_settings() {
     '#maxlength' => 500,
     '#default_value' => variable_get('location_locpick_macro', '[gmap]'),
     '#description' => t('If you would like to change the macro used to generate the location chooser map, you can do so here. Note: Behaviors <em>locpick</em> and <em>collapsehack</em> are forced to be enabled and cannot be changed.'),
+  );
+
+  $form['location_jit_geocoding'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enable JIT geocoding'),
+    '#default_value' => variable_get('location_jit_geocoding', FALSE),
+    '#description' => t('If you are going to be importing locations in bulk directly into the database, you may wish to enable JIT geocoding and load the locations with source set to 4 (LOCATION_LATLON_JIT_GEOCODING). The system will automatically geocode locations as they are loaded.'),
   );
 
   return system_settings_form($form);

@@ -1,5 +1,5 @@
 <?php
-// $Id: xmlsitemap_engines.install,v 1.3.2.9 2009/02/12 11:20:04 kiam Exp $
+// $Id: xmlsitemap_engines.install,v 1.3.2.10 2009/02/28 21:36:19 kiam Exp $
 
 /**
  * @file
@@ -19,12 +19,11 @@ function xmlsitemap_engines_update_6000() {
   variable_set('xmlsitemap_engines_morover_url', 'http://api.moreover.com/ping?u=[sitemap]');
   variable_set('xmlsitemap_engines_live_url', 'http://webmaster.live.com/ping.aspx?siteMap=[sitemap]');
   variable_set('xmlsitemap_engines_yahoo_url', 'http://search.yahooapis.com/SiteExplorerService/V1/ping?sitemap=[sitemap]');
-  return array(
-    0 => array(
-      'success' => TRUE,
-      'query' => 'UPDATE MODULE SETTINGS',
-    )
+  $ret[] = array(
+    'success' => TRUE,
+    'query' => 'UPDATE MODULE SETTINGS',
   );
+  return $ret;
 }
 
 /**

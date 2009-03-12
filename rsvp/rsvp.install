@@ -1,5 +1,5 @@
 <?php
-// $Id: rsvp.install,v 1.6.2.4 2008/12/25 22:01:40 ulf1 Exp $ 
+// $Id: rsvp.install,v 1.10.2.2 2009/03/10 16:53:57 ulf1 Exp $ 
 
 function rsvp_install() {
   drupal_install_schema('rsvp');
@@ -39,6 +39,13 @@ function rsvp_schema() {
       'invite_text' => array(
         'description' => ('RSVP body'),
         'type' => 'text',
+      ),
+      'invite_filterformat' => array(
+        'description' => ('RSVP body filter format'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'default' => '0'
       ),
       'response_blind' => array(
         'description' => ('Defines whether responses (result) of rsvp is visible or not, and when it becomes visible.'),
@@ -81,10 +88,9 @@ function rsvp_schema() {
       ),
       'startdate' => array(
         'description' => ('The startdate related to this invitation'),
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => '0'
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => ''
       ),
       'text_whoiscoming' => array(
         'description' => ('The text that is being shown instead of the "Responses" text'),
@@ -144,6 +150,97 @@ function rsvp_schema() {
         'not null' => TRUE,
         'default' => '0'
       ),
+      'send_conf_owner' => array(
+        'description' => ('Send confirmation emails to owner when guest replies'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+      ),
+      'send_conf_guest' => array(
+        'description' => ('Send confirmation emails to guest when he replies'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+      ),
+      'send_privatemsg' => array(
+        'description' => ('Send emails by privatemsg for registered users'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+      ),
+      'disable_maybe' => array(
+        'description' => ('Allow maybe as answer or not.'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+      ),
+      'reply_startdate' => array(
+        'description' => ('Determines when guests can start replying'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+      ),
+      'reply_enddate' => array(
+        'description' => ('Determines when guests can not reply anymore'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+      ),
+      'open_invitation' => array(
+        'description' => ('Can other registered users signup to the invitation'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+      ),
+      'max_guests' => array(
+        'description' => ('The maximum number of guests allowed to attend'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+      ),
+      'theme' => array(
+        'description' => ('The theme that is being used for the invitation'),
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => ''
+      ),
+      'stylesheet' => array(
+        'description' => ('The style that the theme is beeing displayed with'),
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => ''
+      ),
+      'iconset' => array(
+        'description' => ('The iconset that the theme is beeing using'),
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => ''
+      ),
+      'backgroundimage' => array(
+        'description' => ('The backgroundimage that the theme is using'),
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => ''
+      ),
+      'image' => array(
+        'description' => ('The image that the theme is using'),
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => ''
+      ),
       
     ),
     'primary key' => array('rid', 'nid', 'uid'),
@@ -173,7 +270,7 @@ function rsvp_schema() {
         'default' => '0'
       ),
       'email' => array(
-        'description' => ('Invitee e-mail'),
+        'description' => ('Guests e-mail'),
         'type' => 'varchar',
         'length' => 128,
         'default' => ''
@@ -229,6 +326,25 @@ function rsvp_schema() {
     'primary key' => array('rid', 'email', 'uid'),
   );
 
+  $schema['rsvp_realname'] = array(
+    'description' => t('Mappings from users to real name '),
+    'fields' => array(
+      'email' => array(
+        'description' => ('Guests e-mail'),
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => ''
+      ),
+      'realname' => array(
+        'description' => ('The Real name of a user'),
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => ''
+      ),
+    ),
+    'primary key' => array('email'),
+  );
+      
   // check the event module weight:
   $event_weight = db_result(db_query("SELECT weight FROM {system} WHERE name = 'event'"));
   // check the date module weight:
@@ -245,6 +361,23 @@ function rsvp_uninstall() {
   variable_del('rsvp_connector');
   variable_del('rsvp_content_types');
   variable_del('rsvp_from_address');
+  variable_del('rsvp_for_expired_event');
+
+  foreach (array('max_guests', 'open_invitation', 'disable_maybe', 'send_privatemsg', 
+                 'send_conf_guest', 'send_conf_owner',
+                 'rsvp_view_roles', 'response_view_roles', 'response_blind', 'response_blind_node', 
+                 'reply_blind_node', 'attendees_visible', 'list_email', 'allow_invite', 
+                 'text_whoiscoming', 'text_yes', 'text_no', 'text_maybe', 'theme', 'stylesheet', 'iconset', 'backgroundimage', 'image') as $key) {
+
+    variable_del('rsvp_default_' . $key);
+  }
+  
+  global $rsvp_mailer_ops;
+  foreach ($rsvp_mailer_ops as $op => $op_name) {
+    variable_del("rsvp_default_mailer_{$op}_subject");
+    variable_del("rsvp_default_mailer_{$op}_message");
+  }
+  
 }
 
 function rsvp_update_6000() {
@@ -420,16 +553,210 @@ function rsvp_update_6003() {
   return $ret;
 
 }
-      
+
+function rsvp_update_6200() {
+
+  $ret = array();
+  
+  db_add_field($ret, 'rsvp', 'send_conf_owner', array(
+        'description' => ('Send confirmation emails to owner when guest replies'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+        )
+  );
+
+  db_add_field($ret, 'rsvp', 'send_conf_guest', array(
+        'description' => ('Send confirmation emails to guest when he replies'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+        )
+  );
+  db_add_field($ret, 'rsvp', 'send_privatemsg', array(
+        'description' => ('Send emails by privatemsg for registered users'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+        )
+  );
+  
+  db_add_field($ret, 'rsvp', 'disable_maybe', array(
+        'description' => ('Allow maybe as answer or not.'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+        )
+  );
+
+  db_add_field($ret, 'rsvp', 'reply_startdate', array(
+        'description' => ('Determines when guests can start replying'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+        )
+  );
+  db_add_field($ret, 'rsvp', 'reply_enddate', array(
+        'description' => ('Determines when guests can not reply anymore'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+        )
+  );
+  db_add_field($ret, 'rsvp', 'open_invitation', array(
+        'description' => ('Can other registered users signup to the invitation'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+        )
+  );
+  db_add_field($ret, 'rsvp', 'max_guests', array(
+        'description' => ('The maximum number of guests allowed to attend'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0'
+        )
+  );
+  db_add_field($ret, 'rsvp', 'theme', array(
+        'description' => ('The theme that is being used for the invitation'),
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => ''
+        )
+  );
+  
+  db_add_field($ret, 'rsvp', 'stylesheet', array(
+        'description' => ('The style that the theme is beeing displayed with'),
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => ''
+        )
+  );
+  db_add_field($ret, 'rsvp', 'iconset', array(
+        'description' => ('The iconset that the theme is beeing using'),
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => ''
+        )
+  );
+  db_add_field($ret, 'rsvp', 'invite_filterformat', array(
+        'description' => ('RSVP body filter format'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'default' => '0'
+        )
+  );
+  
+  db_add_field($ret, 'rsvp', 'backgroundimage', array(
+        'description' => ('The backgroundimage that the theme is using'),
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => ''
+        )
+  );
+  db_add_field($ret, 'rsvp', 'image', array(
+        'description' => ('The image that the theme is using'),
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => ''
+        )
+  );
+  
+  
+  $schema['rsvp_realname'] = array(
+    'description' => t('Mappings from users to real name '),
+    'fields' => array(
+      'email' => array(
+        'description' => ('Guests e-mail'),
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => ''
+      ),
+      'realname' => array(
+        'description' => ('The Real name of a user'),
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => ''
+      ),
+    ),
+    'primary key' => array('email'),
+  );
+  
+  if (!db_table_exists('rsvp_realname')) {
+    db_create_table($ret, 'rsvp_realname', $schema['rsvp_realname']);
+  }
+  
+  return $ret;
+
+}
+
+function rsvp_update_6201() {
+
+  $ret = array();
+
+  db_change_field($ret, 'rsvp', 'startdate', 'startdate', array(
+        'description' => ('The startdate related to this invitation'),
+        'type' => 'varchar',
+        'length' => 128,
+        'default' => ''
+      )
+  );
+  
+  drupal_set_message(t('Please edit all existing invitations and reset the startdate to the correct value.'));
+  
+  return $ret;
+}
+
+/**
+ * Implementation of hook_enable().
+ */
+function rsvp_enable() {
+
+	$path = file_directory_path(); // returns e.g. 'sites/default/files'
+	
+	//create default folder for user generated themes if not available
+  $rsvp_path = file_create_path('rsvp');
+  if ($rsvp_path == false) {
+    drupal_set_message(t('The directory %dir must exist and be writable by Drupal.', array('%dir' => $path . '/rsvp')), 'error');
+    return;  	
+    file_check_directory($rsvp_path, FILE_CREATE_DIRECTORY, NULL);
+
+    $rsvptheme_path = file_create_path('rsvp/themes');
+    if ($rsvptheme_path != false) {
+      file_check_directory($rsvptheme_path, FILE_CREATE_DIRECTORY, NULL);
+    }
+  }
+  
+}
+
+
 /**
  * Implementation of hook_requirements().
- * Make sure module Event or module Date is enabled.
+ * Make sure theme path exists.
  */
-function rs_vp_requi_rements($phase) {
-  $requirements = array();
+/*
+function rsvp_requirements($phase) {
+
+	$requirements = array();
 
   $t = get_t();
-
+  $title = $t('RSVP requirements');
+  $severity = REQUIREMENT_ERROR;
+  
 
   switch ($phase) {
     case 'runtime':
@@ -449,9 +776,57 @@ function rs_vp_requi_rements($phase) {
           );
       }
       break;
-     case 'install':
+    case 'install':
+      $path = file_directory_path(); // returns e.g. 'sites/default/files'
+
+      $check = file_check_directory($path . RSVP_THEME_PATH);
+      if ($check == false) {
+        $requirements[] = array(
+          'title' => $title, 'severity' => $severity,
+          'value' => t('The directory %dir does not exist. This is not a problem ', array('%dir' => $rsvp_path . '/rsvp')),
+          );
+        break;
+      }       
+      
+      
+      //create default folder for user generated themes if not available
+      $rsvp_path = file_create_path('rsvp');
+      if ($rsvp_path == false) {
+        $requirements[] = array(
+          'title' => $title, 'severity' => $severity,
+          'value' => t('The directory %dir must exist and be writable by Drupal.', array('%dir' => $path . '/rsvp')),
+          );
+        break;
+      }      	
+      	
+      $check = file_check_directory($rsvp_path, FILE_CREATE_DIRECTORY, NULL);
+      if ($check == false) {
+        $requirements[] = array(
+          'title' => $title, 'severity' => $severity,
+          'value' => t('The directory %dir is not accessible or could not be created .', array('%dir' => $rsvp_path . '/rsvp')),
+          );
+        break;
+      }       
+
+      $rsvptheme_path = file_create_path('rsvp/theme');
+      if ($rsvptheme_path == false) {
+        $requirements[] = array(
+          'title' => $title, 'severity' => $severity,
+          'value' => t('The directory %dir must exist .', array('%dir' => $path . '/rsvp/theme')),
+          );
+      	
+      	
+      	
+      	
+        file_check_directory($rsvptheme_path, FILE_CREATE_DIRECTORY, NULL);
+      }
+    
+    }
+     	
+     	
       break;
   }
   return $requirements;
 }
+*/
 

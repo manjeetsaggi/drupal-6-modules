@@ -1,5 +1,5 @@
 <?php
-// $Id: rules.admin.inc,v 1.1.2.63 2008/12/29 19:35:18 fago Exp $
+// $Id: rules.admin.inc,v 1.1.2.71 2009/02/25 21:29:34 fago Exp $
 
 /**
  * @file Rules Admin UI
@@ -45,8 +45,8 @@ function rules_admin_form_overview(&$form_state) {
   );
   $form['filter']['submit'] = array('#type' => 'submit', '#value' => t('Filter'));
 
-  $category = isset($form_state['values']['category']) ? $form_state['values']['category'] : FALSE;
-  $set = isset($form_state['values']['set']) ? 'event_'. $form_state['values']['set'] : FALSE;
+  $category = !empty($form_state['values']['category']) ? $form_state['values']['category'] : FALSE;
+  $set = !empty($form_state['values']['set']) ? 'event_'. $form_state['values']['set'] : FALSE;
 
   $form['active_header'] = array('#value' => '<h3>'. t('Active rules'). '</h3>');
   $form['active'] = rules_admin_overview_table(array('category' => $category, 'set' => $set, 'active' => TRUE));
@@ -92,9 +92,6 @@ function rules_admin_overview_table($params) {
     if ((!$category || in_array($category, $rule['#categories'])) && (!$set && strpos($rule['#set'], 'event_') === 0 || $rule['#set'] == $set) && $rule['#active'] == $active && ($rule['#status'] == 'fixed') == $fixed) {
       $path = RULES_ADMIN_RULE_PATH .'/'. $name;
       $ops = array();
-      if ($rule['#status'] != 'fixed') {
-        $ops[] = l(t('edit'), $path .'/edit');
-      }
       if ($rule['#status'] == 'custom') {
         $ops[] = l(t('delete'), $path .'/delete', array('query' => drupal_get_destination()));
       }
@@ -104,13 +101,19 @@ function rules_admin_overview_table($params) {
       $ops[] = l(t('clone'), $path .'/clone', array(), drupal_get_destination());
       $categories = array_map('check_plain', $rule['#categories']);
 
+      $set_info = rules_get_rule_sets($rule['#set']);
+      // If the set info is missing, the module providing the event is gone and the
+      // rule can't be edited.
       $rows[] = array(
-      l($rule['#label'], $path .'/edit'),
-      check_plain(rules_get_element_label(rules_get_rule_sets($rule['#set']))),
+      $set_info ? l($rule['#label'], $path .'/edit') : check_plain($rule['#label']),
+      $set_info ? check_plain(rules_get_element_label($set_info)) : array('class' => 'error', 'data' => check_plain($rule['#set'])),
       implode(', ', $categories),
       rules_admin_configuration_status($rule['#status']),
       implode(' ', $ops),
       );
+      if (!$set_info) {
+        rules_handle_error_msg('%set can\'t be found. Probably the providing module has been deactivated.', array('%set' => $rule['#set']));
+      }
     }
   }
 
@@ -466,6 +469,7 @@ function rules_admin_form_unpack_storage($form, &$form_state) {
     }
     $form_state['unpacked'] = TRUE;
   }
+  
   return $form;
 }
 
@@ -524,6 +528,7 @@ function rules_admin_form_edit_action(&$form_state, $element) {
     );
   }
   rules_admin_element_help($form, $element);
+  $form['help']['#weight'] = -4; // Move upwards
   rules_admin_default_argument_form($form, $form_state, $element);
   rules_admin_new_variables_form($form, $form_state, $element);
   rules_admin_element_alter_form($form, $form_state, $element);
@@ -759,8 +764,10 @@ function rules_admin_new_variables_form(&$form, &$form_state, $element) {
         '#default_value' => $name,
         '#required' => TRUE,
       );
-      //preserve its old argument map value
-      $default_name = isset($element['#settings']['#argument map'][$name]) ? $element['#settings']['#argument map'][$name] : $name;
+      // Preserve its old argument map value or initialize the map
+      $element['#settings'] += array('#argument map' => array());
+      $default_name = array_search($name, $element['#settings']['#argument map']);
+      $default_name = $default_name === FALSE ? $name : $default_name;
       $form['map'][$default_name] = array('#type' => 'value', '#value' => $name);
     }
     $form['submit']['#validate'][] = 'rules_admin_new_variables_form_validate';
@@ -769,12 +776,14 @@ function rules_admin_new_variables_form(&$form, &$form_state, $element) {
 
 function rules_admin_new_variables_form_validate($form, &$form_state) {
   $variables = $form_state['proxy']->get_defined_variables($form_state['element']['#id']);
-  foreach ($form_state['values']['new'] as $name => $values) {
-    if (isset($variables[ $values['name'] ])) {
-      form_set_error(implode('][', array('new', $name, 'name')), t('A variable with this name does already exist. Please choose another name.'));
+  foreach ($form_state['values']['new'] as $old_name => $values) {
+    // If the variable name changed or we add a new element we have to ensure
+    // that the variable name is not taken yet.
+    if (isset($variables[ $values['name'] ]) && ($values['name'] != $old_name || !isset($form_state['element']['#id']))) {
+      form_set_error(implode('][', array('new', $old_name, 'name')), t('A variable with this name does already exist. Please choose another name.'));
     }
     if (!eregi('^[0-9a-z_]*$', $values['name'])) {
-      form_set_error(implode('][', array('new', $name, 'name')), t('The name contains not allowed characters.'));
+      form_set_error(implode('][', array('new', $old_name, 'name')), t('The name contains not allowed characters.'));
     }
   }
 }
@@ -789,9 +798,8 @@ function rules_admin_new_variables_form_submit(&$form, &$form_state, &$element) 
 
       if ($old_name != $values['name']) {
         //add it to the argument map
-        $default_name = $element['#settings']['#argument map'][$old_name];
-        $element['#settings']['#argument map'][ $values['name'] ] = $default_name;
-        unset($element['#settings']['#argument map'][$old_name]);
+        $default_name = array_search($old_name, $element['#settings']['#argument map']);
+        $element['#settings']['#argument map'][ $default_name ] = $values['name'];
         //and alter the info about the variable to reflect the name change
         $element['#info']['new variables'][ $values['name'] ] = $element['#info']['new variables'][$old_name];
         unset($element['#info']['new variables'][$old_name]);
@@ -844,7 +852,7 @@ function rules_admin_default_argument_form(&$form, &$form_state, $element) {
 function rules_admin_default_argument_form_submit($form, &$form_state, &$element) {
   //save the argument map
   if (isset($form_state['values']['map'])) {
-    $element['#settings']['#argument map'] = array_flip($form_state['values']['map']);
+    $element['#settings']['#argument map'] = $form_state['values']['map'];
   }
   //add in values of not identifiable variables
   if (isset($form_state['values']['settings'])) {
@@ -860,8 +868,8 @@ function rules_admin_map_get_configured_argument($name, $element) {
     //per default try the the same name
     return $name;
   }
-  $reverse_map = array_flip($element['#settings']['#argument map']);
-  return isset($reverse_map[$name]) ? $reverse_map[$name] : $name;
+  $map = $element['#settings']['#argument map'];
+  return isset($map[$name]) ? $map[$name] : $name;
 }
 
 /**
@@ -1213,7 +1221,8 @@ function rules_admin_save_element_label($form, &$form_state, &$element) {
  */
 function _rules_admin_get_label(&$form_state, $info, $element, $value, $cfirst = NULL) {
   $info_changes = array();
-  if ($info['label'] != $value) {
+
+  if (drupal_strtolower($info['label']) != drupal_strtolower($value)) {
     //label has been customized
     $info_changes['label'] = $value;
     $info_changes['label callback'] = FALSE;
@@ -1221,6 +1230,8 @@ function _rules_admin_get_label(&$form_state, $info, $element, $value, $cfirst =
   else if (isset($info['label callback']) && $info['label callback'] && function_exists($info['label callback'])) {
     $argument_labels = rules_admin_get_argument_labels($form_state['proxy'], $element);
     $info_changes['label'] = $info['label callback']($element['#settings'], $argument_labels, $element);
+    // Labels are treated as user input, so we decode any entites.
+    $info_changes['label'] = decode_entities($info_changes['label']);
     if (isset($cfirst)) {
       $function = $cfirst ? 'drupal_strtoupper' : 'drupal_strtolower';
       $info_changes['label'] = $function(drupal_substr($info_changes['label'], 0, 1)) . drupal_substr($info_changes['label'], 1);

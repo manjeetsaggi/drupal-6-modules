@@ -4,9 +4,9 @@ description = Configure CCK fields to be tagged as required to be complete. Disp
 core = 6.x
 package = CCK
 dependencies[] = content
-; Information added by drupal.org packaging script on 2009-02-04
-version = "6.x-1.x-dev"
+; Information added by drupal.org packaging script on 2009-03-09
+version = "6.x-1.0"
 core = "6.x"
 project = "content_complete"
-datestamp = "1233749055"
+datestamp = "1236605717"
 

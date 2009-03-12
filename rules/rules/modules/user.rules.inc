@@ -1,5 +1,5 @@
 <?php
-// $Id: user.rules.inc,v 1.1.2.13 2008/10/17 10:34:06 fago Exp $
+// $Id: user.rules.inc,v 1.1.2.14 2009/02/19 13:44:16 fago Exp $
 /**
  * @file rules integration for the user module
  */
@@ -181,7 +181,7 @@ function user_rules_action_info() {
           'type' => 'string',
           'label' => t("New user's password"),
         ),
-      ),  
+      ),
       'module' => 'User',
     ),
   );
@@ -198,7 +198,7 @@ function rules_action_user_addrole($user, $settings) {
     foreach ($settings['roles'] as $rid) {
       $user->roles[$rid] = $role_list[$rid];
     }
-    user_save($user, array('roles' => $user->roles));
+    user_save($user, array('roles' => $user->roles), NULL);
     return array('user' => $user);
   }
 }
@@ -215,7 +215,7 @@ function rules_action_user_removerole($user, $settings) {
         unset($user->roles[$rid]);
       }
     }
-    user_save($user, array('roles' => $user->roles));
+    user_save($user, array('roles' => $user->roles), NULL);
     return array('user' => $user);
   }
 }
@@ -239,7 +239,7 @@ function rules_action_user_create($user_name, $user_mail)  {
     'status' => 1,
     'pass' => $password,
   );
-  //validate name input                
+  //validate name input
   if (user_validate_name($user_data['name'])) {
     rules_log(t('No appropriate user name. No user has been created.'));
   }
@@ -263,7 +263,7 @@ function rules_action_user_create($user_name, $user_mail)  {
     $user = user_save(NULL, $user_data);
     return array('user_added' => $user, 'user_added_pw' => $password);
   }
-  
+
 }
 
 

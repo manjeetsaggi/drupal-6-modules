@@ -1,5 +1,5 @@
 <?php
-// $Id: comment.rules.inc,v 1.1.2.2 2008/08/25 15:29:08 fago Exp $
+// $Id: comment.rules.inc,v 1.1.2.3 2009/02/19 12:58:46 fago Exp $
 
 /**
  * @file rules integration for the comment module
@@ -94,6 +94,40 @@ function rules_events_argument_comment_node($comment) {
  */
 function rules_events_argument_comment_node_author($comment) {
   return rules_events_argument_node_author(rules_events_argument_comment_node($comment));
+}
+
+/**
+ * Implementation of hook_rules_action_info().
+ * @ingroup rules
+ */
+function comment_rules_action_info() {
+  return array(
+    'rules_action_load_comment' => array(
+      'label' => t('Load comment by id'),
+      'arguments' => array(
+        'cid' => array(
+          'type' => 'number',
+          'label' => t('Comment id'),
+          'required' => TRUE,
+        ),
+      ),
+      'new variables' => array(
+        'comment_loaded' => array(
+          'type' => 'comment',
+          'label' => t('Loaded comment'),
+          'label callback' => 'rules_action_load_comment_variable_label',
+        ),
+      ),
+      'module' => 'Comment',
+    ),
+  );
+}
+
+/**
+ * Action: Load a comment by id.
+ */
+function rules_action_load_comment($cid) {
+  return array('comment_loaded' => _comment_load($cid));
 }
 
 /**

@@ -1,119 +1,92 @@
 <?php
-// $Id: rsvp_dateconnector.module,v 1.1.2.1 2008/12/05 06:56:59 ulf1 Exp $
+// $Id: rsvp_dateconnector.module,v 1.2.2.7 2009/03/09 21:51:54 ulf1 Exp $
+
 
 class RsvpDateConnectorImpl extends RsvpConnectorImpl {
 
-  //returns a date as int in unix form (and converted to UTC).
-  function convert_date2UTCUnix($dateAsString, $timezone, $date_type)
-  { 
-  	//1) convert input date into DateTime 
-  	$date = date_make_date($dateAsString, $timezone, $date_type);
-  	
-  	//2) convert DateTime into UTC
-    date_timezone_set($date, timezone_open('UTC')); 	
-  	
-    //3) convert DateTime into Unix
-    return intval(date_convert($date, DATE_OBJECT, DATE_UNIX));
-  }	
+  function get_event_field($field_name, $content_type) {
 
+    $field = content_fields($field_name, $content_type);
+    if (empty($field)) {
+      return array();
+    }
+    $field['database'] = content_database_info($field);
+    return $field;
+
+  }
+
+  
   function get_datecount($node, $field) {
-  	$fld = $node->$field;
-  	
-  	return count($fld);
+    if (isset($field['field_name']))
+      return count($node->{$field['field_name']});
+    else
+      return 0;
   }
 
-  //returns startdate as unix timestamp in utc 
-  function get_startdate($node, $field, $pos) {    
-  	$fld = $node->$field;
+  
+  //returns startdate as is to use it as hash
+  function get_startdate($node, $field, $pos) {
 
-    $timezoneName_db = $this->get_offset_db($node, $field, $pos);
-  	
-    $date = $this->convert_date2UTCUnix($fld[$pos]['value'], $timezoneName_db, $fld[$pos]['date_type']);
-    return $date;
+    $date_value = $node->{$field['field_name']}[$pos]['value'];
+    return $date_value;
+/*    
+    $db_tz = $this->_get_dbtimezone($node, $field, $pos);
+
+    // Create a date object
+    $date = date_make_date($date_value, $db_tz, $field['type']);
+    // Make sure the date object is going to print UTC values.
+    date_timezone_set($date, timezone_open('UTC'));
+
+    $date_utc = date_format($date, 'U');
+
+    return $date_utc;
+*/
   }
 
+  
   //returns startdate as string in local timezone
   function get_startdateAsString($node, $field, $pos) {
-  	
-  	$fld = $node->$field;
-    
-    $timezoneName_db = $this->get_offset_db($node, $field, $pos);
-    //$timezoneName_target = $this->get_offset($node, $field, $pos);
-
-    //1) convert input date into DateTime 
-    $date = date_make_date($fld[$pos]['value'], $timezoneName_db, $fld[$pos]['date_type']);
-    
-    //2) convert DateTime into target timezone
-    $timezone_target = date_default_timezone();
-    
-    date_timezone_set($date, $timezone_target);     
-      
-    //3) convert DateTime into String
-    $format = date_formatter_format('default', $field);
-    $out = date_format_date($date, 'custom', $format);
-    return $out;
+    return $this->format_date($node, $field, $pos, FALSE);
   }
   
-  //returns enddate as unix timestamp in utc
+  //returns enddate in utc form
   function get_enddate($node, $field, $pos) {
-  	$fld = $node->$field;
-  	
-  	//if no "toDate" is set, return the "StartDate" of the event instead.
-  	if (!isset($fld[$pos]['value2'])) {
-  	  return $this->get_startdate($node, $field, $pos);
-  	}
-    
-  	$timezoneName_db = $this->get_offset_db($node, $field, $pos);
-  	
-  	
-    $date = $this->convert_date2UTCUnix($fld[$pos]['value2'], $timezoneName_db, $fld[$pos]['date_type']);
-    return $date;
+
+    //if no "toDate" is set, return the "StartDate" of the event instead.
+    if (!isset($node->{$field['field_name']}[$pos]['value2']))
+      $date_value = $this->get_startdate($node, $field, $pos);
+    else    
+      $date_value = $node->{$field['field_name']}[$pos]['value2'];
+
+    $db_tz = $this->_get_dbtimezone($node, $field, $pos);
+
+    // Create a date object
+    $date = date_make_date($date_value, $db_tz, $field['type']);
+    // Make sure the date object is going to print UTC values.
+    date_timezone_set($date, timezone_open('UTC'));
+
+    $date_utc = date_format($date, 'U');
+
+    return $date_utc;
   }
   
   //returns the position for a particular hash, or -1 if invalid hash
   function get_posByHash($node, $field, $hash) {
-    $fld = $node->$field;
-    
+
     $count = $this->get_datecount($node, $field);
 
     for ($i = 0; $i < $count; $i++) {
       $unixdate = $this->get_startdate($node, $field, $i);
       if ($unixdate == $hash) {
-      	return $i;
+        return $i;
       }
     }
     return -1;
   }
   
-  /*
-   * PRIVATE METHOD. Do not use outside. Return type is based on used connector.
-   * returns time zone offset according to Date API. 
-   */
-  function get_offset($node, $field, $pos) {
-    $fld = $node->$field;
     
-    return $fld[$pos]['timezone'];
-  }
-
-  /*
-   * PRIVATE METHOD. Do not use outside. Return type is based on used connector.
-   * returns time zone name as date is stored in database according to Date API. 
-   */
-  function get_offset_db($node, $field, $pos) {
-    $fld = $node->$field;
-    
-    return $fld[$pos]['timezone_db'];
-  }
-  
   function is_event_enabled($contenttype) {
-
-    $rsvp_content_types = variable_get('rsvp_content_types', array());
-    if (!isset ($rsvp_content_types[$contenttype])) {
-      return false;
-    }
-    else {
-      return true;
-    }
+    return true;
   }
   
   function isTypesAreSelectable() {
@@ -125,8 +98,65 @@ class RsvpDateConnectorImpl extends RsvpConnectorImpl {
     return true;
   }
   
+  // internal function
+  function _get_dbtimezone($node, $field, $pos) {
+    // Figure out the timezone handling for this date.
+    if ($field['tz_handling'] == 'date') {
+      $tz = $node->{$field['field_name']}[$pos]['timezone'];
+    }
+    else {
+      $tz = date_default_timezone_name();
+    }
+    $db_tz = date_get_timezone_db($field['tz_handling'], $tz);
+    
+    return db_tz;
+  }
   
+  function format_date($node, $field, $pos, $include_to_date = FALSE) {
+  
+    // Figure out the timezone handling for this date.
+    if ($field['tz_handling'] == 'date') {
+      $tz = $node->{$field['field_name']}[$pos]['timezone'];
+    }
+    else {
+      $tz = date_default_timezone_name();
+    }
+  
+    $display_tz = date_get_timezone($field['tz_handling'], $tz);
+    $db_tz = date_get_timezone_db($field['tz_handling'], $tz);
+
+    if (isset($node->{$field['field_name']})) {
+      $date_value = $node->{$field['field_name']}[$pos]['value'];
+    }
+    else {
+      $date_value = $node->{$field['database']['columns']['value']['column']};
+    }
+    $date = date_make_date($date_value, $db_tz, $field['type']);
+    if ($db_tz != $display_tz) {
+      date_timezone_set($date, timezone_open($display_tz));
+    }
+    $date_out = date_format($date, date_type_format($field['type']));
+    
+    if ($include_to_date) {
+      if (isset($node->{$field['field_name']})) {
+        $date_value = $node->{$field['field_name']}[$pos]['value2'];
+      }
+      else {
+        $date_value = $node->{$field['database']['columns']['value2']['column']};
+      }
+      $date = date_make_date($date_value, $db_tz, $field['type']);
+      if ($db_tz != $display_tz) {
+        date_timezone_set($date, timezone_open($display_tz));
+      }
+
+      if ($date_value) {
+        $date_out .= t(' to ') . date_format($date, date_type_format($field['type']));
+      }
+    }
+    return $date_out;
+  }
 }
+
 
 function rsvp_dateconnector_getconnector() {
   return new RsvpDateConnectorImpl();  

@@ -1,5 +1,5 @@
 <?php
-// $Id: rules.install,v 1.1.2.17 2008/10/20 11:45:16 fago Exp $
+// $Id: rules.install,v 1.1.2.18 2009/02/25 10:48:25 fago Exp $
 
 /**
  * Implementation of hook_install().
@@ -112,6 +112,41 @@ function rules_update_6002() {
   $result = db_query("SELECT COUNT(name) FROM {rules_rules} WHERE name LIKE 'rules_%%'");
   variable_set('rules_counter', db_result($result) + 10);
   return array();
+}
+
+/**
+ * Flips all argument maps of all rule elements. This is necessary as the format has changed.
+ */
+function rules_update_6003() {
+  drupal_load('module', 'rules');
+  
+  $rules = rules_get_configured_items('rules');
+  
+  foreach ($rules as $name => $rule) {
+    if (($rule['#status'] == 'altered' || $rule['#status'] == 'custom') && !isset($rule['#version'])) {
+      $rule = rules_rule_format_upgrade_6003($rule);
+      rules_item_save('rules', $name, $rule);
+    }
+  }
+  return array();
+}
+
+/**
+ * Upgrades the format of the rule to 6003 by flipping the argument maps of all rule elements.
+ */
+function rules_rule_format_upgrade_6003($rule) {
+  // Flip argument maps
+  rules_helper_do_recursive('_rules_element_flip_argument_map', $rule['#actions']);
+  rules_helper_do_recursive('_rules_element_flip_argument_map', $rule['#conditions']);
+  // Introduce the rule format #version property
+  $rule['#version'] = 6003;
+  return $rule;
+}
+
+function _rules_element_flip_argument_map(&$element) {
+  if (isset($element['#settings']['#argument map'])) {
+    $element['#settings']['#argument map'] = array_flip($element['#settings']['#argument map']);
+  }
 }
 
 

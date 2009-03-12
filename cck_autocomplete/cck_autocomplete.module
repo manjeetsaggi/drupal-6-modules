@@ -1,5 +1,5 @@
 <?php
-// $Id: cck_autocomplete.module,v 1.1 2009/01/25 19:53:21 archard Exp $
+// $Id: cck_autocomplete.module,v 1.2 2009/02/20 21:54:31 archard Exp $
 
 /**
  * @file
@@ -90,10 +90,47 @@ function cck_autocomplete_widget_info() {
 }
 
 /**
+ * Implementation of hook_widget_settings().
+ *
+ */
+function cck_autocomplete_widget_settings($op, $widget) {
+	switch ($op) {
+		case 'form':
+			$form = array();
+			$form['matching'] = array(
+				'#type' => 'radios',
+				'#title' => t('Autocomplete matching'),
+				'#description' => t('How should the widget match the text that was typed in?'),
+				'#options' => array(0 => t('Starts with'), 1 => t('Contains'), 2 => t('Ends with')),
+				'#default_value' => isset($widget['matching']) ? $widget['matching'] : 0
+			);
+			$form['num_results'] = array(
+				'#type' => 'textfield',
+				'#size' => 1,
+				'#title' => t('Number of results to return'),
+				'#description' => t('How many results should the widget return at once? Maximum is 50.'),
+				'#default_value' => isset($widget['num_results']) ? $widget['num_results'] : 10
+			);
+			
+			return $form;
+			break;
+		case 'validate':
+			if ($widget['num_results'] > 50 || $widget['num_results'] < 1) {
+				form_set_error('num_results', t('Number of results must be between 1 and 50, inclusively.'));
+			}
+			break;
+		case 'save':
+			return array('matching', 'num_results');
+			break;
+	}
+}
+
+/**
  * Page callback for the autocomplete field.
  */
 function cck_autocomplete($content_type, $field_name, $string = '') {
 	$matches = array();
+	
 	if ($string) {
 		// we need to decide what kind of table the field values are stored in
 		// first check content_node_field for the multiple value
@@ -102,18 +139,47 @@ function cck_autocomplete($content_type, $field_name, $string = '') {
 		// in content_node_field_instance then the field has its own table
 		$sql = "SELECT multiple FROM {content_node_field} WHERE field_name = '%s'";
 		$multiple = db_result(db_query($sql, $field_name));
-		$sql = "SELECT field_name FROM {content_node_field_instance} WHERE field_name = '%s'";
-		db_query($sql, $field_name);
+		
+		// some customization of the query
+		$widget_settings = db_result(db_query("SELECT widget_settings FROM {content_node_field_instance} WHERE field_name = '%s'", $field_name));
+		$widget_settings = unserialize($widget_settings);
+		
+		// decide how to match the string
+		if (isset($widget_settings['matching'])) {
+			switch ($widget_settings['matching']) {
+				case 0:
+					$matching = '%s%%';
+					break;
+				case 1:
+					$matching = '%%%s%%';
+					break;
+				case 2:
+					$matching = '%%%s';
+					break;
+			}
+		}
+		else {
+			$matching = '%s%%';
+		}
+		
+		// decide how many results to return
+		if (isset($widget_settings['num_results'])) {
+			$num_results = $widget_settings['num_results'];
+		}
+		else {
+			$num_results = 10;
+		}
+		
 		if (db_affected_rows() > 1 || $multiple) {
 			// this field is stored in its own table because it either has multiple values
 			// or it shares its field with another content type
 			$table = 'content_' . $field_name;
-			$result = db_query_range("SELECT %s_value AS field_value FROM {%s} WHERE LOWER(%s_value) LIKE LOWER('%s%%')", $field_name, $table, $field_name, $string, 0, 10);
+			$result = db_query_range("SELECT %s_value AS field_value FROM {%s} WHERE LOWER(%s_value) LIKE LOWER('" . $matching . "')", $field_name, $table, $field_name, $string, 0, $num_results);
 		}
 		else {
 			// this field is stored in a normal table
 			$table = 'content_type_' . $content_type;
-			$result = db_query_range("SELECT %s_value AS field_value FROM {%s} WHERE LOWER(%s_value) LIKE LOWER('%s%%')", $field_name, $table, $field_name, $string, 0, 10);
+			$result = db_query_range("SELECT %s_value AS field_value FROM {%s} WHERE LOWER(%s_value) LIKE LOWER('" . $matching . "')", $field_name, $table, $field_name, $string, 0, $num_results);
 		}
 		while ($field = db_fetch_object($result)) {
       $matches[$field->field_value] = check_plain($field->field_value);

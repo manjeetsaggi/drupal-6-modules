@@ -1,5 +1,5 @@
 <?php
-// $Id: addthis.module,v 1.13.2.8 2008/11/16 07:53:15 wesku Exp $
+// $Id: addthis.module,v 1.13.2.12 2009/02/15 10:06:35 wesku Exp $
 
 /**
  * @file
@@ -22,8 +22,9 @@ function addthis_link($type, $node=NULL, $teaser = FALSE) {
   $links = array();
 
   if ($type === 'node' && user_access('view addthis')) {
-    if (($teaser && variable_get('addthis_display_in_teasers', '0')) ||
-      (!$teaser && variable_get('addthis_display_in_links', '0'))) {
+    if (($node && variable_get('addthis_nodetype_' . $node->type, 1)) &&
+      (($teaser && variable_get('addthis_display_in_teasers', '0')) ||
+      (!$teaser && variable_get('addthis_display_in_links', '0')))) {
       $links['addthis'] = array(
           'title' => _addthis_create_button($node, $teaser),
           'html' => TRUE,
@@ -67,6 +68,34 @@ function addthis_block($op = 'list', $delta = 0) {
 }
 
 /**
+ * Implementation of hook_form_alter().
+ */
+function addthis_form_alter(&$form, $form_state, $form_id) {
+  if ($form_id == 'node_type_form' && isset($form['identity']['type'])) {
+    $form['workflow']['addthis_nodetype'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Show AddThis button on this type of node'),
+      '#default_value' => variable_get('addthis_nodetype_' . $form['#node_type']->type, 1),
+      '#description' => t('Select whether the AddThis button should be shown or not on this type of node.'),
+    );
+  }
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function addthis_theme() {
+  return array(
+    'addthis_button' => array(
+      'arguments' => array(
+        'node' => NULL,
+        'teaser' => NULL,
+      ),
+    ),
+  );
+}
+
+/**
  * Internal function to generate code for AddThis button
  *
  * @return
@@ -85,40 +114,47 @@ function _addthis_create_button($node=NULL, $teaser = FALSE) {
 	    addthis_brand = \'%s\';
 	    addthis_options = \'%s\';
 	',
-        variable_get('addthis_username', 'my-username'),
-        variable_get('addthis_logo', 'http://www.addthis.com/images/yourlogo.png'),
-        variable_get('addthis_logo_background', 'EFEFFF'),
-        variable_get('addthis_logo_color', '666699'),
-        variable_get('addthis_brand', 'Your Site'),
-        variable_get('addthis_options', 'favorites, email, digg, delicious, myspace, facebook, google, live, more')
+        addslashes(variable_get('addthis_username', 'my-username')),
+        addslashes(variable_get('addthis_logo', 'http://www.addthis.com/images/yourlogo.png')),
+        addslashes(variable_get('addthis_logo_background', 'EFEFFF')),
+        addslashes(variable_get('addthis_logo_color', '666699')),
+        addslashes(variable_get('addthis_brand', 'Your Site')),
+        addslashes(variable_get('addthis_options', 'favorites, email, digg, delicious, myspace, facebook, google, live, more'))
       ), 'inline');
   }
 
+  return theme('addthis_button', $node, $teaser);
+}
+
+/**
+ * Theme the AddThis button.
+ */
+function theme_addthis_button($node, $teaser) {
   if (variable_get('addthis_dropdown_disabled', '0')) {
     return ( sprintf('
-      <div class="addthis"><a href="http://www.addthis.com/bookmark.php"
+      <a href="http://www.addthis.com/bookmark.php"
         onclick="addthis_url   = location.href; addthis_title = document.title; return addthis_click(this);">
-      <img src="%s" width="%d" height="%d" %s /></a></div>
+      <img src="%s" width="%d" height="%d" %s /></a>
       ',
-      variable_get('addthis_image', 'http://s9.addthis.com/button1-share.gif'),
-      variable_get('addthis_image_width', '125'),
-      variable_get('addthis_image_height', '16'),
-      variable_get('addthis_image_attributes', 'alt=""')
+      addslashes(variable_get('addthis_image', 'http://s9.addthis.com/button1-share.gif')),
+      addslashes(variable_get('addthis_image_width', '125')),
+      addslashes(variable_get('addthis_image_height', '16')),
+      addslashes(variable_get('addthis_image_attributes', 'alt=""'))
     ));
   }
   else {
     return ( sprintf('
-      <div class="addthis"><a href="http://www.addthis.com/bookmark.php"
+      <a href="http://www.addthis.com/bookmark.php"
         onmouseover="return addthis_open(this, \'\', \'%s\', \'%s\')"
         onmouseout="addthis_close()"
-        onclick="return addthis_sendto()"><img src="%s" width="%d" height="%d" %s /></a></div>
+        onclick="return addthis_sendto()"><img src="%s" width="%d" height="%d" %s /></a>
       <script type="text/javascript" src="http://s7.addthis.com/js/152/addthis_widget.js"></script>
       ',
       $teaser ? url('node/'. $node->nid, array('absolute' => 1) ) : '[URL]',
       $teaser ? addslashes($node->title) : '[TITLE]',
-      variable_get('addthis_image', 'http://s9.addthis.com/button1-share.gif'),
-      variable_get('addthis_image_width', '125'),
-      variable_get('addthis_image_height', '16'),
+      addslashes(variable_get('addthis_image', 'http://s9.addthis.com/button1-share.gif')),
+      addslashes(variable_get('addthis_image_width', '125')),
+      addslashes(variable_get('addthis_image_height', '16')),
       variable_get('addthis_image_attributes', 'alt=""')
     ));
   }
