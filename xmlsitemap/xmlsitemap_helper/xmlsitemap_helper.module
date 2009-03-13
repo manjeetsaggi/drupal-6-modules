@@ -1,5 +1,5 @@
 <?php
-// $Id: xmlsitemap_helper.module,v 1.1.2.1 2009/03/08 23:47:46 kiam Exp $
+// $Id: xmlsitemap_helper.module,v 1.1.2.2 2009/03/12 17:02:37 kiam Exp $
 
 /**
  * @file
@@ -10,6 +10,17 @@
  * @addtogroup xmlsitemap
  * @{
  */
+
+/*****************************************************************************
+ * Drupal hooks.
+ ****************************************************************************/
+
+/**
+ * Implementation of hook_boot().
+ */
+function xmlsitemap_helper_boot() {
+  define('XMLSITEMAP_TIME', time());
+}
 
 /*****************************************************************************
  * Public functions.

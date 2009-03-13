@@ -1,5 +1,5 @@
 <?php
-// $Id: xmlsitemap.module,v 1.1.2.50 2009/03/11 22:29:31 kiam Exp $
+// $Id: xmlsitemap.module,v 1.1.2.51 2009/03/12 17:02:34 kiam Exp $
 
 /**
  * @file
@@ -14,13 +14,6 @@
 /*****************************************************************************
  * Drupal hooks.
  ****************************************************************************/
-
-/**
- * Implementation of hook_boot().
- */
-function xmlsitemap_boot() {
-  define('XMLSITEMAP_TIME', time());
-}
 
 /**
  * Implementation of hook_cron().

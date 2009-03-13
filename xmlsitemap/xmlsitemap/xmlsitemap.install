@@ -1,5 +1,5 @@
 <?php
-// $Id: xmlsitemap.install,v 1.1.2.27 2009/03/11 16:27:55 kiam Exp $
+// $Id: xmlsitemap.install,v 1.1.2.29 2009/03/12 15:50:31 kiam Exp $
 
 /**
  * @file
@@ -18,7 +18,7 @@ function xmlsitemap_requirements($phase) {
   if ($phase == 'runtime') {
     $requirements['xmlsitemap'] = array(
       'title' => t('XML Sitemap'),
-      'value' => t("XML Sitemap revision !revision", array('!revision' => preg_replace('/\$Rev[iI]sion:\s+(.*)\s+\$/iU', '$1', '$Revision: 1.1.2.27 $'))),
+      'value' => t("XML Sitemap revision !revision", array('!revision' => preg_replace('/\$Rev[iI]sion:\s+(.*)\s+\$/iU', '$1', '$Revision: 1.1.2.29 $'))),
     );
   }
   return $requirements;
@@ -644,6 +644,13 @@ function xmlsitemap_update_6130() {
  * Implementation of hook_update_N().
  */
 function xmlsitemap_update_6131() {
+  return array();
+}
+
+/**
+ * Implementation of hook_update_N().
+ */
+function xmlsitemap_update_6132() {
   $ret = xmlsitemap_update_6000();
   module_enable(array('xmlsitemap_helper'));
   $ret[] = array(
@@ -655,6 +662,7 @@ function xmlsitemap_update_6131() {
     'success' => TRUE,
     'query' => 'FORCE SITEMAP UPDATE',
   );
+  return $ret;
 }
 
 /**
