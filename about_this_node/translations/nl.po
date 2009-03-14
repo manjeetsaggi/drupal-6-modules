@@ -1,0 +1,121 @@
+# $Id: nl.po,v 1.1.2.1 2008/08/04 20:42:54 toddnienkerk Exp $
+#
+# Dutch translation of Drupal (general)
+# Copyright 2008 SCJV <vladimircev@gmail.com>
+# Generated from files:
+#  about_this_node.module,v 1.3 2008/04/16 14:57:29 toddnienkerk
+#  about_this_node.info,v 1.3 2008/04/11 23:45:26 toddnienkerk
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"POT-Creation-Date: 2008-05-02 13:51+0200\n"
+"PO-Revision-Date: 2008-05-02 13:51+0200\n"
+"Last-Translator: NAME <EMAIL@ADDRESS>\n"
+"Language-Team: Dutch <EMAIL@ADDRESS>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=0; plural=;\n"
+
+#: about_this_node.module:19;63;69 about_this_node.info:0
+msgid "About This Node"
+msgstr "Over deze knoop"
+
+#: about_this_node.module:45
+msgid "View information about these node types"
+msgstr ""
+
+#: about_this_node.module:48
+msgid "The about this node block will appear when viewing these node types."
+msgstr ""
+
+#: about_this_node.module:115
+msgid "Yes"
+msgstr "Ja"
+
+#: about_this_node.module:116
+msgid "No"
+msgstr "Nee"
+
+#: about_this_node.module:117
+msgid "by"
+msgstr "door"
+
+#: about_this_node.module:118
+msgid "on"
+msgstr "op"
+
+#: about_this_node.module:122
+msgid "Node ID (NID):"
+msgstr "Doc ID:"
+
+#: about_this_node.module:128
+msgid "Node type:"
+msgstr "Knoop soort:"
+
+#: about_this_node.module:137;164
+msgid "Anonymous"
+msgstr "Anoniem"
+
+#: about_this_node.module:146
+msgid "Created:"
+msgstr "Geplaatst:"
+
+#: about_this_node.module:173
+msgid "Last updated:"
+msgstr "Laatst bijgewerkt:"
+
+#: about_this_node.module:178
+msgid "Never"
+msgstr "Nooit"
+
+#: about_this_node.module:195
+msgid "Published:"
+msgstr "Gepubliceerd:"
+
+#: about_this_node.module:206
+msgid "Promoted:"
+msgstr "Aangeraden:"
+
+#: about_this_node.module:217
+msgid "Stickied:"
+msgstr "Vastgeplakt:"
+
+#: about_this_node.module:228
+msgid "Commenting:"
+msgstr "Reactie:"
+
+#: about_this_node.module:232
+msgid "Disabled"
+msgstr "Uitgeschakeld"
+
+#: about_this_node.module:235
+msgid "Read only"
+msgstr "Alleen lezen"
+
+#: about_this_node.module:238
+msgid "Read/Write"
+msgstr "Lezen/Schrijven"
+
+#: about_this_node.module:242
+msgid "Module not enabled"
+msgstr ""
+
+#: about_this_node.module:35
+msgid "administer about this node"
+msgstr ""
+
+#: about_this_node.module:35
+msgid "view about this node block"
+msgstr ""
+
+#: about_this_node.module:0
+msgid "about_this_node"
+msgstr ""
+
+#: about_this_node.info:0
+msgid "Displays a block containing information about the currently viewed node."
+msgstr ""
+

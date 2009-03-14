@@ -1,0 +1,21 @@
+<?php
+/*
+  Copyright (C) 2008 by Phase2 Technology.
+  Author: Irakli Nadareishvili
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License.
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY. See the LICENSE.txt file for more details.
+
+ */
+
+function block_edit_init() {
+  if ( user_access('administer blocks') ) {
+    if (function_exists('drupal_get_path')){
+      $mpath = drupal_get_path('module', 'block_edit');
+      drupal_add_js($mpath . '/block_edit.js' );
+      drupal_add_css($mpath . '/block_edit.css' );    
+    }
+  }
+}
