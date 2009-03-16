@@ -1,4 +1,8 @@
-$Id: CHANGELOG.txt,v 1.1.4.140 2009/03/11 22:30:05 kiam Exp $
+$Id: CHANGELOG.txt,v 1.1.4.141 2009/03/14 14:53:10 kiam Exp $
+
+XML Sitemap 6.x-1.x-dev, 2009-03-12
+-----------------------------------
+#385452: Error on update.
 
 XML Sitemap 6.x-1.x-dev, 2009-03-11
 -----------------------------------

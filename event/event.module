@@ -1,5 +1,5 @@
 <?php
-// $Id: event.module,v 1.401 2009/02/03 00:21:19 killes Exp $ 
+// $Id: event.module,v 1.403 2009/03/15 18:12:20 killes Exp $ 
 
 define('EVENT_API', '5.2');
 define('EVENT_PATH', drupal_get_path('module', 'event'));
@@ -1088,7 +1088,7 @@ function event_calendar_data($date, $view = NULL, $types = NULL, $terms = NULL, 
 
       // we have to load these here since there is no way to pass the
       // $view parameter to nodeapi through node_load :/
-      $node->event['links'] = module_invoke_all('link', 'event_node_'. $view, $node, FALSE);
+      $node->event['links'] = module_invoke_all('link', 'event_node_'. $view, $node, TRUE);
 
       if (event_is_later($node->event['start_exploded'], $first_exploded)) {
         $node_start = $node->event['start_exploded'];
