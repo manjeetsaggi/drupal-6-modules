@@ -1,5 +1,5 @@
 <?php
-// $Id: xmlsitemap.module,v 1.1.2.53 2009/03/14 20:20:54 kiam Exp $
+// $Id: xmlsitemap.module,v 1.1.2.56 2009/03/18 21:22:29 kiam Exp $
 
 /**
  * @file
@@ -338,6 +338,12 @@ function xmlsitemap_settings_sitemap() {
     '#maxlength' => 5,
     '#description' => t('This is the number of links to include in one site map. Values can range between 1 and 50,000. If the total number of links exceeds the chunk size, multiple site maps will be generated.'),
   );
+  $form['general']['xmlsitemap_all_links_to_default_language'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Add all the links to the default language site map'),
+    '#default_value' => variable_get('xmlsitemap_all_links_to_default_language', 0),
+    '#description' => t('This option will be used only when the language negotiation uses a path prefix mechanism.'),
+  );
   $form['general']['xmlsitemap_front_page_changefreq'] = array(
     '#type' => 'select',
     '#title' => t('Front page change frequency'),
@@ -493,17 +499,7 @@ function _xmlsitemap_create_cache_chunk($fp, $chunk_size, $chunk = 0) {
   fwrite($fp, '  xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9'."\n");
   fwrite($fp, '  http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">'."\n");
   $start = $chunk * $chunk_size;
-  $links = db_query_range("SELECT xsm.loc, xsm.module, xsm.type, xsm.changed, xsm.changefreq, xsm.priority
-    FROM {xmlsitemap} xsm
-    INNER JOIN {system} s ON s.name = xsm.module
-    WHERE s.type = 'module'
-      AND s.status = 1
-      AND xsm.changefreq <> 0
-      AND xsm.changed <> 0
-      AND (xsm.priority >= 0 AND xsm.priority <= 1)
-    ORDER BY xsm.changed DESC, xsm.changefreq, xsm.priority DESC, xsm.loc",
-    $start, $chunk_size
-  );
+  $links = db_query_range("SELECT xsm.loc, xsm.module, xsm.type, xsm.changed, xsm.changefreq, xsm.priority". xmlsitemap_helper_sitemap_query() ."ORDER BY xsm.changed DESC, xsm.changefreq, xsm.priority DESC, xsm.loc", $start, $chunk_size);
   while ($link = db_fetch_object($links)) {
     if ($link->type == 'frontpage') {
       $url = url(NULL, array('absolute' => TRUE));
@@ -559,18 +555,7 @@ function _xmlsitemap_create_cache_files() {
       fwrite($fp, '  <sitemap>'."\n");
       fwrite($fp, '    <loc>'. url("sitemap$chunk.xml", array('absolute' => TRUE)) .'</loc>'."\n");
       $from = $chunk * $chunk_size;
-      $changed = db_result(
-        db_query_range("SELECT changed FROM {xmlsitemap} xsm
-          INNER JOIN {system} s ON s.name = xsm.module
-          WHERE s.type = 'module'
-            AND s.status = 1
-            AND xsm.changefreq <> 0
-            AND xsm.changed <> 0
-            AND (xsm.priority >= 0 AND xsm.priority <= 1)
-          ORDER BY xsm.changed DESC",
-          $from, $chunk_size
-        )
-      );
+      $changed = db_result(db_query_range("SELECT changed". xmlsitemap_helper_sitemap_query() ."ORDER BY xsm.changed DESC", $from, $chunk_size));
       fwrite($fp, '    <lastmod>'. gmdate('Y-m-d\TH:i:s+00:00', $changed) .'</lastmod>'."\n");
       fwrite($fp, '  </sitemap>'."\n");
     }
@@ -608,17 +593,7 @@ function _xmlsitemap_create_cache_files() {
 function _xmlsitemap_link_count() {
   static $link_count;
   if (!isset($link_count)) {
-    $link_count = db_result(
-      db_query(
-        "SELECT COUNT(xsm.loc) FROM {xmlsitemap} xsm
-          INNER JOIN {system} s ON s.name = xsm.module
-          WHERE s.type = 'module'
-            AND s.status = 1
-            AND xsm.changefreq <> 0
-            AND xsm.changed <> 0
-            AND (xsm.priority >= 0 AND xsm.priority <= 1)"
-      )
-    );
+    $link_count = db_result(db_query("SELECT COUNT(xsm.loc)". xmlsitemap_helper_sitemap_query()));
   }
   return $link_count;
 }
