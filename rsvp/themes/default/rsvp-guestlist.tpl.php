@@ -1,5 +1,5 @@
 <?php
-// $Id: rsvp-guestlist.tpl.php,v 1.2.2.2 2009/03/07 21:34:35 ulf1 Exp $
+// $Id: rsvp-guestlist.tpl.php,v 1.2.2.4 2009/03/16 18:17:32 ulf1 Exp $
 
 /**
  * @file rsvp-guestlist.tpl.php
@@ -126,7 +126,6 @@
 
                   <?php if ($is_moderator) : ?>
                     <?php print l(theme('image', $icon_path . 'view.gif', 'view', '', array('width' => 17, 'height' => 17)), 'rsvp/email/'. $guest['userhash'] .'/view', array('html' => true, 'attributes' => array('title' => t('View invitation like the guest would see it.')))) ?>
-                    <?php print l(theme('image', $icon_path . 'edit.gif', 'edit', '', array('width' => 17, 'height' => 17)), 'rsvp/email/'. $guest['userhash'] .'/edit', array('html' => true, 'attributes' => array('title' => t('Edit reply')))) ?>
                     <?php print l(theme('image', $icon_path . 'profile.gif', 'status', '', array('width' => 17, 'height' => 17)), 'rsvp/' . $rid . '/attendees/status/'. $guest['userhash'], array('html' => true, 'attributes' => array('title' => t('View status of invitation')))) ?>
                     <?php print l(theme('image', $icon_path . 'delete.gif', 'remove', '', array('width' => 17, 'height' => 17)), 'rsvp/' . $rid . '/attendees/remove/'. $guest['userhash'], array('html' => true, 'attributes' => array('title' => t('Remove attendee from invitation list')))) ?>
                     <?php print l(theme('image', $icon_path . 'message.gif', 'send message', '', array('width' => 17, 'height' => 17)), 'rsvp/' . $rid . '/message/'. $guest['userhash'], array('html' => true, 'attributes' => array('title' => t('Send message to guest')))) ?>
@@ -141,6 +140,11 @@
 
                 </li>
               <?php } ?>
+              <?php if ($typearray['cut_off']) : ?>
+                <li>
+                . . . .
+                </li>
+              <?php endif; ?>
             </ul>
           </div>
         <?php } ?>

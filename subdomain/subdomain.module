@@ -1,5 +1,5 @@
 <?php
-// $Id: subdomain.module,v 1.4.2.8 2008/09/24 23:52:08 setvik Exp $
+// $Id: subdomain.module,v 1.4.2.12 2009/03/18 12:53:37 setvik Exp $
 
 // token.module token prefix
 define('SUBDOMAIN_TOKEN_PREFIX', '~');
@@ -74,17 +74,17 @@ function subdomain_nodeapi(&$node, $op, $teaser, $page) {
 
         // Allow only letters, numbers, and spaces
         if (variable_get('subdomain_allow_onlyalpha', FALSE) && !preg_match('!^[a-zA-Z0-9 ]+$!', $node->title)) {
-          form_set_error('title', "The $type_name's $type_title can contain only letters, numbers and spaces");
+          form_set_error('title', t("The @type_name's @type_title can contain only letters, numbers and spaces", array('@type_name'=>$type_name, '@type_title'=> $type_title)));
         }
 
         // Disallow reserved subdomain
         elseif (subdomain_reserved($node->title)) {
-          form_set_error('title', "Sorry. '$node->title' is not available for use. Please enter a different $type_title for your $type_name.");
+          form_set_error('title', "Sorry. '@node_title' is not available for use. Please enter a different @type_title for your @type_name.", array('@node_title' => $node->title, '@type_name'=>$type_name, '@type_title'=> $type_title));
         }
 
         // Ensure group name is unique
         elseif (db_result(db_query("SELECT 1 FROM {node} WHERE nid <> %d AND type = '%s' AND title = '%s'", $node->nid, $node->type, $node->title))) {
-          form_set_error('title', "There is already a $type_name with that $type_title. Please enter a different $type_name");
+          form_set_error('title', "There is already a @type_name with that @type_title. Please enter a different @type_name", array('@type_name'=>$type_name, '@type_title'=> $type_title));
         }
 
         // Disallow changes to group name (to avoid SEO issues and path alias getting out of sync with group content aliases)
@@ -93,7 +93,7 @@ function subdomain_nodeapi(&$node, $op, $teaser, $page) {
           if (strtolower($currentgroupname) != strtolower($node->title)) {
             if (variable_get('subdomain_allowchange', SUBDOMAIN_ALLOWCHANGE_NO) == SUBDOMAIN_ALLOWCHANGE_NO
             || (variable_get('subdomain_allowchange', SUBDOMAIN_ALLOWCHANGE_NO) == SUBDOMAIN_ALLOWCHANGE_ADMINONLY && !user_access('administer site configuration'))) {
-              form_set_error('title', "Sorry, $type_name {$type_title}s are permanent and may not be changed. You can change capitalization only.");
+              form_set_error('title', t("Sorry, @type_name @type_titles are permanent and may not be changed. You can change capitalization only.", array('@type_name'=>$type_name, '@type_title'=> $type_title)));
             }
           }
         }
@@ -101,7 +101,7 @@ function subdomain_nodeapi(&$node, $op, $teaser, $page) {
 
       // Disallow node titles that start with the subdomain token prefix character (else they'll be inadvertantly rewritten as subdomains)
       if (substr(trim($node->title), 0, strlen(SUBDOMAIN_TOKEN_PREFIX)) == SUBDOMAIN_TOKEN_PREFIX) {
-        form_set_error('title', "Sorry, {$type_title}s can't start with a ". SUBDOMAIN_TOKEN_PREFIX .".");
+        form_set_error('title', t("Sorry, @type_titles can't start with a @token_prefix.", array('@type_title'=> $type_title, '@token_prefix' => SUBDOMAIN_TOKEN_PREFIX)));
       }
       break;
 
@@ -117,18 +117,18 @@ function subdomain_nodeapi(&$node, $op, $teaser, $page) {
  * Implementation of hook_user
  */
 function subdomain_user($op, &$edit, &$user_edit, $category = NULL) {
-  if ($op == 'validate' && variable_get('subdomain_type', SUBDOMAIN_USER) == SUBDOMAIN_USER) {
+  if ($op == 'validate' && variable_get('subdomain_type', SUBDOMAIN_USER) == SUBDOMAIN_USER && $category == 'account') {
     // If configured, disallow username changes if subdomains are set to Node Authors
     if (is_numeric($user_edit->uid) && $user_edit->name != $edit['name']) {
       if (variable_get('subdomain_allowchange', SUBDOMAIN_ALLOWCHANGE_NO) ==  SUBDOMAIN_ALLOWCHANGE_NO
       || (variable_get('subdomain_allowchange', SUBDOMAIN_ALLOWCHANGE_NO) == SUBDOMAIN_ALLOWCHANGE_ADMINONLY && !user_access('administer site configuration'))) {
-        form_set_error('name', 'Sorry. Usernames are permanent and cannot be changed');
+        form_set_error('name', t('Sorry. Usernames are permanent and cannot be changed'));
       }
     }
 
     // If configured, allow only letters and spaces in usernames
     elseif (variable_get('subdomain_allow_onlyalpha', FALSE) && !preg_match('!^[a-zA-Z0-9 ]+$!', $edit['name'])) {
-      form_set_error('name', 'User Names can contain only letters, numbers and spaces');
+      form_set_error('name', t('User Names can contain only letters, numbers and spaces'));
     }
   }
 }
@@ -220,8 +220,8 @@ function subdomain_admin_settings() {
 
   $reserved_default = implode("\n", array('www', 'static'));
 
-  $options[SUBDOMAIN_USER] = 'Node authors and author content';
-  $options[SUBDOMAIN_TYPE] = 'Content types';
+  $options[SUBDOMAIN_USER] = t('Node authors and author content');
+  $options[SUBDOMAIN_TYPE] = t('Content types');
   if (module_exists('taxonomy')) {
     $vocabs = taxonomy_get_vocabularies();
     if (is_array($vocabs) && count($vocabs)) {
@@ -229,19 +229,19 @@ function subdomain_admin_settings() {
         $vocab_options[$vocab->vid] = $vocab->name;
       }
       if (is_array($vocab_options)) {
-        $options[SUBDOMAIN_VOCAB] = 'Taxonomy Vocabulary and associated content';        
+        $options[SUBDOMAIN_VOCAB] = t('Taxonomy Vocabulary and associated content');        
       }
     }
   }
 
   if (module_exists('og')) {
-    $options[SUBDOMAIN_GROUP] = 'Organic groups and group content';
+    $options[SUBDOMAIN_GROUP] = t('Organic groups and group content');
   }
 
   $form['subdomain_settings']['requirements'] = array(
     '#type' => 'fieldset',
     '#title' => 'Subdomain Prerequisites',
-    '#description' => 'To enable subdomains on your website, you must first configure the following 5 items. If something isn\'t working, refer to the suggested solutions and make sure you have completed each step outlined in readme.txt.',
+    '#description' => t('To enable subdomains on your website, you must first configure the following 5 items. If something isn\'t working, refer to the suggested solutions and make sure you have completed each step outlined in readme.txt.'),
   );
   
   $form['subdomain_settings']['requirements']['body'] = array(
@@ -252,7 +252,7 @@ function subdomain_admin_settings() {
   $form['subdomain_settings']['subdomain_type'] = array(
     '#type' => 'select', 
     '#title' => t('Create subdomains for'), 
-    '#description' => !isset($options[SUBDOMAIN_GROUP]) || !isset($options[SUBDOMAIN_VOCAB]) ? 'To use Taxonomy or Organic Group mode, enable and configure those modules' : '',
+    '#description' => !isset($options[SUBDOMAIN_GROUP]) || !isset($options[SUBDOMAIN_VOCAB]) ? t('To use Taxonomy or Organic Group mode, enable and configure those modules') : '',
     '#options' => $options, 
     '#default_value' => variable_get('subdomain_type', SUBDOMAIN_USER)
   );
@@ -269,13 +269,13 @@ function subdomain_admin_settings() {
   $form['subdomain_settings']['subdomain_style'] = array(
     '#type' => 'select',
     '#title' => t('Using'),
-    '#options' => array(SUBDOMAIN_STYLE_NAME => 'Group or Node Author name', SUBDOMAIN_STYLE_CUSTOM => 'Custom...'),
+    '#options' => array(SUBDOMAIN_STYLE_NAME => t('Group or Node Author name'), SUBDOMAIN_STYLE_CUSTOM => t('Custom...')),
     '#default_value' => variable_get('subdomain_style', SUBDOMAIN_STYLE_NAME)
   );
   $form['subdomain_settings']['subdomain_custom'] = array(
     '#type' => 'textfield',
     '#title' => t('Custom subdomain'),
-    '#description' => 'You may use the tokens %name% and %id% for group-name/user-name and group-nid/user-uid respectively',
+    '#description' => t('You may use the tokens %name% and %id% for group-name/user-name and group-nid/user-uid respectively'),
     '#default_value' => variable_get('subdomain_custom', NULL),
     '#prefix' => '<div id="subdomain_custom">',
     '#suffix' => '</div>'
@@ -284,28 +284,28 @@ function subdomain_admin_settings() {
     '#type' => 'textarea', 
     '#title' => t('But disallow the following subdomains'), 
     '#rows' => 10, 
-    '#description' => 'Enter 1 subdomain per line', 
+    '#description' => t('Enter 1 subdomain per line'), 
     '#default_value' => variable_get('subdomain_reserved', $reserved_default)
   );
 
   $form['subdomain_settings']['advanced']['subdomain_allow_onlyalpha'] = array(
     '#type' => 'checkbox',
-    '#title' => 'Restrict group names to letters and numbers',
+    '#title' => t('Restrict group names to letters and numbers'),
     '#default_value' => variable_get('subdomain_allow_onlyalpha', FALSE),
-    '#description' => 'Restricting names to letters and numbers ensures the subdomain is the same as the group name, since anything else will be stripped from the URL.',
+    '#description' => t('Restricting names to letters and numbers ensures the subdomain is the same as the group name, since anything else will be stripped from the URL.'),
   );
 
   $form['subdomain_settings']['advanced']['subdomain_allowchange'] = array(
     '#type' => 'select',
-    '#title' => 'Allow changes to group names?',
+    '#title' => t('Allow changes to group names?'),
     '#options' => array(SUBDOMAIN_ALLOWCHANGE_NO => 'No', SUBDOMAIN_ALLOWCHANGE_YES => 'Yes', SUBDOMAIN_ALLOWCHANGE_ADMINONLY => 'Site administrators only'),
     '#default_value' => variable_get('subdomain_allowchange', SUBDOMAIN_ALLOWCHANGE_YES),
-    '#description' => "Disallow changes to ensure that the links/URLs to content on your subdomains doesn't change. This will help prevent links from external sites and search engines breaking.",
+    '#description' => t("Disallow changes to ensure that the links/URLs to content on your subdomains doesn't change. This will help prevent links from external sites and search engines breaking."),
   );
   
   $form['subdomain_settings']['subdomain_next'] = array(
     '#type' => 'markup',
-    '#value' => '<div style="width:500px;">After saving, configure <strong>automated alias settings</strong> and place the <strong>[subdomain]</strong> token at the start of any paths you want on a subdomain</div>'
+    '#value' => t('<p style="width:500px;">After saving, configure <strong>automated alias settings</strong> and place the <strong>[subdomain]</strong> token at the start of any paths you want on a subdomain</p>')
   );
 
   return system_settings_form($form);
@@ -315,7 +315,7 @@ function subdomain_admin_settings_validate($form, &$form_state) {
   if ($form_state['values']['subdomain_style'] == SUBDOMAIN_STYLE_CUSTOM) {
     $custom = trim($form_state['values']['subdomain_custom']);
     if (empty($custom)) {
-      form_set_error('subdomain_custom', 'You forgot to specify a custom subdomain rewrite');
+      form_set_error('subdomain_custom', t('You forgot to specify a custom subdomain rewrite'));
     }
     else {
       // get valid tokens out of the way
@@ -324,7 +324,7 @@ function subdomain_admin_settings_validate($form, &$form_state) {
 
       // Only allow letters and spaces in custom rewrite
       if (!preg_match('!^[a-zA-Z ]+$!', $custom)) {
-        form_set_error('subdomain_custom', 'Apart from the ' . SUBDOMAIN_CUSTOM_TOKEN_NAME . ' and ' . SUBDOMAIN_CUSTOM_TOKEN_ID . ' tokens, the custom rewrite can only contain letters and spaces');
+        form_set_error('subdomain_custom', t('Apart from the @token_name and @token_id tokens, the custom rewrite can only contain letters and spaces', array('@token_name' => SUBDOMAIN_CUSTOM_TOKEN_NAME, '@token_id' => SUBDOMAIN_CUSTOM_TOKEN_ID)));
       }
     }
   }
@@ -370,8 +370,19 @@ function subdomain_url_rewrite_inbound(&$result, $path, $path_language) {
   //  - Subdomain is present in HTTP_HOST
   //  - 1st call to this function or Subdomain module is performing internal test
   if ((!$executed || $path == 'subdomain/test') && strlen($_SERVER['HTTP_HOST']) > strlen($cookie_domain)) {
+
     $subdomain_length = strpos($_SERVER['HTTP_HOST'], $cookie_domain);
     $subdomain = substr($_SERVER['HTTP_HOST'], 0, $subdomain_length);
+
+    // Exit if user has indicated this is a reserved subdomain (e.g. static or www, et cetera.) that shouldn't be rewritten
+    if (subdomain_reserved($subdomain)) {
+      $executed = true;
+      return;
+    }
+
+    // Rewrite $GLOBAL['base_url'] without the subdomain so that we don't interfere
+    // with other modules like imagecache (substr removes leading period)
+    $GLOBALS['base_url'] = 'http://'. substr($cookie_domain,1);
 
     if ($path == variable_get('site_frontpage', 'node') && ltrim(request_uri(),'/') != ltrim($path, '/')) {
       $alias_path = '';
@@ -379,6 +390,7 @@ function subdomain_url_rewrite_inbound(&$result, $path, $path_language) {
     else {
       $alias_path = $path;
     }
+
     $alias = "~". $subdomain . ($alias_path ? "/$alias_path" : "");
 
     if ($internal_path = drupal_lookup_path('source', $alias, $path_language)) {
@@ -395,16 +407,15 @@ function subdomain_url_rewrite_inbound(&$result, $path, $path_language) {
  * Looks for subdomain token in Drupal generated URLs; if present, prepends to domain
  */
 function subdomain_url_rewrite_outbound(&$path, &$options) {
-
   $options['absolute'] = TRUE;
 
   if (substr($path, 0, SUBDOMAIN_TOKEN_PREFIX_LENGTH) == SUBDOMAIN_TOKEN_PREFIX) {
     $path_parts = explode('/', substr($path, SUBDOMAIN_TOKEN_PREFIX_LENGTH));
-    $options['base_url'] = 'http://'. array_shift($path_parts) .'.'. subdomain_base_domain();
+    $options['base_url'] = _subdomain_get_protocol() . array_shift($path_parts) .'.'. subdomain_base_domain();
     $path = implode('/', $path_parts);
   }
   else {
-    $options['base_url'] = 'http://'. subdomain_base_domain();
+    $options['base_url'] = _subdomain_get_protocol() . subdomain_base_domain();
   }
 }
 
@@ -425,4 +436,20 @@ function subdomain_build_token($name, $id = '') {
     $raw = str_replace(SUBDOMAIN_CUSTOM_TOKEN_ID, $id, $raw);
   }
   return subdomain_subdomain_to_token(subdomain_raw_to_subdomain($raw));
+}
+
+/**
+ * Checks whether protocol is https or http
+ * Based on code from http://php.net/manual/en/reserved.variables.server.php#89306
+ */
+function _subdomain_get_protocol(){
+  if($_SERVER['https'] == 1) /* Apache */ { 
+     return 'https://';
+  } elseif ($_SERVER['https'] == 'on') /* IIS */ { 
+     return 'https://'; 
+  } elseif ($_SERVER['SERVER_PORT'] == 443) /* others */ { 
+     return 'https://'; 
+  } else { 
+    return 'http://';
+  }
 }

@@ -1,6 +1,6 @@
 <?php
 
-// $Id: rsvp.form.inc,v 1.3.2.4 2009/03/07 21:34:34 ulf1 Exp $
+// $Id: rsvp.form.inc,v 1.3.2.5 2009/03/11 18:29:23 ulf1 Exp $
 
 /**
  * @module rsvp_form
@@ -520,15 +520,15 @@ function rsvp_form_element_send_privatemsg($rsvp, $field_attr = array()) {
 */
 function rsvp_form_element_disable_maybe($rsvp, $field_attr = array()) {
   
-  $disable_maybe = array(  RSVP_OPTION_YES => t('Yes'), 
-                           RSVP_OPTION_NO => t('No'));
+  $disable_maybe = array(  RSVP_OPTION_YES => t('Hide'), 
+                           RSVP_OPTION_NO => t('Show'));
                                 
   return array_merge($field_attr, array(
     '#type' => 'select',
-    '#title' => t('Answer \'Maybe\' disabled'),
+    '#title' => t('Display answer option \'Maybe\''),
     '#options' => array_map('check_plain', $disable_maybe),
     '#default_value' => $rsvp->disable_maybe,
-    '#description' => t('When guests reply to invitations, they may choose \'Yes\', \'No\', or \'Maybe\' as their response. If you do not wish to offer the \'Maybe\' option, set this option to \'Yes\''),
+    '#description' => t('When guests reply to invitations, they may choose \'Yes\', \'No\', or \'Maybe\' as their response. If you do not wish to offer the \'Maybe\' option, set this option to \'Hide\''),
   
   
   ));

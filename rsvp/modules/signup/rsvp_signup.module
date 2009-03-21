@@ -1,5 +1,5 @@
 <?php
-// $Id: rsvp_signup.module,v 1.1 2009/02/05 02:37:39 ulf1 Exp $
+// $Id: rsvp_signup.module,v 1.1.2.1 2009/03/11 06:18:47 ulf1 Exp $
 
 /**
  * @module rsvp_signup
@@ -25,7 +25,7 @@
  */
 function rsvp_signup_form_alter(&$form, $form_state, $form_id) {
   
-  if (($form_id == 'rsvp_invite_view_form') || ($form_id == 'rsvp_guest_editreply_form')) {
+  if ($form_id == 'rsvp_reply_form') {
 
   	
   	$form['submit']['#submit'][] = 'rsvp_signup_form_submit';
@@ -45,7 +45,7 @@ function rsvp_signup_form_submit($form, &$form_state) {
   // for this event, sign him/her up for it.
   if ($reply == RSVP_ATT_YES && module_exists('signup')) {
     include_once('./'. drupal_get_path('module', 'signup') . '/includes/no_views.inc');
-  	if ($invite_target->uid) {
+  	if ( $invite_target->uid > 0 ) {
 
       // Sign up the registered user.
       $signups = signup_list_user_signups($invite_target->uid);
@@ -57,7 +57,8 @@ function rsvp_signup_form_submit($form, &$form_state) {
       }
     }
     else {
-        // Sign up the unregistered user.
+      include_once('./'. drupal_get_path('module', 'signup') . '/includes/signup_form.inc');
+      // Sign up the unregistered user.
       if (signup_validate_anon_email($rsvp->nid, $invite_target->email)) {
         $signup_form = array(
           'nid' => $rsvp->nid,

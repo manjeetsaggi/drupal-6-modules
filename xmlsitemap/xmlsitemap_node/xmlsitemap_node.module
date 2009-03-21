@@ -1,5 +1,5 @@
 <?php
-// $Id: xmlsitemap_node.module,v 1.19.2.79 2009/03/11 15:31:29 kiam Exp $
+// $Id: xmlsitemap_node.module,v 1.19.2.80 2009/03/19 13:19:46 kiam Exp $
 
 /**
  * @file
@@ -333,9 +333,7 @@ function xmlsitemap_node_xmlsitemap_links($modules) {
         $priority += $node->comment_ratio * variable_get('xmlsitemap_node_comment_priority', 0.2);
       }
       $row->priority = min(max(round($priority, 1), 0.0), 1.0);
-      if (db_result(db_query("SELECT loc FROM {xmlsitemap} WHERE loc = '%s'", $row->loc)) != $row->loc) {
-        drupal_write_record('xmlsitemap', $row);
-      }
+      drupal_write_record('xmlsitemap', $row);
     }
   }
 }

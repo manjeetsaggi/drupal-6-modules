@@ -50,6 +50,7 @@ Configuration
     * rsvp on events - create invitations on nodes.
     * rsvp on own events - create invitations on your own nodes.
     * rsvp system users - permission to invite persons based on available roles.
+    * rsvp multiple invitations per event - permission to create more then one invitation per event.
 
     Additionaly Each plugin has its own permission that needs to be configured. 
     For example the 'rsvp invite simplenews' permission determines who can add guests based on 
@@ -213,7 +214,8 @@ TODO/Features for following releases:
 
 
 - offer open registration for anonymous users.
-
+- http://drupal.org/node/397888 : For guests, Invitation tab can forward to the invitation if only one invitation is available.
+- http://drupal.org/node/397888 : Configure, which options are listed on the basic screen and which are extended.
 
 
 

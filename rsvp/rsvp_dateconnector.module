@@ -1,18 +1,22 @@
 <?php
-// $Id: rsvp_dateconnector.module,v 1.2.2.7 2009/03/09 21:51:54 ulf1 Exp $
+// $Id: rsvp_dateconnector.module,v 1.2.2.8 2009/03/10 17:53:55 ulf1 Exp $
 
 
 class RsvpDateConnectorImpl extends RsvpConnectorImpl {
 
   function get_event_field($field_name, $content_type) {
-
+    //$field_name can potentially be empty if no association is available for $content_type.
+    if (!isset($field_name)) {
+      return array();
+    }
+    
     $field = content_fields($field_name, $content_type);
     if (empty($field)) {
       return array();
     }
+
     $field['database'] = content_database_info($field);
     return $field;
-
   }
 
   

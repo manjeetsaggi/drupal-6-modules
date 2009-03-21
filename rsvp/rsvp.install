@@ -1,5 +1,5 @@
 <?php
-// $Id: rsvp.install,v 1.10.2.2 2009/03/10 16:53:57 ulf1 Exp $ 
+// $Id: rsvp.install,v 1.10.2.3 2009/03/16 18:17:31 ulf1 Exp $ 
 
 function rsvp_install() {
   drupal_install_schema('rsvp');
@@ -64,7 +64,7 @@ function rsvp_schema() {
         'default' => '0'
       ),
       'list_email' => array(
-        'description' => ('Defines who is allowed to send emails (none, invitee, respondent, attendee)'),
+        'description' => ('Defines who is allowed to send messages (none, invitee, respondent, attendee)'),
         'type' => 'int',
         'size' => 'tiny',
         'unsigned' => TRUE,

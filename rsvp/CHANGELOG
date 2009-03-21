@@ -1,5 +1,18 @@
+03/18/09: fixed by ulf1- removed unnecessary message "RSVP: Association for content type..." when saving a content type.
+
+
+03/16/09: improoved guest list: show "all/part" link only if we have more then a total of 10 guests.
+
+03/11/09: fixed by ulf1- replybox and guestlist does not show up for anonymous users.
+          fixed by ulf1- [#397828]
+
 03/10/09: fixed by ulf1- [#396464] Enabling of RSVP module sets event connector by default, and enabling the date connector will 
                                    fail because of that.
+          fixed by ulf1- Unregularities when selecting date field for date connector inside content-types.                        
+          added by ulf1- [#397888] added new permission "rsvp multiple invitations per event"
+          fixed by ulf1- [#397842]
+          
+
 
 03/07/09: fixed by ulf1- [#360151] Users can see other guests complete emailaddress in guest list. Only first part should be visible.
           fixed by ulf1- [#360151] anonymous guests can not see their invitation (Access denied).

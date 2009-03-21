@@ -1,5 +1,5 @@
 <?php
-// $Id: rsvp.module,v 1.22.2.18 2009/03/10 16:53:57 ulf1 Exp $
+// $Id: rsvp.module,v 1.22.2.25 2009/03/18 18:46:51 ulf1 Exp $
 
 /**
  * @module rsvp
@@ -125,7 +125,8 @@ function rsvp_perm() {
   return array(RSVP_PERM_ADMIN, 
                RSVP_PERM_MAINTAIN, 
                RSVP_PERM_ONEVENTS, 
-               RSVP_PERM_ONOWNEVENTS);
+               RSVP_PERM_ONOWNEVENTS,
+               RSVP_PERM_MULTI_INVITATIONS);
 }
 
 /**
@@ -212,16 +213,6 @@ function rsvp_menu() {
     'access arguments' => array($connector, 1, NULL),
   );
     
-  // email response path (for guest access)
-  $items['rsvp/email/%rsvp_hash/edit'] = array(
-    'title' => t('Edit guests reply'),
-    'type' => MENU_CALLBACK,
-    'page callback' => 'rsvp_guest_editreply_page',
-    'page arguments' => array(2),
-    'access callback' => 'rsvp_guest_editreply_form_access',
-    'access arguments' => array($connector, 2),
-    'weight' => 0,
-  );
   $items['rsvp/email/%rsvp_hash'] = array(
     'title' => t('View invitation'),
     'type' => MENU_NORMAL_ITEM,
@@ -548,35 +539,35 @@ function rsvp_nodeapi(&$node, $op, $teaser, $page) {
   if ($op == 'view') {
 
     if (!$teaser && $page) {
-      //do not show guestlist for anonymous users
-    	if (user_is_anonymous())
-        return;
-    	
-    	global $user;
-    	
-      $content = '';
+      //show reply box and guestlist based on permissions.
+    	$content = '';
       $display = false;
-      //In a first  step collect all invitations for the node that a user has view permissions to.
-      $invitations = rsvp_function_load_invitations_user($user->uid, $node->nid);
-      while ($invite_target = db_fetch_object($invitations)) {
-        $rsvp = rsvp_function_load_rsvp($invite_target->rid);
-      	
-      	if ($rsvp->response_blind_node == RSVP_RESPONSE_SHOW) {
-        	
-        	$params = array();
-          list($perm_view, $perm_guestonly) = rsvp_function_invitation_by_invite_accessarray($connector, $rsvp, $invite_target, NULL, array(RSVP_ACCESS_VIEW, RSVP_ACCESS_GUESTONLY), NULL);
-          if (($perm_guestonly == true) || ($perm_view == true)) {
-            if ($perm_guestonly == true) {
-              $params['replybox'] = drupal_get_form('rsvp_reply_form', $rsvp, $invite_target);
-              $display = true;
-            }
-            if ($perm_view == true) {  
-              $params['guestlist'] = rsvp_show_guestlist($rsvp, NULL);
-              $display = true;
-            }
-            $content .= theme('rsvp_invitation_page', $connector, $rsvp, $invite_target, $params);
-            
-          }
+      //Collect all invitations for the node.
+      $rsvps = rsvp_function_load_invitations($node->nid);
+      while ($rsvp = db_fetch_object($rsvps)) {
+        //Now verify if user received an invitation or not. 
+        //We have to do this two step approcah because users (not guests) might be allowed to see an invitation by role.
+        $invite_target = rsvp_function_load_invitation_rid($rsvp->rid, NULL, false);
+        if ($invite_target == false)
+          $invite_target = NULL;
+          
+        $params = array();
+        
+        $is_guestlist_visible = _rsvp_visible_guestlist_access($connector, $rsvp, $invite_target);  
+        list($perm_byrole, $perm_guestonly) = rsvp_function_invitation_by_invite_accessarray($connector, $rsvp, NULL, NULL, array(RSVP_ACCESS_BYROLE, RSVP_ACCESS_GUESTONLY), NULL);
+
+        if ($perm_guestonly == true) {  
+          $params['replybox'] = drupal_get_form('rsvp_reply_form', $rsvp, $invite_target);
+          $display = true;
+        }
+
+        if ($is_guestlist_visible == true) {  
+          $params['guestlist'] = rsvp_show_guestlist($rsvp, NULL);
+          $display = true;
+        }
+
+        if (count($params) > 0) {
+          $content .= theme('rsvp_invitation_page', $connector, $rsvp, $invite_target, $params);
         }
       }
 
@@ -597,10 +588,11 @@ function rsvp_nodeapi(&$node, $op, $teaser, $page) {
   	//load old version of node, and check if startdate has changed. If that is the case update invitation as well. 
   	//$old_node = node_load($node->nid);
   }
-    	
+  // The following functionality could be implemented here.
+  //- automatic update of invitations startdate when startdate in node changes.
+  //- automatic remove guests uid from invitations if user is being removed.
+  
 }
-//- automatic update of invitations startdate when startdate in node changes.
-//- automatic remove guests uid from invitations if user is being removed.
 
 /**
  * Implementation of hook_user().
@@ -939,7 +931,6 @@ function rsvp_overview_created_form_access($connector, $node, $usr) {
     
     if (!$connector->is_event_enabled($node->type))
       return false;
-      
     //check if we are allowed to create an invitation
     if (rsvp_function_create_invitation_access($connector, $node, RSVP_ACCESS_CREATE) == true)
       return true;
@@ -1447,7 +1438,7 @@ function rsvp_overview_form_access($connector, $usr, $node) {
   //check if user has created invitations. If yes, show the form  
   if (rsvp_count_created($connector, $node, $usr) > 0)
     return true;
-  
+
   //check if user can create invitation for node. If yes, show the form  
   $perm_create = rsvp_function_create_invitation_access($connector, $node, RSVP_ACCESS_CREATE);
   if ($perm_create == true)
@@ -1679,112 +1670,6 @@ function rsvp_invite_viewonly_form_access($connector, $rsvp) {
 }
 
 
-
-/**
-* Handles the rsvp single invite requests.
-* rsvp_guest_editreply_page consists of the reply form that the moderator can edit (in the name of the guest).
-* 
-* @ingroup rsvp_core
-*
-* @param $invite_target The invite instance that the current user wants to view/modify.
-* @return themed rsvp invite view response.
-*
-* This method can be called by 
-* - rsvp/email/%rsvp_hash/edit  : $invite_target is set (regular guest access or moderator access)
-*
-* !There are several combinations on how this function can be accessed:
-* - Moderator/Owner is invited and accesses his own invitation by hash. 
-* - Moderator accesses another guests invitation by hash when he clicks on the "edit reply" icon. 
-* - Guest accesses his invitation by hash. 
-*/
-function rsvp_guest_editreply_page($invite_target) {
-  $form = array();
-  $connector = new RsvpConnector();
-
-  $rsvp = rsvp_function_load_rsvp($invite_target->rid);
-  $rsvp = rsvp_function_check_rsvp($rsvp);
-    
-  list($is_moderator, $is_guestonly)  = rsvp_function_invitation_by_invite_access($connector, $rsvp, $invite_target, NULL, array(RSVP_ACCESS_EDIT, RSVP_ACCESS_GUESTONLY));
-
-  
-  //$is_guestonly: Check if we display our own invitation. If yes, make database update later.
-  
-  $node = rsvp_function_load_node($rsvp);
-
-  // check if the event has been deleted
-  if (!$node->nid) {
-    drupal_set_message(t('The invitation you are trying to view belongs to a node that has been deleted.'));
-    drupal_goto();
-  }
-
-  
-  // Set the breadcrumb trail.
-  if ($is_moderator) {
-    drupal_set_breadcrumb(array(l(t('Home'), NULL), l($node->title, 'node/'. $node->nid . '/rsvp')));
-  }
-  else {
-    drupal_set_breadcrumb(array(l(t('Home'), NULL), l($node->title, 'node/'. $node->nid)));
-  }
-  drupal_set_title(t('Invitation: !name', array( '!name' => $rsvp->name)));
-      
-  // This isn't here by mistake: I think we need to log the user action
-  // even if the event has expired.
-  if (($invite_target != NULL) && ($invite_target->invited != 1) && ($is_guestonly)) {
-    $fields[] = 'invited = %d';
-    $fields[] = 'received = %d';
-    $fields[] = 'timestamp = %d';
-    
-    $vals[] = 1;
-    $vals[] = 1;
-    $vals[] = time();
-    $vals[] = $invite_target->hash;
-    
-    $sql = 'UPDATE {rsvp_invite} SET '. implode(', ', $fields) .' WHERE hash = \'%s\'';
-    db_query(sql, $vals);
-  }
-  
-  // check if the event has expired
-  if (rsvp_function_is_expired($node, $rsvp)) {
-    drupal_set_message(t('You can no longer respond to this invitation since the event has expired.'));
-  }
-  else {
-    
-    $params['replybox'] = drupal_get_form('rsvp_reply_form',$rsvp, $invite_target);
-  }
-  
-  $params['guestlist'] = rsvp_show_guestlist($rsvp, $invite_target);
-
-  return theme('rsvp_invitation_page', $connector, $rsvp, $invite_target, $params);
-}
-
-/*
- * Access function to determine if the current user is allowed to 
- * access rsvp_guest_editreply_page. rsvp_guest_editreply_page consists of one sub components: reply
- *
- * !There are several combinations on how this function can be accessed:
- * - Moderator/Owner is invited and accesses his own invitation by hash. 
- * - Moderator accesses another guests invitation by hash when he clicks on the "edit reply" icon. 
- * - Guest accesses his invitation by hash. 
- * 
- * @param $invite_target The invitation object that the current user wants to check.
- * @return true or false.
- *
- * - rsvp/email/%rsvp_hash/edit  : $invite_target is set (regular guest access or moderator access)
- *  
- */
-function rsvp_guest_editreply_form_access($connector, $invite_target) {
-
-  $rsvp = rsvp_function_load_rsvp($invite_target->rid);
-  if ($rsvp == false)
-    return false;
-  
-  if (rsvp_function_invitation_by_invite_access($connector, $rsvp, $invite_target, NULL, RSVP_ACCESS_REPLY) == true)
-    return true;
-    
-  return false;
-}
-
-
 /**
 * Displays an html formatted Invitation message if user has the permissions
 * 
@@ -1839,7 +1724,6 @@ function rsvp_show_guestlist($rsvp, $invite_target, $is_block = false, $extended
   if (isset($_GET['show'])) {
     if ($_GET['show'] == 'all') {
     	rsvp_function_guestlist_showall($rsvp, RSVP_GUESTLIST_SHOW_ALL);
-      $guestlist_show_all = true;
     } 
     elseif ($_GET['show'] == 'part') {  
       rsvp_function_guestlist_showall($rsvp, RSVP_GUESTLIST_SHOW_PART);
@@ -1872,7 +1756,7 @@ function rsvp_show_guestlist($rsvp, $invite_target, $is_block = false, $extended
     $has_open_signup = false;
     
     $totals = rsvp_function_load_totalguests($rsvp->rid);
-    
+
     $show_header = true;
     $show_whoiscoming = true;
 
@@ -1888,9 +1772,7 @@ function rsvp_show_guestlist($rsvp, $invite_target, $is_block = false, $extended
       $guestlist[RSVP_ATT_ALL] = array('show_comment' => false, 'icon' => 'not.gif', 'answertext' => t('ALL'), 'count' => 0);
     }
 
-    $guestlist_show_part = (rsvp_function_guestlist_showall($rsvp) == RSVP_GUESTLIST_SHOW_PART);
-    $guestlist_sort_date = (rsvp_function_guestlist_sortorder($rsvp) == RSVP_GUESTLIST_SORT_DATE);
-    
+    $total_lineitems = 0;
     
     if (!$are_attendees_visible) {
     	// for blind invitations display only totals as already shown in the header
@@ -1940,16 +1822,20 @@ function rsvp_show_guestlist($rsvp, $invite_target, $is_block = false, $extended
           if (!$attendee->invited) {
             $guestlist[RSVP_ATT_NOTSEND]['guests'][] = $guest; 
             $guestlist[RSVP_ATT_NOTSEND]['count'] += $attendee->totalguests;
+            $total_lineitems++;
           }
 
           //add element to the correct array (RSVP_ATT_YES, RSVP_ATT_NO, ...)
           $guestlist[$attendee->response]['guests'][] = $guest;
           $guestlist[$attendee->response]['count'] += $attendee->totalguests;
+          $total_lineitems++;
         }
         else {
           //add element to "all" list
           $guestlist[RSVP_ATT_ALL]['guests'][] = $guest;
           $guestlist[RSVP_ATT_ALL]['count'] += $attendee->totalguests;
+          $total_lineitems++;
+          
         }
       }
 
@@ -1959,6 +1845,21 @@ function rsvp_show_guestlist($rsvp, $invite_target, $is_block = false, $extended
       
       
     }
+
+    $params = array(
+      'show_header' => $show_header,
+      'show_whoiscoming' => $show_whoiscoming,
+      'show_footer' => $show_footer,
+      'show_viral' => $has_viral_invitation,
+      'show_opensignup' => $has_open_signup,
+      'totalsarray' => $totals,
+      'show_responses' => $are_responses_visible,
+      'is_moderator' => $is_moderator,
+      'is_anonymous' => user_is_anonymous(),
+    );
+    
+    //Now prepare the guestlist array.    
+    $guestlist_sort_date = (rsvp_function_guestlist_sortorder($rsvp) == RSVP_GUESTLIST_SORT_DATE);
     
     if ($guestlist_sort_date == true)
     	$cmp_func = 'rsvp_cmp_guestlist_date';
@@ -1973,49 +1874,67 @@ function rsvp_show_guestlist($rsvp, $invite_target, $is_block = false, $extended
       }
     }
       
-    //postprocessing of the guest list data (removing empty sections)
-    $totalguests = 0;
-    $max_guests = 10; //at the moment hardcoded
-    $guestlistarray = array();
-    foreach($guestlist as $type => $values) {
-      $section_guests = $values['count'];
-      if ($section_guests > 0) {
-        if ($guestlist_show_part == true) {
-        
-          //remove empty sections of the guestlist
-          if ($totalguests < $max_guests) {
-      	
-            //remove elements if we show only parts and reached the max.
-            if (($totalguests + $section_guests > $max_guests)) {
-              array_splice($values['guests'], $max_guests - $totalguests);
+    if ($total_lineitems > RSVP_GUESTLIST_SHOW_MAXITEMS) {
+      //in this case we show the all/partial link and remove elements from the guestlist      
+      $show_part = (rsvp_function_guestlist_showall($rsvp) == RSVP_GUESTLIST_SHOW_PART);
+      if ($show_part == true)
+        $params['show_all_link'] = true;
+      else
+        $params['show_part_link'] = true;
+      
+      //postprocessing of the guest list data
+      //-removing empty sections
+      //-limit the number of element if we show only part of the guest list 
+      $totalguests = 0;
+      $max_guests = RSVP_GUESTLIST_SHOW_MAXITEMS; //at the moment hardcoded
+      $guestlistarray = array();
+      foreach($guestlist as $type => $values) {
+        $section_guests = count($values['guests']);
+        //show section only if there are at least guests in to begin with.
+        if ($section_guests > 0) {
+
+          if ($show_part == true) {
+            if ($totalguests < $max_guests) {
+              //remove guests from the section if we show only parts and reached the max.
+              if (($totalguests + $section_guests > $max_guests)) {
+                array_splice($values['guests'], $max_guests - $totalguests);
+                //if we cut guests off, add this information to the guestlist.
+                $values['cut_off'] = true; 
+              }
             }
-            if (count($values['guests']) > 0) {
-              $totalguests += count($values['guests']);
-              $guestlistarray[$type] = $values;
+            else {
+              // we already reached the max.
+              $values['guests'] = array();
+              $values['cut_off'] = true; 
             }
+            
+            $totalguests += count($values['guests']);
+            $guestlistarray[$type] = $values;
+            
+          }
+          else {
+            //show all
+            $guestlistarray[$type] = $values;
           }
         }
-        else {
-          //remove empty sections of the guestlist
+      }
+    }
+    else {
+      //do not show the all/partial link and show all guests.
+
+      //postprocessing of the guest list data
+      //-removing empty sections
+      $guestlistarray = array();
+      foreach($guestlist as $type => $values) {
+        $section_guests = $values['count'];
+        if ($section_guests > 0) {
           $guestlistarray[$type] = $values;
         }
       }
     }
       
+    $params['guestlistarray'] = $guestlistarray;
     
-    $params = array(
-      'show_header' => $show_header,
-      'show_whoiscoming' => $show_whoiscoming,
-      'show_footer' => $show_footer,
-      'show_viral' => $has_viral_invitation,
-      'show_opensignup' => $has_open_signup,
-      'totalsarray' => $totals,
-      'show_responses' => $are_responses_visible,
-      'is_moderator' => $is_moderator,
-      'is_anonymous' => user_is_anonymous(),
-      'guestlistarray' => $guestlistarray,
-    
-    );
     
     $content .= theme(($is_block == true) ? 'rsvp_guestlist_block' : 'rsvp_guestlist', $connector, $rsvp, $invite_target, $params);
     
@@ -2039,6 +1958,7 @@ function rsvp_cmp_guestlist_alpha($a, $b)
 {
   return strcasecmp($a['username'], $b['username']);
 }
+
 
 
 /**
@@ -2662,7 +2582,7 @@ function rsvp_message_hash_form(&$form_state, $invite_from) {
   if ($rsvp == false)
     drupal_goto();
   
-  $node = rsvp_funtion_load_node($rsvp);
+  $node = rsvp_function_load_node($rsvp);
   if ($node == false)
     drupal_goto();
     
@@ -2933,7 +2853,7 @@ function rsvp_reply_form(&$form_state, $rsvp, $invite_target) {
     '#default_value' => $invite_target->totalguests,
     '#size' => 3,
     '#maxlength' => 3,
-    '#prefix' => '<div class="rsvp_form_content rsvp_reply_form_content rsvp_color_inner">',
+    '#prefix' => '<div class="container-inline rsvp_form_content rsvp_reply_form_content rsvp_color_inner">',
     '#suffix' => '</div>',  
     //'#description' => ($is_own_invitation) ? t('The number of guests you plan to bring to the event (including yourself) ' . $open_seats_text) : t('The number of guests that guest \'%owner\' plans to bring to the event (including yourself)' . $open_seats_text, array('%owner' => $target_name)),
     '#description' => $open_seats_text,
@@ -3978,56 +3898,6 @@ function rsvp_list_roles_form(&$form_state, $rsvp) {
   return $form;
 }
 
-
-/* Interal access function to determine if the current user is allowed to access a user related rsvp page
- * 
- * @param $usr_target The passed user object you want to check for.
- * @param $access The access type we want to check the current user for on the user object. 
- *            (RSVP_ACCESS_VIEW)  
- * @param $addtlparam String, check for an additional permission.
- * @return true or false.
- *  
- * returns true if the current user is allowed to access the $user related rsvp pages in terms of rsvp privilegues. 
- *     could be user, admin, moderator or anonymous
- */
-/*
-function _rsvp_user_access($connector, $usr_target, $access, $addtlparam = NULL) {
-
-  $usr_caller = NULL;
-
-  if (user_is_anonymous())
-    return false;
-  
-  global $user;
-  $usr_caller = $user;
-
-  $is_owner = false;
-  $is_guest = false;
-  $is_moderator = false;
-  $addtlperm = true;
-    
-  if (!is_null($addtlparam)) {  
-    $addtlperm = user_access($addtlparam);
-  }
-
-  $is_moderator = user_access(RSVP_PERM_MAINTAIN);    
-  $is_owner = ($usr_caller->uid == $usr_target->uid);
-  
-  switch($access) {
-    case RSVP_ACCESS_VIEW:
-      return (($is_moderator || $is_owner) && $addtlperm );
-    case RSVP_ACCESS_CREATE:
-    case RSVP_ACCESS_REPLY:
-    case RSVP_ACCESS_DELETE:
-    case RSVP_ACCESS_EDIT:
-    default:
-      return false;
-            
-  }
-  
-}
-*/
-
 /*
  * Access function to determine if the current user is allowed to send a messages to other user.
  * 
@@ -4292,7 +4162,7 @@ function template_preprocess_rsvp_invitation(&$variables) {
   $donate_text = '';
   $perm_moderator = rsvp_function_invitation_by_invite_access($connector, $rsvp, $invite_target, NULL, RSVP_ACCESS_MAINTAIN);
   if ($perm_moderator == true) {
-    $donate_text .= '<br /><div style="width:100%; border-style:solid; padding:5px"><b>Visible to maintainer only:<br />If you like this module, please consider donating to support the <a href="http://drupal.org/project/rsvp">rsvp project</a> at http://drupal.org/project/rsvp</b></div><br />';   
+    $donate_text .= '<br /><div style="width:80%; border-style:solid; padding:5px"><b>Visible to maintainer only:<br />If you like this module, please consider donating to support the <a href="http://drupal.org/project/rsvp">rsvp project</a> at http://drupal.org/project/rsvp</b></div><br />';   
   }
   
   $variables['totalsarray'][RSVP_ATT_ALL]   = array(check_plain($params['totalsarray'][RSVP_ATT_ALL]),    'not.gif',  t('All'));
@@ -4351,6 +4221,8 @@ function template_preprocess_rsvp_invitation(&$variables) {
  * $rsvp
  * $connector
  *  
+ * [params]$show_all_link
+ * [params]$show_part_link
  * [params]$show_header
  * [params]$show_whoiscoming
  *    [params]$show_responses
@@ -4420,15 +4292,11 @@ function template_preprocess_rsvp_guestlist(&$variables) {
   if (rsvp_function_guestlist_sortorder($rsvp) == RSVP_GUESTLIST_SORT_DATE) {
   	$variables['sort_alpha_link'] = l(t('Alphabetically'), $current_path, array('html' => true, 'query' => 'sort=alpha', 'attributes' => array('title' => t('Show guest list in alphabetically order.'))));
   } 
-  
-  if (rsvp_function_guestlist_showall($rsvp) == RSVP_GUESTLIST_SHOW_PART) {
-    $variables['show_all_link'] = l(t('View all'), $current_path, array('html' => true, 'query' => 'show=all', 'attributes' => array('title' => t('Show complete guest list.'))));   
-  }
 
-  if (rsvp_function_guestlist_showall($rsvp) == RSVP_GUESTLIST_SHOW_ALL) {
+  if ($params['show_all_link'] == true)
+    $variables['show_all_link'] = l(t('View all'), $current_path, array('html' => true, 'query' => 'show=all', 'attributes' => array('title' => t('Show complete guest list.'))));   
+  if ($params['show_part_link'] == true)
     $variables['show_part_link'] = l(t('View some'), $current_path, array('html' => true, 'query' => 'show=part', 'attributes' => array('title' => t('Show condensed form of guest list.'))));
-  }
-  
   
   $variables['totalsarray'][RSVP_ATT_ALL]   = array(check_plain($params['totalsarray'][RSVP_ATT_ALL]),    'not.gif',  t('All'));
   $variables['totalsarray'][RSVP_ATT_YES]   = array(check_plain($params['totalsarray'][RSVP_ATT_YES]),    'yes.gif',  t('Yes'));
@@ -4702,18 +4570,24 @@ class RsvpConnector {
 
   function enable_event($contenttype, $field) {
     $rsvp_content_types = variable_get(RSVP_VAR_CONTENT_TYPES, array());
-    $rsvp_content_types[$contenttype] = $field;     
-    variable_set(RSVP_VAR_CONTENT_TYPES, $rsvp_content_types);  
     
-    drupal_set_message(t('RSVP: Association for content type \'%type\' and field \'%field\' has been added.', array('%type' => $contenttype, '%field' => $field)));
+    if (!isset($rsvp_content_types[$contenttype])) {
+      $rsvp_content_types[$contenttype] = $field;     
+      variable_set(RSVP_VAR_CONTENT_TYPES, $rsvp_content_types);  
+    
+      drupal_set_message(t('RSVP: Association for content type \'%type\' and field \'%field\' has been added.', array('%type' => $contenttype, '%field' => $field)));
+    }
   }
 
   function disable_event($contenttype) {
     $rsvp_content_types = variable_get(RSVP_VAR_CONTENT_TYPES, array());
-    unset($rsvp_content_types[$contenttype]);
-    variable_set(RSVP_VAR_CONTENT_TYPES, $rsvp_content_types);  
 
-    drupal_set_message(t('RSVP: Association for content type \'%type\' has been removed.', array('%type' => $contenttype)));
+    if (isset($rsvp_content_types[$contenttype])) {
+      unset($rsvp_content_types[$contenttype]);
+      variable_set(RSVP_VAR_CONTENT_TYPES, $rsvp_content_types);  
+
+      drupal_set_message(t('RSVP: Association for content type \'%type\' has been removed.', array('%type' => $contenttype)));
+    }
   }
   
   function get_event_fieldname($contenttype) {
@@ -4723,6 +4597,8 @@ class RsvpConnector {
 
   function get_event_field($content_type) {
     $field_name = $this->get_event_fieldname($content_type);
+    //$field_name can potentially be empty if no association is available for $content_type.
+    
     // this is necessary for initial menu rebuild when connectors are not enabled yet.    
     if (isset($this->connector))
       return $this->connector->get_event_field($field_name, $content_type);

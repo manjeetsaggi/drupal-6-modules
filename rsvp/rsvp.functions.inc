@@ -1,6 +1,6 @@
 <?php
 
-// $Id: rsvp.functions.inc,v 1.3.2.8 2009/03/07 21:34:34 ulf1 Exp $
+// $Id: rsvp.functions.inc,v 1.3.2.10 2009/03/16 18:17:31 ulf1 Exp $
 
 /**
  * @module rsvp_functions
@@ -86,6 +86,8 @@ define('RSVP_GUESTLIST_SORT_DATE', 'sd');
 define('RSVP_GUESTLIST_SHOW_ALL', 'all');
 define('RSVP_GUESTLIST_SHOW_PART', 'part');
 
+define('RSVP_GUESTLIST_SHOW_MAXITEMS', 10);
+
 /**
  * PATH WHERE THE USER DEFINED THEMES ARE LOCATED
  */
@@ -123,11 +125,12 @@ define('RSVP_ACCESS_BYROLE',    'b'); //view by role permission
 /**
  * RSVP PERMISSIONS
  */
-define('RSVP_PERM_ADMIN',          'administer rsvp');
-define('RSVP_PERM_MAINTAIN',       'maintain rsvp');
-define('RSVP_PERM_ONEVENTS',       'rsvp on events');
-define('RSVP_PERM_ONOWNEVENTS',    'rsvp on own events');
-define('RSVP_PERM_INVITE_ROLE',    'rsvp invite by role');
+define('RSVP_PERM_ADMIN',             'administer rsvp');
+define('RSVP_PERM_MAINTAIN',          'maintain rsvp');
+define('RSVP_PERM_ONEVENTS',          'rsvp on events');
+define('RSVP_PERM_ONOWNEVENTS',       'rsvp on own events');
+define('RSVP_PERM_INVITE_ROLE',       'rsvp invite by role');
+define('RSVP_PERM_MULTI_INVITATIONS', 'rsvp multiple invitations per event');
 
 
 /**
@@ -2057,8 +2060,8 @@ function rsvp_function_invitation_by_invite_accessarray($connector, $rsvp, $invi
  * @param $addtlparam String, check for an additional permission.
  * @return true or false.
  *  
- * returns true if the current user is allowed to create an invitation based on the $node in terms of rsvp privilegues. 
- *     could be user, admin, moderator or anonymous
+ * returns true if the current user is allowed to create an invitation based on the $node in terms of
+ * rsvp privilegues. (Could be user, admin, moderator or anonymous)
  *
  * With this method you can find out if the current user is
  *   - allowed to create a rsvp on the node
@@ -2077,6 +2080,7 @@ function rsvp_function_create_invitation_access($connector, $node, $access, $add
   $is_moderator = false;
   $addtlperm = true;
   $allExpired = true;
+  $too_many_invitations = true;
   
   if (!$connector->is_event_enabled($node->type))
     return false;
@@ -2090,15 +2094,20 @@ function rsvp_function_create_invitation_access($connector, $node, $access, $add
     $addtlperm = user_access($addtlparam);
   }
 
+  $too_many_invitations = ((db_result(rsvp_function_load_invitations($node->nid, true)) > 0) &&
+                            !user_access(RSVP_PERM_MULTI_INVITATIONS));
+  
   $is_moderator = user_access(RSVP_PERM_MAINTAIN);    
-  $is_owner = (!is_null($usr)) && ($usr->uid > 0) && ($node->uid == $usr->uid);
+  $is_node_owner = (!is_null($usr)) && ($usr->uid > 0) && ($node->uid == $usr->uid);
   
   switch($access) {
     case RSVP_ACCESS_CREATE:
-      return (($is_moderator || 
-              (!$allExpired && (user_access(RSVP_PERM_ONEVENTS) || 
-                               (user_access(RSVP_PERM_ONOWNEVENTS) && $is_owner)))) 
-            && $addtlperm );
+      return  (!$too_many_invitations && !$allExpired && $addtlperm &&
+                ($is_moderator || 
+                 user_access(RSVP_PERM_ONEVENTS) || 
+                 (user_access(RSVP_PERM_ONOWNEVENTS) && $is_node_owner)
+                ) 
+              );
     case RSVP_ACCESS_VIEW:
     case RSVP_ACCESS_REPLY:
     case RSVP_ACCESS_DELETE:
