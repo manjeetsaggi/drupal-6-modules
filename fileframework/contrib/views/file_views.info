@@ -1,0 +1,15 @@
+; $Id: file_views.info,v 1.11 2008/08/27 19:20:04 miglius Exp $
+name = Views
+description = Integrates file operations with the Views module.
+package = File management
+dependencies[] = file
+dependencies[] = views
+core = 6.x
+php = 5.2
+
+; Information added by drupal.org packaging script on 2009-03-18
+version = "6.x-1.0-alpha4"
+core = "6.x"
+project = "fileframework"
+datestamp = "1237365931"
+

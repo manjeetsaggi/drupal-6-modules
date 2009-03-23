@@ -1,0 +1,11 @@
+/* $Id: file_restriction.css,v 1.12 2009/02/12 10:23:07 miglius Exp $ */
+
+/*
+ * File extensions block
+ */
+div.file-restriction {
+  padding: 0 2px;
+  margin: 4px 0 0 0;
+  font-size: 0.85em;
+  max-width: 500px;
+}
