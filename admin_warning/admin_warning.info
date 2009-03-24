@@ -1,0 +1,11 @@
+; $Id: admin_warning.info,v 1.2 2009/02/03 00:52:38 drothstein Exp $
+name = Administrator Warning
+description = Provides a warning to site administrators reminding them that they are logged in to the live site as administrators, not regular users.
+core = 6.x
+
+; Information added by drupal.org packaging script on 2009-02-03
+version = "6.x-1.0"
+core = "6.x"
+project = "admin_warning"
+datestamp = "1233622815"
+

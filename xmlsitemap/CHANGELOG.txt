@@ -1,4 +1,9 @@
-$Id: CHANGELOG.txt,v 1.1.4.141 2009/03/14 14:53:10 kiam Exp $
+$Id: CHANGELOG.txt,v 1.1.4.143 2009/03/23 14:01:06 kiam Exp $
+
+XML Sitemap 6.x-1.x-dev, 2009-03-23
+-----------------------------------
+#407748: Error on node add page.
+#408066: Wrong SQL query for retrieving the menu item links.
 
 XML Sitemap 6.x-1.x-dev, 2009-03-12
 -----------------------------------

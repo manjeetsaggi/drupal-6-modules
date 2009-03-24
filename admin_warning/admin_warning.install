@@ -1,0 +1,8 @@
+<?php
+// $Id: admin_warning.install,v 1.1 2009/02/02 21:07:58 drothstein Exp $
+
+function admin_warning_uninstall() {
+  // Delete variables.
+  variable_del('admin_warning_message_text');
+  variable_del('admin_warning_excluded_form_ids');
+}

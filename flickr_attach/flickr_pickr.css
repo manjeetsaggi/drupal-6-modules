@@ -1,0 +1,36 @@
+ul#sets-list li, ul#flickr-pickr-list li { 
+	list-style-type: none;
+	float: left; 
+	padding: 0 .5em;
+	text-align: center;
+}
+div#flickr-pickr-wrappr #edit-ffleft,
+div#flickr-pickr-wrappr #edit-ffright,
+div#flickr-pickr-wrappr #edit-left,
+div#flickr-pickr-wrappr #edit-right 
+{ font-size: 2em; }
+div#flickr-image-existing, div#flickr-image-none { float: left; }
+
+ul#sets-list li { 
+	background: url(/sites/all/themes/zen/zen/images/set_case.gif) no-repeat;
+	padding: 5px 10px;
+	margin: 0;
+}
+ul#sets-list li.first { 
+	background-image: none; 
+}
+
+ul#flickr-pickr-list li.last { padding: 0 .25em 0 0; width: 28px; }
+
+div#flickr-item-list { display: block; }
+
+div.ahah-progress-throbber { 
+	position: absolute; 
+	background-color: white; 
+	padding:20px 250px;
+	margin:5px 50px;
+}
+
+div#wrappr-wrappr input.form-submit { 
+	float: left; height: 75px; margin: 0 2px;
+}

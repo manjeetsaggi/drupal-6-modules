@@ -1,5 +1,5 @@
 <?php
-// $Id: terms_of_use.module,v 1.1.2.8 2008/08/06 12:11:34 chill35 Exp $
+// $Id: terms_of_use.module,v 1.1.2.8 2009/03/23 21:20:27 chill35 Exp $
 
 /**
  * @file
@@ -73,7 +73,6 @@ function terms_of_use_admin_settings() {
   // Adding the fieldset for form specification.
   $form['terms_of_use_form'] = array(
     '#type' => 'fieldset',
-    //'#title' => t('Terms of Use form'),
   );
   $form['terms_of_use_form']['terms_of_use_fieldset_name'] = array(
     '#type' => 'textfield',
@@ -85,7 +84,7 @@ function terms_of_use_admin_settings() {
     '#type' => 'textfield',
     '#title' => t('Label for the ckeckbox'),
     '#default_value' => variable_get('terms_of_use_checkbox_label', t('I agree with these terms.')),
-    '#description' => t('Type here something like "I agree with these terms." or "I CERTIFY THAT I AM OVER THE AGE OF 18 YEARS OLD.", without quotes.'),
+    '#description' => t('Type here something like "I agree with these terms." or "I CERTIFY THAT I AM OVER THE AGE OF 18 YEARS OLD.", without quotes. You can use the token @link to insert a link to the Terms in this label. For example, the label can be: "I agree with the @link.", without quotes. You may want to link to the Terms if you prefer not to show the full text of the Terms in the registration form. If you use the token, the Terms will not be shown.'),
   );
 
   return system_settings_form($form);
@@ -133,14 +132,32 @@ function terms_of_use_form_user_register_alter(&$form, $form_state) {
   // Adding the fieldset.
   $form['terms_of_use'] = array(
     '#type' => 'fieldset',
-    '#title' => variable_get('terms_of_use_fieldset_name', t('Terms of Use')),
+    '#title' => check_plain(variable_get('terms_of_use_fieldset_name', t('Terms of Use'))),
     '#weight' => 10,
   );
 
   // Getting the node that contains the Terms of Use.
-  $node = node_load(variable_get('terms_of_use_node_id', ''));
-  if ($node) {
-    // Adding the Terms of Use to the fieldset.
+  $terms_of_use_node_id = variable_get('terms_of_use_node_id', '');
+  if (module_exists('translation')) {
+    global $language;
+    $translations = translation_node_get_translations($terms_of_use_node_id);
+    if ($translations[$language->language]) {
+      $terms_of_use_node_id = $translations[$language->language]->nid;
+    }
+  }
+  $node = node_load($terms_of_use_node_id);
+  
+  // Will we show the full text of the Terms or only provide a link to the Terms.
+  // Reading the checkbox label to find out.
+  $show_terms = TRUE;
+  $checkbox_label = check_plain(variable_get('terms_of_use_checkbox_label', t('I agree with these terms.')));
+  if (strpos($checkbox_label, '@link') !== FALSE) {
+    $checkbox_label = str_replace('@link', l(check_plain($node->title), 'node/'. $node->nid), $checkbox_label);
+    $show_terms = FALSE;
+  }  
+    
+  // Adding the Terms of Use to the fieldset. 
+  if ($show_terms && $node) {
     $terms = node_prepare($node);
     $form['terms_of_use']['terms_of_use_text'] = array(
       '#value' => theme('terms_of_use', $terms->body, $node),
@@ -150,7 +167,7 @@ function terms_of_use_form_user_register_alter(&$form, $form_state) {
   // Adding the checkbox to the fieldset.
   $form['terms_of_use']['I_agree'] = array(
     '#type' => 'checkbox',
-    '#title' => variable_get('terms_of_use_checkbox_label', t('I agree with these terms.')) . '&nbsp;<span class="form-required" title="This field is required.">*</span>',
+    '#title' => $checkbox_label . '&nbsp;<span class="form-required" title="' . t('This field is required') . '">*</span>',
     '#required' => TRUE,
     '#element_validate' => array('_terms_of_use_validate_checkbox'),
   );
