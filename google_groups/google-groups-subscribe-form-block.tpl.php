@@ -1,9 +1,11 @@
-<form action="http://groups.google.com/group/<?php echo $group; ?>/boxsubscribe">
-  <div class="google-groups-subscribe-form">
-    <p><img src="http://groups.google.com/groups/img/3nb/groups_bar.gif" height="26" width="132" alt="Google Groups"></p>
-    <p><strong>Subscribe to <?php echo $group_name; ?></strong></p>
-    <p style="text-align: right;">Email: <input type=text name=email /></p>
-    <p style="text-align: right;"><input type=submit name="sub" value="Subscribe" /></p>
-    <p style="text-align: right;"><a href="http://groups.google.com/group/<?php echo $group; ?>">Visit this group</a></p>
+<form action="http://groups.google.com/group/<?php echo check_plain($group_id); ?>/boxsubscribe">
+  <div class="gg-subscribe-form">
+    <p>
+      <label for="google-groups-email" ><?php print t('Email:'); ?></label>
+      <input  id="google-groups-email" class="input-text" type="text" name="email" />
+    </p>
+    <p><input class="input-submit" type="submit" name="sub" value="<?php print t('Subscribe'); ?>" /></p>
+    <p><img src="http://groups.google.com/groups/img/3nb/groups_bar.gif" height="26" width="132" alt="<?php print t('Google Groups'); ?>" /></p>
+    <p><?php print l(t('Visit this group'), 'http://groups.google.com/group/' . check_plain($group_id)); ?></p>
   </div>
 </form>
