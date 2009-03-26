@@ -5,9 +5,9 @@ dependencies[] = flickr
 package = Flickr
 core = 6.x
 
-; Information added by drupal.org packaging script on 2009-03-23
-version = "6.x-1.0"
+; Information added by drupal.org packaging script on 2009-03-25
+version = "6.x-1.1"
 core = "6.x"
 project = "flickr"
-datestamp = "1237800039"
+datestamp = "1237998339"
 
