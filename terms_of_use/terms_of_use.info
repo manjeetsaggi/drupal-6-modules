@@ -2,9 +2,9 @@
 name = Terms of Use
 description = Adds terms of Use to the registration page.
 core = 6.x
-; Information added by drupal.org packaging script on 2008-08-06
-version = "6.x-1.8"
+; Information added by drupal.org packaging script on 2009-03-24
+version = "6.x-1.10"
 core = "6.x"
 project = "terms_of_use"
-datestamp = "1218024922"
+datestamp = "1237863957"
 

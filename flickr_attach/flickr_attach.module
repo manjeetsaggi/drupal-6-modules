@@ -1,0 +1,517 @@
+<?php 
+define('PATH_FLICKR_ATTACH_CALLBACK', 'flickr_attach/pickr_callback');
+define('DOM_ID_FLICKR_PICKR_WRAPPER', 'flickr-pickr-wrappr');
+define('NUM_FLICKR_PICKR_ELEMENTS_PER_PAGE', 5);
+define('CSS_CLASS_FLICKR_PICKR_CLICKR', 'flickr-pickr-clickr');
+define('CSS_CLASS_FLICKR_PICKR_SET', 'flickr-pickr-set');
+define('FLICKR_ATTACH_DEFAULT_UNAVAILABLE', 'Unable to attach flickr album at this time. Please try again later.');
+/**
+ * add a flickr-attach field to the node form
+ *
+ * @param string $form 
+ * @param string $form_state 
+ * @param string $form_id 
+ * @return void
+ * @author aaron
+**/
+function flickr_attach_menu() {
+	return array(
+		PATH_FLICKR_ATTACH_CALLBACK => array(
+			'type' => MENU_CALLBACK,
+			'title' => false,
+			'access arguments' => array('flickr attach'),
+			'page callback' => 'flickr_attach_pickr_callback',
+		),
+	);
+}
+
+function flickr_attach_initimages(&$node) {
+	$node->flickr_attach = array('album' => array(), 'image' => array());
+	$result = db_query("SELECT * FROM {node_flickr} WHERE nid = %d", $node->nid);
+	while($row = db_fetch_array($result)) {
+		$row['data'] = unserialize($row['data']);
+		$node->flickr_attach[$row['type']] = $row;
+	}
+}
+
+function flickr_attach_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+	global $user;
+	switch($op) {
+		case 'load':
+			flickr_attach_initimages($node);
+			break;
+		case 'insert':
+		case 'update':
+			$uid = $user->uid;
+			$nid = $node->nid;
+			flickr_attach_initimages($node);
+			
+			if($node->photos != 'existing' 
+			&& ($node->photos || $node->flickr_attach['image']['data']['id'] != $node->photos)) {
+				if($node->photos == 'none') {
+					$sql = 'DELETE FROM {node_flickr} WHERE nid = %d AND type = "image"';
+					$args = $node->nid;
+				} else {
+					$pid = $node->photos;
+					$p = flickr_photo_get_info($pid);
+					if($p) {
+						$type = 'image';
+						$data = serialize($p);
+						$args = array($uid, $nid, $type, $data);
+						if(is_numeric($node->flickr_attach['image']['faid'])) {
+							$sql = 'REPLACE INTO {node_flickr} (faid, uid, nid, type, data) VALUES (%d, %d, %d, "%s", "%s")';
+							array_unshift($args, $node->flickr_attach['image']['faid']);
+						} else {
+							$sql = 'INSERT INTO {node_flickr} (uid, nid, type, data) VALUES (%d, %d, "%s", "%s")';
+						}
+					}
+				}
+				$success = db_query($sql, $args);
+				if($success === false) {
+					drupal_set_message(t(FLICKR_ATTACH_DEFAULT_UNAVAILABLE));
+				}
+			}
+			if($node->sets || $node->flickr_attach['album']['data']['id'] != $node->sets) {
+				if($node->sets == 'none') {
+					$args = $node->nid;
+					$sql = 'DELETE FROM {node_flickr} WHERE nid = %d AND type = "album"';
+				} else {
+					$sid = $node->sets;
+					$albums = flickr_photoset_get_list(variable_get('flickr_default_userid', ''));
+					$found = false;
+					foreach($albums as $set) {
+						if($set['id'] == $sid) {
+							$found = true;
+							break;
+						}
+					}
+					if($found) {
+						$type = 'album';
+						$data = serialize($set);
+						$args = array($uid, $nid, $type, $data);
+						if(is_numeric($node->flickr_attach['album']['faid'])) {
+							$sql = 'REPLACE INTO {node_flickr} (faid, uid, nid, type, data) VALUES (%d, %d, %d, "%s", "%s")';
+							array_unshift($args, $node->flickr_attach['album']['faid']);
+						} else {
+							$sql = 'INSERT INTO {node_flickr} (uid, nid, type, data) VALUES (%d, %d, "%s", "%s")';
+						}
+					}
+				}
+				$success = db_query($sql, $args);
+				if($success === false) {
+					drupal_set_message(t(FLICKR_ATTACH_DEFAULT_UNAVAILABLE));
+				}
+			}
+			break;
+	}
+}
+
+function flickr_attach_perm() {
+	return array(
+		'flickr attach' => 'flickr attach',
+		);
+}
+
+function flickr_attach_form_alter(&$form, $form_state, $form_id) {
+	//if we're looking at a node form, add the flickr-attach field
+	if(user_access('flickr attach') 
+	&& $form['#id'] == 'node-form'
+	&& variable_get('flickr_attach_allow_'.$form['type']['#value'], true)) {
+		flickr_attach_add_nodeform_fields($form, $form_state);
+	}
+	
+	if($form_id == 'node_type_form') {
+		$node_name = $form['#node_type']->name;
+		
+		//the node_type form automatically appends _"node_type" 
+		//where "node_type" is the system name of this node type.
+		//the node_type form also automatically set_variable()s these
+		$key = 'flickr_attach_allow';
+
+		$form['flickr_attach'] = array('#type' => 'fieldset', '#collapsible' => true,
+			'#title' => t('Flickr Attachment'),
+			$key => array(
+				'#type' => 'checkbox', '#default_value' => variable_get($key, true),
+				'#title' => t('Yes, allow Flickr Image & Album Attachments for !node_name nodes.',
+				 						array('!node_name' => $node_name))
+			),
+		);
+	}
+}
+
+function flickr_attach_get_photos($page = false, $set_id = null) {
+  drupal_add_css(drupal_get_path('module', 'flickr') .'/flickr.css');
+
+  global $user, $pager_page_array, $pager_total, $pager_total_items;
+	
+  //set this to something else if you want multiple pagers
+  $element = 0;
+	
+	if($page === false) {
+  	$pager_page_array[$element] = empty($_GET['page']) ? 0 : (int) $_GET['page'];
+	} else {
+		$pager_page_array[$element] = (int)$page;
+	}
+	
+	$nsid = variable_get('flickr_default_userid', '');
+
+	if($set_id) {
+		$photos = flickr_request('flickr.photosets.getPhotos', array(
+			'photoset_id' => $set_id,
+      'page' => $pager_page_array[$element] + 1,
+      'per_page' => NUM_FLICKR_PICKR_ELEMENTS_PER_PAGE));
+	} else {
+  	$photos = flickr_photos_search($nsid, $pager_page_array[$element] + 1, array('per_page' => NUM_FLICKR_PICKR_ELEMENTS_PER_PAGE));
+	}
+
+  if (!$photos) {
+    drupal_set_message(t('No accessible photos found for Flickr %userid', array('%userid' => $nsid)));
+    return FALSE;
+  }
+
+  //set pager information we just acquired
+  $pager_total[$element] = $photos['pages'];
+  $pager_total_items[$element] = $photos['total'];
+	return $photos;
+  //return theme('flickr_photos', $uid, $photos);
+}
+
+function flickr_attach_pickr_pagrs($set_id = null) {
+		$ahah = array('wrapper' => DOM_ID_FLICKR_PICKR_WRAPPER,
+					      'method' => 'replace',
+								'event' => 'click');
+		return array(
+			'left' => array(
+		    '#type' => 'button',
+		    '#value' => '‹',
+				'#attributes' => array('title' => 'page left'),
+				'#ahah' => $ahah + array('path' => PATH_FLICKR_ATTACH_CALLBACK.'/left/'.$set_id),
+				),
+			'ffleft' => array(
+		    '#type' => 'button',
+		    '#value' => '«',
+				'#attributes' => array('title' => 'jump left ('.NUM_FLICKR_PICKR_ELEMENTS_PER_PAGE.')'),
+				'#ahah' => $ahah + array('path' => PATH_FLICKR_ATTACH_CALLBACK.'/ffleft/'.$set_id),
+				),
+			'right' => array(
+		    '#type' => 'button',
+		    '#value' => '›',
+				'#attributes' => array('title' => 'page right'),
+				'#ahah' => $ahah + array('path' => PATH_FLICKR_ATTACH_CALLBACK.'/right/'.$set_id),
+				),
+			'ffright' => array(
+		    '#type' => 'button',
+		    '#value' => '»',
+				'#attributes' => array('title' => 'jump right ('.NUM_FLICKR_PICKR_ELEMENTS_PER_PAGE.')'),
+				'#ahah' => $ahah + array('path' => PATH_FLICKR_ATTACH_CALLBACK.'/ffright/'.$set_id),
+				),
+			);
+}
+
+function flickr_attach_pickr($node = null, $page = 0, $set_id = null) {
+	if($set_id) {
+		$photos = flickr_request('flickr.photosets.getPhotos', array(
+			'photoset_id' => $set_id,
+      'page' => $page,
+      'per_page' => NUM_FLICKR_PICKR_ELEMENTS_PER_PAGE));
+	} else {
+		$photos = flickr_attach_get_photos($page);
+	}
+	$options = array('none' => 'None');
+	$pickr = array();
+
+	if($node->flickr_attach['image']['data']) {
+		$options['existing'] = 'Existing';
+		$pickr['existing_image'] = array('#value' => flickr_img($node->flickr_attach['image']['data'], 's'));
+		$default = 'existing';
+	} 
+	
+	foreach($photos['photo'] as $i=>$p) {
+		$options[$p['id']] = $i;
+	}
+	
+	$sets = flickr_photoset_get_list(variable_get('flickr_default_userid', ''));
+	$set_options = array('' => t('<show all albums>'));
+	foreach($sets as $i=>$set) {
+		$set_options[$set['id']] = 
+			is_array($set['title']) 
+				? check_plain(current($set['title']))
+				: check_plain($set['title']);
+	}
+	
+	$pickr += array(
+		'set_pickr' => array(
+			'#type' => 'select', '#options' => $set_options, 
+			'#ahah' => array(
+				'wrapper' => DOM_ID_FLICKR_PICKR_WRAPPER,
+				'method' => 'replace',
+				'event' => 'change', 
+				'path' => PATH_FLICKR_ATTACH_CALLBACK.'/reset/'.$set_id,
+				),
+			),
+		'photos' => array(
+			'position' => array('#type' => 'value', '#value' => $page),
+			'photos' => array('#type' => '#value', '#value' => $photos),
+			'#title' => 'Photos',
+			'#type' => 'radios', 
+			'#options' => $options,
+		),
+		'pagers' => flickr_attach_pickr_pagrs($set_id),
+		'#theme' => 'flickr_pickr',
+	);
+	if($default) { $pickr['photos']['#default_value'] = $default; }
+
+	return $pickr;
+}
+
+function flickr_attach_pickr_callback($dir = 'left', $set_id = null) {
+	if(empty($set_id)) {
+		$set_id = $_POST['set_pickr'];
+	}
+  $form_state = array('submitted' => FALSE);
+  $form_build_id = $_POST['form_build_id'];
+  $form = form_get_cache($form_build_id, $form_state);
+	$fields = array();
+	$pos = $form['flickr_attach']['picker']['photos']['position']['#value'];
+	//only 2 possible dirs
+	if(!in_array($dir, array('left', 'right', 'ffleft', 'ffright'))) {
+		$dir = 'left';
+	}
+	
+	switch($dir) {
+		case 'left':
+			$pos -= NUM_FLICKR_PICKR_ELEMENTS_PER_PAGE;
+			break;
+		case 'right':
+			$pos += NUM_FLICKR_PICKR_ELEMENTS_PER_PAGE;
+			break;
+		case 'ffright':
+			$pos += NUM_FLICKR_PICKR_ELEMENTS_PER_PAGE * NUM_FLICKR_PICKR_ELEMENTS_PER_PAGE;
+			break;
+		case 'ffleft':
+			$pos -= NUM_FLICKR_PICKR_ELEMENTS_PER_PAGE * NUM_FLICKR_PICKR_ELEMENTS_PER_PAGE;
+			break;
+		case 'reset':
+			$pos = 0;
+	}
+	
+	if($pos < 0) { 
+		$pos = 0; 
+	}
+	
+	if($set_id) {
+		$photos = flickr_request('flickr.photosets.getPhotos', array(
+			'photoset_id' => $set_id,
+      'page' => $pos / NUM_FLICKR_PICKR_ELEMENTS_PER_PAGE,
+      'per_page' => NUM_FLICKR_PICKR_ELEMENTS_PER_PAGE));
+		$photos = $photos['photoset'];
+	} else {
+		$photos = flickr_attach_get_photos($pos / NUM_FLICKR_PICKR_ELEMENTS_PER_PAGE);
+	}
+	
+	if($pos >= $photos['total']) {
+		$pos = $photos['total'] - NUM_FLICKR_PICKR_ELEMENTS_PER_PAGE;
+	}
+
+	$options = array('none' => 'None');
+	if($form['#node'] && $form['#node']->flickr_attach['image']['data']) {
+		$node = $form['#node'];
+		$options['existing'] = 'Existing';
+		$fields['existing_image'] = array('#value' => flickr_img($node->flickr_attach['image']['data'], 's'));
+	} 
+	
+	foreach($photos['photo'] as $i=>$p) {
+		$options[$p['id']] = $i;
+	}
+  $fields += array('photos' => array(
+			'position' => array('#type' => 'value', '#value' => $pos),
+			'photos' => array('#type' => '#value', '#value' => $photos),
+			'#title' => 'Photos',
+			'#type' => 'radios',
+			'#options' => $options,
+			'#default_value' => null,
+		), 
+		'pagers' => flickr_attach_pickr_pagrs($set_id),
+		'#theme' => 'flickr_pickr');
+
+  $form['flickr_attach']['picker'] = $fields;
+  form_set_cache($form_build_id, $form, $form_state);
+  $form += array( '#post' => $_POST, '#programmed' => FALSE );
+
+  // Rebuild the form.
+  $form = form_builder($_POST['form_id'], $form, $form_state);
+
+  // Render the new output.
+  $new_form = $form['flickr_attach']['picker'];
+  $output = drupal_render($new_form);  
+  print drupal_to_js(array('data' => $output, 'status' => true));
+	exit;
+}
+
+function flickr_attach_add_nodeform_fields(&$form, $form_state) {
+	$node = $form['#node'];
+
+	$picker = flickr_attach_pickr($form['#node'], $form_state['values']['position']);
+	$sets = flickr_attach_sets($form['#node']);
+	$form['flickr_attach'] = array(
+		'#title' => t('Flickr Attachment'),
+		'#type' => 'fieldset', '#collapsible' => true,
+		'#collapsed' => empty($node->flickr_attach['image']) && empty($node->flickr_attach['album']), 
+		'#description' => t('You can associate a photo with this post.'),
+		'picker' => $picker,
+	);
+	$form['flickr_sets_attach'] = array(
+		'#title' => t('Flickr Albums'),
+		'#type' => 'fieldset', '#collapsible' => true, 
+		'#collapsed' => empty($node->flickr_attach['image']) && empty($node->flickr_attach['album']),
+		'#description' => t('You can associate an album with this post.'),
+		'sets' => $sets
+		);
+}
+
+function flickr_attach_sets($node = null) {
+	$sets = flickr_photoset_get_list(variable_get('flickr_default_userid', ''));
+	$options = array('none' => 'None');
+	foreach($sets as $i=>$set) {
+		$options[$set['id']] = $i;
+	}
+	
+	if(is_numeric($node->flickr_attach['album']['data']['id'])) {
+		$default = $node->flickr_attach['album']['data']['id'];
+	}
+	
+	$set_picker = array(
+			'sets' => array('#type' => 'value', '#value' => $sets),
+			'#prefix' => '<div class="clear">', '#suffix' => '</div>',
+			'#title' => false,
+			'#type' => 'radios', 
+			'#options' => $options,
+			'#default_value' => $default,
+		'#theme' => 'flickr_sets',
+	);
+	return $set_picker;
+}
+
+function flickr_attach_theme() {
+  return array(
+    'flickr_pickr' => array(
+      'arguments' => array('element' => NULL),
+    ),
+		'flickr_sets' => array(
+			'arguments' => array('element' => null)
+		),
+	);
+}
+
+function theme_flickr_sets($element) {
+	$sets = $element['sets']['#value'];
+	$options = $element['#options'];
+	$items = array();
+
+	foreach($options as $sid=>$i) {
+		$set = $sets[$i];
+		if($sid != 'none') {
+			$element[$sid]['#title'] = false;
+		} 
+		$input = '<div class="'.$radio_class.'">'.drupal_render($element[$sid]).'</div>';
+		$attr = array('html' => true, 'attributes' => array('class' => CSS_CLASS_FLICKR_PICKR_CLICKR. ' ' . CSS_CLASS_FLICKR_PICKR_SET, 'id' => 'sets-'.$sid));
+		$size = 's';
+		$image = l(flickr_img($set, $size), $_GET['q'], $attr);
+		$image = '<div class="'.$img_class.'">'.$image.'</div>';
+		if($sid == 'none') {
+			$items[] = array('data' => $input, 'class' => 'sets-list-no-bg');
+		} else {
+			$items[] = $image.$input;
+		}
+	}
+
+	$list = 
+		'<div id="sets-wrapper">'
+				.'<div class="flickr-item-list">'
+						.theme_item_list($items, null, 'ul', array('id' => 'sets-list'))
+				.'</div>'
+		.'</div>';
+		
+	$element['#type'] = 'markup';
+	$element['#value'] = $list;
+	
+	return drupal_render($element);
+}
+
+function theme_flickr_pickr($element) {
+	drupal_add_js(drupal_get_path('module', 'flickr_attach').'/flickr_pickr.js');
+	drupal_add_css(drupal_get_path('module', 'flickr_attach').'/flickr_pickr.css');
+	$link_class = CSS_CLASS_FLICKR_PICKR_CLICKR;
+	$img_class = 'flickr-pickr-item';
+	$radio_class = 'flickr-pickr-radio';
+	$list_id = 'flickr-pickr-list';
+	$wrapper_id = DOM_ID_FLICKR_PICKR_WRAPPER;
+	$pager_class = 'flickr-pager';
+	$pager_id_left = 'flickr-page-left';
+	$pager_id_right = 'flickr-page-right';
+	$ff_id_left = 'flickr-ff-left';
+	$ff_id_right = 'flickr-ff-right';
+	drupal_add_js(
+		array(
+			'flickrpickr' => array(
+				'setswrapper' => '#sets-wrapper',
+				'pagerclass' => '.'.$pager_class,
+				'pageleftid' => '#'.$pager_id_left,
+				'pagerightid' => '#'.$pager_id_right,
+				'wrapperid' => '#'.$wrapper_id,
+				'listid' => '#'.$list_id,
+				'radioclass' => '.'.$radio_class,
+				'imageclass' => '.'.$img_class,
+				'imglinkclass' => '.'.$link_class,
+				'setclass' => CSS_CLASS_FLICKR_PICKR_SET,
+			)), 'setting');
+	$photos = $element['photos']['photos']['#value'];
+	$options = $element['photos']['#options'];
+	$size = 's';
+	$items = array();
+	//e($element['photos']);
+	$none = '<div>'.drupal_render($element['photos']['none']).'</div>';
+
+	if($element['photos']['existing']) {
+		$element['existing_image']['#title'] = false;
+		$attr = array('html' => true, 'attributes' => array('class' => $link_class, 'id' => 'photos-existing', 'title' => 'current flickr attachment'));
+		$photo = drupal_render($element['existing_image']);
+		$image = l($photo, $_GET['q'], $attr);
+		$existing = '<div>'
+				.'<div>'.$image.'</div>'
+				.'<div>'.drupal_render($element['photos']['existing']).'</div>'
+			.'</div>';
+	}
+	foreach($options as $pid=>$i) {
+		if($pid == 'none' || $pid == 'existing') { continue; }
+		$photo = $photos['photo'][$i];
+		$element['photos'][$pid]['#title'] = false;
+		$input = '<div class="'.$radio_class.'">'.drupal_render($element['photos'][$pid]).'</div>';
+		$attr = array('html' => true, 'attributes' => array('class' => $link_class, 'id' => 'photos-'.$pid));
+		$image = l(flickr_img($photo, $size), $_GET['q'], $attr);
+		$image = '<div class="'.$img_class.'">'.$image.'</div>';
+		$items[] = $image.$input;
+	}
+	$items[] = array('data' => 'page '.$photos['page'].' of ' . $photos['pages'], 'class' => 'last');
+	$list = '<div id="wrappr-wrappr">'
+			.'<div id="'.$wrapper_id.'">'
+				.'<div class="clear">'
+				.'<div id="flickr-image-existing">'.$existing.$none.'</div>'
+					.drupal_render($element['pagers']['ffleft'])
+					.drupal_render($element['pagers']['left'])
+						.'<div class="flickr-item-list">'
+								.theme_item_list($items, null, 'ul', array('id' => $list_id))
+						.'</div>'
+					.drupal_render($element['pagers']['right'])
+					.drupal_render($element['pagers']['ffright'])
+				.'</div>'
+			.'</div>'
+		.'</div>';
+	$element['photos'] = array('#type' => 'markup', '#value' => $list);
+	return drupal_render($element);
+}
+
+
+
+
+

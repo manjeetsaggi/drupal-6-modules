@@ -1,0 +1,53 @@
+<?php
+// $Id: flickr_attach.install,v 1.1 2009/01/30 22:23:53 ambiguator Exp $
+
+function flickr_attach_install() {
+  drupal_install_schema('flickr_attach');
+	return array(array('success' => true));
+}
+
+function flickr_attach_update_2() {
+  drupal_install_schema('flickr_attach');
+	return array(array('success' => true));
+}
+
+function flickr_attach_uninstall() {
+  drupal_uninstall_schema('flickr_attach');
+	return array(array('success' => true));
+}
+
+function flickr_attach_schema() {
+  $schema['node_flickr'] = array(
+    'description' => t('Connects Drupal users to their Flickr accounts.'),
+    'fields' => array(
+			'faid' => array(
+				'type' => 'serial',
+				'not null' => TRUE,
+				'description' => t('Flickr Attach ID: primary key for this table'),
+				),
+      'uid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'description' => t('User Id: Drupal user ID'),
+      ),
+      'nid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'description' => t('Node Id: which node is this image attached to?'),
+      ),
+      'type' => array(
+        'type' => 'varchar',
+        'length' => 8,
+        'not null' => TRUE,
+        'description' => t('What type of flickr object is this? image or album?'),
+      ),
+      'data' => array(
+        'type' => 'text',
+        'not null' => TRUE,
+        'description' => t('this is the serialize data for the flickr object'),
+      ),
+    ),
+    'primary key' => array('faid'),
+  );
+  return $schema;
+}
