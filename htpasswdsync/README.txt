@@ -1,4 +1,4 @@
-/* $Id: README.txt,v 1.1 2009/03/16 20:05:06 mfu Exp $ */
+/* $Id: README.txt,v 1.1.2.2 2009/03/26 22:28:39 mfu Exp $ */
 
 -- SUMMARY --
 
@@ -10,6 +10,8 @@ For a full description of the module, visit the project page:
 
 To submit bug reports and feature suggestions, or to track changes:
   http://drupal.org/project/issues/htpasswdsync
+
+The way password are encrypted it only compatible with *nix version of Apache.
 
 
 -- REQUIREMENTS --
@@ -37,6 +39,17 @@ installed before any user creation.
   - htgroup file
   
     The file that will synchronize the roles.
+    
+  - password hashing algorythm
+    
+    Let you choose how the password is encrypted/hashed. There are two options
+    crypt and SHA-1.
+    Crypt works only on Un*x platforms. SHA-1 shall work on bother Windows 
+    based systems and Un*xes.
+    
+    WARNING: changing this value only change the way new or updated password.
+             You will need to request you users to all change their password
+             if you want to migrate from only hash to another.
 
   - roles
   

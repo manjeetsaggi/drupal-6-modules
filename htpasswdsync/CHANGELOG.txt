@@ -1,0 +1,10 @@
+$Id: CHANGELOG.txt,v 1.1.2.2 2009/03/26 22:15:29 mfu Exp $
+
+v1.1-Dev bug fix release
+Fixed #409406 by fasdalf@fasdalf.ru : remove comma in htgroup file
+Added #408798 by fasdalf@fasdalf.ru : request for windows support
+  windows does not support crypt password hash
+  added support for SHA-1 password hash which is supported by windows.
+Fixed : group file not allways updated.
+
+v1.0 Initial release

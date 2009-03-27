@@ -5,9 +5,9 @@ description = Provides an autocomplete widget for CCK text fields.
 package = CCK
 core = 6.x
 dependencies[] = content
-; Information added by drupal.org packaging script on 2009-02-20
-version = "6.x-1.1"
+; Information added by drupal.org packaging script on 2009-03-26
+version = "6.x-1.2"
 core = "6.x"
 project = "cck_autocomplete"
-datestamp = "1235167223"
+datestamp = "1238101284"
 

@@ -1,5 +1,5 @@
 <?php
-// $Id: cck_autocomplete.module,v 1.2 2009/02/20 21:54:31 archard Exp $
+// $Id: cck_autocomplete.module,v 1.3 2009/03/26 20:56:51 archard Exp $
 
 /**
  * @file
@@ -140,8 +140,14 @@ function cck_autocomplete($content_type, $field_name, $string = '') {
 		$sql = "SELECT multiple FROM {content_node_field} WHERE field_name = '%s'";
 		$multiple = db_result(db_query($sql, $field_name));
 		
+		$result = db_query("SELECT type_name, widget_settings FROM {content_node_field_instance} WHERE field_name = '%s'", $field_name);
+		$field_instances = array();
+		while ($data = db_fetch_object($result)) {
+			$field_instances[$data->type_name] = $data->widget_settings;
+		}
+		
 		// some customization of the query
-		$widget_settings = db_result(db_query("SELECT widget_settings FROM {content_node_field_instance} WHERE field_name = '%s'", $field_name));
+		$widget_settings = $field_instances[$content_type];
 		$widget_settings = unserialize($widget_settings);
 		
 		// decide how to match the string
@@ -170,17 +176,19 @@ function cck_autocomplete($content_type, $field_name, $string = '') {
 			$num_results = 10;
 		}
 		
-		if (db_affected_rows() > 1 || $multiple) {
+		// decide which table to use
+		if (count($field_instances) > 1 || $multiple) {
 			// this field is stored in its own table because it either has multiple values
 			// or it shares its field with another content type
 			$table = 'content_' . $field_name;
-			$result = db_query_range("SELECT %s_value AS field_value FROM {%s} WHERE LOWER(%s_value) LIKE LOWER('" . $matching . "')", $field_name, $table, $field_name, $string, 0, $num_results);
 		}
 		else {
 			// this field is stored in a normal table
 			$table = 'content_type_' . $content_type;
-			$result = db_query_range("SELECT %s_value AS field_value FROM {%s} WHERE LOWER(%s_value) LIKE LOWER('" . $matching . "')", $field_name, $table, $field_name, $string, 0, $num_results);
 		}
+		
+		// run the query and return the matches
+		$result = db_query_range("SELECT %s_value AS field_value FROM {%s} WHERE LOWER(%s_value) LIKE LOWER('" . $matching . "')", $field_name, $table, $field_name, $string, 0, $num_results);
 		while ($field = db_fetch_object($result)) {
       $matches[$field->field_value] = check_plain($field->field_value);
     }
@@ -198,6 +206,9 @@ function cck_autocomplete($content_type, $field_name, $string = '') {
 function cck_autocomplete_content_type_load($type) {
 	$types = node_get_types();
 	if (isset($types[$type])) {
+		if (user_access('administer nodes')) {
+			return $type;
+		}
 		$create = user_access('create ' . $type . ' content');
 		$edit_any = user_access('edit any ' . $type . ' content');
 		$edit_own = user_access('edit own ' . $type . ' content');
