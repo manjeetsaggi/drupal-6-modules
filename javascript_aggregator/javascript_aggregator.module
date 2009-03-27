@@ -1,0 +1,56 @@
+<?php
+// $Id: javascript_aggregator.module,v 1.17.2.1 2008/11/26 23:54:27 robloach Exp $
+
+/**
+ * Implementation of hook_help().
+ */
+function javascript_aggregator_help($path, $arg) {
+  switch ($path) {
+    case 'admin/help#javascript_aggregator':
+      $output = '<p>'. t('Uses the <a href="@jsmin">JSMin</a> library to minify the aggregated JavaScript file when <em>JavaScript optimization</em> has been enabled in the <a href="@performance">Performance settings</a>.', array('@performance' => url('admin/settings/performance'), '@jsmin' => 'http://code.google.com/p/jsmin-php/')) .'</p>';
+      return $output;
+  }
+}
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function javascript_aggregator_form_alter(&$form, $form_state, $form_id) {
+  if ($form_id == 'system_performance_settings') {
+    $form['bandwidth_optimizations']['preprocess_js']['#title'] = t('Optimize and Minify JavaScript files');
+    $form['bandwidth_optimizations']['minify_js']['#description'] .= t(' Once the JavaScript files have been aggregated, they will be minified.');
+  }
+}
+
+/**
+ * Implementation of hook_preprocess_hook().
+ *
+ * Minify the aggregated JavaScript file if JavaScript Optimization is turned on.
+ */
+function javascript_aggregator_preprocess_page(&$variables) {
+  // Only do this for pages that have JavaScript on them.
+  if (!empty($variables['scripts'])) {
+    // Only process it is JavaScript Optimization is enabled.
+    if (variable_get('preprocess_js', 0)) {
+      // Strip out the aggregated JavaScript file.
+      $path = base_path() . file_directory_path();
+      $pattern = "!(<script type=\"text\/javascript\" src=\"$path)(.*?)(\"(.*?)><\/script>)!";
+      preg_match_all($pattern, $variables['scripts'], $matches);
+      $aggregated_file = $matches[2][0];
+      $jsmin_file = $aggregated_file .'min.js';
+      $jsmin_file_path = file_directory_path() .$jsmin_file;
+
+      // Create the JSMinified file if it doesn't exist yet.
+      if (!file_exists($jsmin_file_path)) {
+        require_once('jsmin.php');
+        $contents = JSMin::minify(file_get_contents(file_directory_path() . $aggregated_file));
+        $file = fopen($jsmin_file_path, 'w');
+        fwrite($file, $contents);
+        fclose($file);
+      }
+      
+      // Replace the aggregated file with the minified JavaScript file.
+      $variables['scripts'] = str_replace($aggregated_file, $jsmin_file, $variables['scripts']);
+    }
+  }
+}
