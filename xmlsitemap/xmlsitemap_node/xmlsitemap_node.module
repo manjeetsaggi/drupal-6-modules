@@ -1,5 +1,5 @@
 <?php
-// $Id: xmlsitemap_node.module,v 1.19.2.81 2009/03/23 14:00:46 kiam Exp $
+// $Id: xmlsitemap_node.module,v 1.19.2.82 2009/03/28 19:18:29 kiam Exp $
 
 /**
  * @file
@@ -439,6 +439,9 @@ function _xmlsitemap_node_batch_process($nodes, $priority, &$context) {
   $context['sandbox']['progress']++;
   if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
     $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
+  }
+  else {
+    xmlsitemap_helper_update_sitemap('xmlsitemap_node');
   }
 }
 

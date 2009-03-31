@@ -1,0 +1,93 @@
+<?php
+// $Id: css_gzip.module,v 1.1 2009/03/24 10:33:55 mikeytown2 Exp $
+
+/**
+ * Implementation of hook_help().
+ */
+function css_gzip_help($path, $arg) {
+  switch ($path) {
+    case 'admin/help#css_gzip':
+      $output = '<p>'. t('Option to gzip the aggregated CSS file when <em>CSS optimization</em> has been enabled in the <a href="@performance">Performance settings</a>. Requires .htaccess mod_rewrite (apache web server & clean urls).', array('@performance' => url('admin/settings/performance'))) .'</p>';
+      return $output;
+  }
+}
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function css_gzip_form_alter(&$form, $form_state, $form_id) {
+  if ($form_id == 'system_performance_settings') {
+    $form['bandwidth_optimizations']['css_aggregator_gzip'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('GZip CSS'),
+      '#description' => t('Optionally <a href="@gzip">GZip</a> the aggregated CSS file to dramatically decrease its size.', array('@gzip' => 'http://en.wikipedia.org/wiki/Gzip')),
+      '#default_value' => variable_get('css_aggregator_gzip', FALSE),
+      '#weight' => 2,
+    );
+    $form['bandwidth_optimizations']['css_aggregator_gzip_no_htaccess'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('GZip CSS: Do not generate .htaccess file'),
+      '#description' => t('Sometimes your host does not like mutiple .htaccess files. Enable this to bypass htaccess file generation. Follow directions in the README.txt if this is effecting you.'),
+      '#default_value' => variable_get('css_aggregator_gzip_no_htaccess', FALSE),
+      '#weight' => 3,
+    );
+  }
+}
+
+/**
+ * Implementation of hook_preprocess_hook().
+ *
+ * Minify the aggregated CSS file if CSS Optimization is turned on.
+ */
+function css_gzip_preprocess_page(&$variables) {
+  // Only do this for pages that have CSS on them.
+  if (!empty($variables['styles'])) {
+    // Only process it if CSS Optimization is enabled.
+    if (variable_get('preprocess_css', FALSE)) {
+      // GZip the CSS file.
+      $htaccess = file_directory_path() .'/css/.htaccess';
+      if (variable_get('css_aggregator_gzip', FALSE)) {
+        //Get list of CSS files
+        $path = base_path() . file_directory_path();
+        $css_files=explode($path, $variables['styles']);
+        array_shift($css_files);
+        for ($i = 0; $i < count($css_files); $i++) {
+          $css_files[$i]=array_shift(explode('"', $css_files[$i]));
+        }
+
+        // Create the GZip file if it doesn't already exist.
+        foreach ($css_files as $css_file) {
+          if (!file_exists($css_file .'.gz')) {
+            file_save_data(gzencode(file_get_contents(file_directory_path() . $css_file), 9), $css_file .'.gz', FILE_EXISTS_REPLACE);
+          }
+        }
+
+        // Make sure the .htaccess file is active to handle GZipped CSS files.
+        if (variable_get('css_aggregator_gzip_no_htaccess', FALSE)==TRUE || !file_exists($htaccess) || variable_get('css_aggregator_gzip_htaccess_size', NULL)!=filesize($htaccess)) {
+          $htaccess_contents = <<<EOT
+<FilesMatch "\.(css.gz)$">
+  AddEncoding x-gzip .gz
+  ForceType text/css
+</FilesMatch>
+<IfModule mod_rewrite.c>
+  RewriteEngine on
+  RewriteCond %{HTTP_USER_AGENT} !".*Safari.*"
+  RewriteCond %{HTTP:Accept-encoding} gzip
+  RewriteCond %{REQUEST_FILENAME}.gz -f
+  RewriteRule ^(.*)\.css $1.css.gz [L,QSA]
+</IfModule>
+EOT;
+          file_save_data($htaccess_contents, $htaccess, FILE_EXISTS_REPLACE);
+          variable_set('css_aggregator_gzip_htaccess_size', filesize($htaccess));
+        }
+      }
+      
+      if (variable_get('css_aggregator_gzip', FALSE)==FALSE || variable_get('css_aggregator_gzip_no_htaccess', FALSE)==TRUE) {
+        //delete .htaccess file so *.gz files do not get served.
+        if (file_exists($htaccess)) {
+          file_delete($htaccess);
+        }
+      }
+    }
+  }
+}
