@@ -1,5 +1,5 @@
 <?php
-// $Id: feedapi_mapper.module,v 1.1.2.7.2.22 2009/03/26 15:22:18 alexb Exp $
+// $Id: feedapi_mapper.module,v 1.1.2.7.2.23 2009/03/30 12:31:49 aronnovak Exp $
 
 /**
  * Implementation of hook_help().
@@ -427,7 +427,10 @@ function _feedapi_mapper_get_feed_elements($merged_item) {
   $elements = array();
   while (count($merged_item)) {
     $path = array();
-    $path = _feedapi_mapper_next_element_path($merged_item, $path);
+    $path = _feedapi_mapper_next_element_path($merged_item, $path, TRUE);
+    if ($path == FALSE) {
+      break;
+    }
     $elements[implode('->', $path)] = serialize($path);
   }
   return $elements;
@@ -440,13 +443,16 @@ function _feedapi_mapper_get_feed_elements($merged_item) {
  * A path to a leaf element in the format
  * array(path, to, leaf, element);
  */
-function _feedapi_mapper_next_element_path(&$items, &$path) {
+function _feedapi_mapper_next_element_path(&$items, &$path, $reset_count = FALSE) {
   // This recursion is a bit shaky. Put on breaks.
-  static $i;
+  static $i = 0;
   $i++;
+  if ($reset_count) {
+    $i = 0;
+  }
   if ($i > 200) {
     drupal_set_message(t('Error in recursion _feedapi_mapper_next_element_path()'), 'error');
-    return array();
+    return FALSE;
   }
   foreach ($items as $key => $value) {
     $path[] = $key;

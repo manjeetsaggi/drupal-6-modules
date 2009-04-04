@@ -1,5 +1,5 @@
 <?php
-// $Id: feedapi_mapper_date.inc,v 1.1.2.3.2.2 2009/02/10 20:32:43 alexb Exp $
+// $Id: feedapi_mapper_date.inc,v 1.1.2.3.2.3 2009/04/02 13:13:50 alexb Exp $
 
 /**
  * Implementation of hook_feedapi_mapper for date field from content.module (CCK),
@@ -285,6 +285,5 @@ class date_constructor {
     $this->value['value'] = date_format($this->value['date'], $this->format);
     $this->value['value2'] = date_format($this->value['date2'], $this->format);
     $this->value['timezone'] = $this->to_tz;
-    dsm($this->value);
   }
 }
