@@ -1,5 +1,5 @@
 <?php
-// $Id: css_gzip.install,v 1.1 2009/03/24 10:33:55 mikeytown2 Exp $
+// $Id: css_gzip.install,v 1.2 2009/04/04 08:19:28 mikeytown2 Exp $
 
 /**
  * Implementation of hook_install().
@@ -39,4 +39,34 @@ function css_gzip_disable() {
   if (file_exists($htaccess)) {
     file_delete($htaccess);
   }
+}
+
+/**
+ * Implementation of hook_requirements().
+ */
+function css_gzip_requirements($phase) {
+  $requirements = array();
+  $t = get_t();
+  $directory = file_directory_path();
+  $is_writable = is_dir($directory) && is_writable($directory) && (variable_get('file_downloads', FILE_DOWNLOADS_PUBLIC) == FILE_DOWNLOADS_PUBLIC);
+  switch ($phase) {
+    case 'runtime':
+      if (!$is_writable) {
+        $requirements['css_gzip'] = array(
+          'title' => $t('CSS Gzip'),
+          'description' => $t('Files directory is not writable AND/OR public download method is disabled'),
+          'severity' => $phase == 'install' ? REQUIREMENT_WARNING : REQUIREMENT_ERROR,
+          'value' => $t('Server Configuration Error'),
+        );
+      }
+      else {
+        $requirements['css_gzip'] = array(
+          'title' => $t('CSS Gzip'),
+          'severity' => REQUIREMENT_OK,
+          'value' => $t('Files directory is writable and server is using public downloads'),
+        );
+      }
+    break;
+  }
+  return $requirements;
 }

@@ -1,4 +1,8 @@
-$Id: CHANGELOG.txt,v 1.1.4.144 2009/03/28 16:35:29 kiam Exp $
+$Id: CHANGELOG.txt,v 1.1.4.145 2009/04/05 12:22:41 kiam Exp $
+
+XML Sitemap 6.x-1.x-dev, 2009-04-05
+-----------------------------------
+#421028: Undefined function error on uninstall.
 
 XML Sitemap 6.x-1.x-dev, 2009-03-28
 -----------------------------------
