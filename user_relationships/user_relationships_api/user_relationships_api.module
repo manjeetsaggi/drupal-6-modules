@@ -1,5 +1,5 @@
 <?php
-// $Id: user_relationships_api.module,v 1.1.2.7 2008/10/28 11:28:44 alexk Exp $
+// $Id: user_relationships_api.module,v 1.1.2.10 2009/02/26 23:07:34 alexk Exp $
 
 /**
  * @file
@@ -66,7 +66,13 @@ function _user_relationships_generate_query($param = array(), $options = array()
       $cond[] = "%s.%s {$operator}";
       $arguments[] = !in_array($key, $types_cols) ? 'ur' : 'urt';
       $arguments[] = $key;
-      $arguments[] = $value;
+      //#358669 support having multiple values for a single column - the query already has IN(...) placeholders
+      if (!is_array($value)) {
+        $arguments[] = $value;
+      }
+      else {
+        $arguments = array_merge($arguments, $value);
+      }
     }
   }
 
@@ -109,7 +115,8 @@ function _user_relationships_generate_query($param = array(), $options = array()
   $extra = is_array($extra) ? implode(' ', $extra) : $extra;
 
   return array(
-    'query'     => "SELECT {$selects} FROM {user_relationships} ur {$joins} {$cond} GROUP BY rid {$extra}",
+    //331692 remove improper GROUP BY rid for Postgre
+    'query'     => "SELECT {$selects} FROM {user_relationships} ur {$joins} {$cond} {$extra}",
     'count'     => "SELECT COUNT(DISTINCT rid) AS count FROM {user_relationships} ur {$count_joins} {$cond}",
     'arguments' => $arguments,
   );
@@ -177,19 +184,29 @@ function user_relationships_api_cron() {
 
   // only expire relationships once a day
   $last_cron = variable_get('user_relationships_last_expire', 0);
-  if ($now >  $last_cron + (24 * 60 * 60)) {
+  if ($now < $last_cron + 86400) {
     return FALSE;
   }
 
-  db_query(
-    " DELETE ur
+  $result = db_query(
+    " SELECT ur.rid
       FROM {user_relationships} ur
-        INNER JOIN {user_relationship_types} urt USING ( rtid )
+        INNER JOIN {user_relationship_types} urt ON ur.rtid = urt.rtid
       WHERE ur.approved = 0
         AND urt.expires_val > 0
-        AND %d > (ur.updated_at + (urt.expires_val * 24 * 60 *60))",
-    $now
+        AND ur.updated_at < (%d - (urt.expires_val * 86400))
+      GROUP BY ur.rid", $now
   );
+
+  $expired_requests = array();
+  while ($request = db_fetch_object($result)) {
+    $expired_requests[$request->rid] = $request;
+  }
+
+  if ($expired_requests) {
+    db_query('DELETE FROM {user_relationships} WHERE rid IN ('. db_placeholders($expired_requests) .')', $expired_requests);
+    _user_relationships_invoke('delete', $expired_requests);
+  }
 
   // remember when we last expired relationships
   variable_set('user_relationships_last_expire', $now);

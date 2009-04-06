@@ -1,6 +1,7 @@
 <?php
-// $Id: user_relationships.tpl.php,v 1.1.2.5 2008/11/01 17:44:03 alexk Exp $
+// $Id: user_relationships.tpl.php,v 1.1.2.7 2009/03/24 08:46:35 alexk Exp $
 
+//$relationships array is loaded in template_preprocess_user_relationships()
 if ($relationships) {
   foreach ($relationships as $relationship) {
     $edit_access = ($user->uid == $account->uid && user_access('maintain own relationships')) || user_access('administer users');
@@ -21,7 +22,7 @@ if ($relationships) {
   }
 
   print
-    theme('table', array(), $rows) .
+    theme('table', array(), $rows, array('class' => 'user-relationships-listing-table')) .
     theme('pager', NULL, $relationships_per_page);
 }
 else {

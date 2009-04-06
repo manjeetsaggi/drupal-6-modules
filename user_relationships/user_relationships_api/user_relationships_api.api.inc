@@ -1,5 +1,5 @@
 <?php
-// $Id: user_relationships_api.api.inc,v 1.1.2.7 2008/10/28 11:28:44 alexk Exp $
+// $Id: user_relationships_api.api.inc,v 1.1.2.11 2009/03/24 11:07:55 alexk Exp $
 
 /**
  * @file
@@ -16,12 +16,15 @@
  *    relationship, such as rtid or name. Attributes must match column names
  *    in the user_relationship_types table.
  *
+ * @param $reset
+ *    a boolean that forces a reset of the internal static types list
+ *
  * @return
  *    object of the requested relationship type
  *
  */
-function user_relationships_type_load($param = array()) {
-  $types = user_relationships_types_load();
+function user_relationships_type_load($param = array(), $reset = NULL) {
+  $types = user_relationships_types_load($reset);
 
   if (is_numeric($param)) {
     return $types[$param];
@@ -73,6 +76,13 @@ function user_relationships_types_load($reset = NULL) {
     $results = db_query("SELECT * FROM {user_relationship_types}");
     while ($relationship = db_fetch_object($results)) {
       $relationship_types_list[$relationship->rtid] = $relationship;
+    }
+    //load role permissions for all types
+    $results = db_query('SELECT rtid, rid FROM {user_relationship_type_roles} ORDER BY rtid, rid');
+    while ($mapping = db_fetch_object($results)) {
+      $rtype = $relationship_types_list[$mapping->rtid];
+      // //roles is an associative array {role id} => {role id}
+      $rtype->roles[$mapping->rid] = $mapping->rid;//] = $mapping->name;
     }
   }
 
@@ -153,11 +163,18 @@ function user_relationships_request_relationship($requester, $requestee, $type, 
     }
   }
 
+  //check requester is allowed to create this rtype
+  if (!user_relationships_api_can_request($requester, $type)) {
+    watchdog('user_relationships_api', t('User %user has no suitable roles to request a %rtype relationship', array('%user' => $requester->name, '%rtype' => $type->name)), WATCHDOG_WARNING);
+    //it would be good to return a reason why save is denied, but it's the API portion, it does not expose anything user-visible
+    return FALSE;
+  }
+  
   if (!user_relationships_load(array('between' => array($requester->uid, $requestee->uid), 'rtid' => $type->rtid), array('count' => TRUE))) {
     $relationship = (object)array(
       'requester_id'  => $requester->uid,
       'requestee_id'  => $requestee->uid,
-      'approved'      => $approved || !$type->requires_approval,
+      'approved'      => $approved || !$type->requires_approval || $requestee->user_relationships_ui_auto_approve[$type->rtid],
       'rtid'          => $type->rtid,
     );
 
@@ -184,7 +201,7 @@ function user_relationships_save_relationship(&$relationship, $op = 'request') {
   !isset($relationship->flags) ? $relationship->flags = UR_OK : NULL;
   !isset($relationship->created_at) ? $relationship->created_at = time() : NULL;
   $relationship->updated_at = time();
-
+  
   _user_relationships_invoke('presave', $relationship);
 
   if ($relationship->rid) {
@@ -199,21 +216,14 @@ function user_relationships_save_relationship(&$relationship, $op = 'request') {
       );
     }
   }
-  else {
-    $relationship->rid = db_result(db_query("SELECT MAX(rid) FROM {user_relationships}")) + 1;
-  }
 
   if ($valid = drupal_write_record('user_relationships', $relationship)) {
     // if the relationship has been approved and is two-way we need
     // to do a double entry for DB efficiency
     $relationship_type = user_relationships_type_load($relationship->rtid);
     if ($relationship->approved && !$relationship_type->is_oneway) {
-      $relationship_copy = drupal_clone($relationship);
-
-      $relationship_copy->requester_id = $relationship->requestee_id;
-      $relationship_copy->requestee_id = $relationship->requester_id;
-
-      $valid = drupal_write_record('user_relationships', $relationship_copy);
+      //#365623 drupal_write_record will not work because rid is a serial field, and we need to use the same rid
+      $valid = db_query('INSERT INTO {user_relationships} (rid, requester_id, requestee_id, rtid, approved, created_at, updated_at, flags) SELECT rid, requestee_id, requester_id, rtid, approved, created_at, updated_at, flags from {user_relationships} where rid = %d', $relationship->rid);
     }
 
     // second entry didn't go well. revert the first
@@ -264,6 +274,10 @@ function user_relationships_delete_relationship(&$relationship, &$deleted_by, $o
   *       $start_time = mktime(0,0,0,0,0,2007);
   *       $end_time = mktime(0,0,0,0,0,2008);
   *       user_relationships_load(array('created_at' => ">= {$start_time}", 'created_at' => '< {$end_time'}));
+  * 
+  *   each parameter may be an array, if you wish to pass several values
+  *     example: user_relationships_load(array('rtid' => array(2, 3), 'between' => array($uid1, $uid2)))
+  *       will load all relationships of types 2 or 3 between uid1 and uid2 (query will have an IN clause)
   *
   * @param @options
   *   An array keyed by the option
@@ -364,4 +378,47 @@ function user_relationships_api_translate_user_info(&$relationship) {
       $relationship->{$user_type}->data = unserialize($relationship->{$user_type}->data);
     }
   }
+}
+
+/**
+ * Check whether a user is allowed to request a certain relationship type
+ *
+ * @param $requester requesting user object or uid
+ * @param $relationship_type loaded relationship type object or rtid
+ * @return TRUE iff requester is allowed to request this type of relationship
+ */
+function user_relationships_api_can_request($requester, $relationship_type) {
+  //validate arguments
+  if (is_numeric($requester)) {
+    $requester = user_load($requester);
+  }
+  if (is_numeric($relationship_type)) {
+    $relationship_type = user_relationships_type_load($relationship_type);
+  }
+  if (!is_object($requester) || !is_object($relationship_type)) {
+    return FALSE;
+  }
+  if ($requester->uid == 1) {
+    return TRUE;
+  }
+  //if no roles have been set, any user can request
+  if (!count($relationship_type->roles)) {
+    return TRUE;
+  }
+  //check user has at least one required role
+  foreach ($relationship_type->roles as $role_id) {
+    if ($requester->roles[$role_id]) {
+      return TRUE;
+    }
+  }
+  return FALSE;
+}
+
+/**
+ * Implements the hook_cck_field_privacy_access to allow users to display privacy fields
+ * based on a relationship with other users
+ */
+function user_relationships_api_cck_field_privacy_access($requestee, $requester) {
+  $relationship = user_relationships_load(array('between' => array($requestee->uid, $requester->uid), 'approved' => TRUE), array('count' => TRUE), FALSE);
+  return $relationship;
 }

@@ -1,5 +1,5 @@
 <?php
-// $Id: user_relationships_ui.admin.inc,v 1.1.2.8 2008/11/01 17:44:03 alexk Exp $
+// $Id: user_relationships_ui.admin.inc,v 1.1.2.10 2009/03/03 16:42:05 alexk Exp $
 
 /**
  * @file
@@ -50,7 +50,38 @@ function user_relationships_ui_settings() {
       'is_numeric' => array('msg' => t('The relationships per page setting is not an integer'))
     )))
   );
-
+  $form['positioning'] = array(
+    '#type'   => 'fieldset',
+    '#title'  => t('AJAX Popup Positioning'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#description' => t('Some themes may require repositioning of AJAX confirmation dialogs. You may use these controls to set where the popup appears on the page or in relation to the mouse cursor.')
+  );
+  $form['positioning']['user_relationships_position'] = array(
+    '#type' => 'select',
+    '#title' => t('Elaboration form\'s css position'),
+    '#default_value' => variable_get('user_relationships_position', 'absolute'),
+    '#options' => array(
+      'absolute' => t('Mouse cursor'),
+      'fixed' => t('Fixed'),
+    ),
+    '#description' => t('Sets the css <em>position</em> property of AJAX confirmation popups.'),
+  );
+  $form['positioning']['user_relationships_left'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Elaboration form\'s css left value'),
+    '#default_value' => variable_get('user_relationships_left', '0'),
+    '#size' => 4,
+    '#description' => t('Sets the css <em>left</em> property of AJAX confirmation popups. Try the value of 0 for \'Mouse cursor\', or 0.5 for \'Fixed\'. You may enter a distance in pixels, or as a % using a value 1 or less. Relative positioning requires a fixed position.'),
+  );
+  $form['positioning']['user_relationships_top'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Elaboration form\'s css top value'),
+    '#default_value'  => variable_get('user_relationships_top', '0'),
+    '#size' => 4,
+    '#description' => t('Sets the css <em>top</em> property of AJAX confirmation popups. Try the value of 0 for \'Mouse cursor\', or 0.4 for \'Fixed\'. You may enter a distance in pixels, or as a % using a value 1 or less. Relative positioning requires a fixed position.'),
+  );
+  
   $replaceables = array(
     '!requester',
     '!requestee',
@@ -115,6 +146,16 @@ function user_relationships_ui_type_edit(&$form_state, $relationship_type = NULL
     '#default_value'  => isset($relationship_type->expires_val) ? $relationship_type->expires_val : 0,
     '#description'    => t('After how many days should a request of this type be removed? (0 for never)'),
     '#weight'         => -8,
+  );
+  $form['roles'] = array(
+    '#title' => t('Role access'),
+    '#type' => 'fieldset',
+    '#description' => t('You may choose which roles are allowed to request this relationship. If none are selected, all roles are allowed.'),
+    'roles' => array(
+      '#type' => 'checkboxes',
+      '#options' => user_roles(TRUE),
+      '#default_value' => is_array($relationship_type->roles) ? $relationship_type->roles : array(),
+    ),
   );
   $form['rtid'] = array(
     '#type'   => 'value',
