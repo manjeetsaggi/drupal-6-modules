@@ -7,9 +7,9 @@ dependencies[] = rdf
 core = 6.x
 php = 5.2
 
-; Information added by drupal.org packaging script on 2009-03-18
-version = "6.x-1.0-alpha4"
+; Information added by drupal.org packaging script on 2009-04-07
+version = "6.x-1.0-alpha5"
 core = "6.x"
 project = "fileframework"
-datestamp = "1237365931"
+datestamp = "1239110787"
 

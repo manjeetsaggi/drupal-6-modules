@@ -1,5 +1,5 @@
 <?php
-// $Id: xmlsitemap.install,v 1.1.2.30 2009/03/14 18:52:18 kiam Exp $
+// $Id: xmlsitemap.install,v 1.1.2.31 2009/04/06 14:35:52 kiam Exp $
 
 /**
  * @file
@@ -19,8 +19,8 @@ function xmlsitemap_requirements($phase) {
     if (module_exists('xmlsitemap_helper')) {
       $requirements['xmlsitemap'] = array(
         'title' => t('XML Sitemap'),
-        'value' => t("XML Sitemap revision !revision", array('!revision' => preg_replace('/\$Rev[iI]sion:\s+(.*)\s+\$/iU', '$1', '$Revision: 1.1.2.30 $'))),
-        'severity' => REQUIREMENT_INFO,
+        'value' => t("XML Sitemap revision !revision", array('!revision' => preg_replace('/\$Rev[iI]sion:\s+(.*)\s+\$/iU', '$1', '$Revision: 1.1.2.31 $'))),
+        'severity' => REQUIREMENT_OK,
       );
     }
     else {

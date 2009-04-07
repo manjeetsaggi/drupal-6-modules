@@ -1,7 +1,8 @@
 <?php
-// $Id: image_captcha.module,v 1.17 2009/01/03 22:14:45 soxofaan Exp $
+// $Id: image_captcha.module,v 1.19 2009/03/22 20:06:39 soxofaan Exp $
 
 /**
+ * @file
  * Implementation of image CAPTCHA for use with the CAPTCHA module
  */
 
@@ -18,7 +19,7 @@ function image_captcha_help($path, $arg) {
         require_once('./'. drupal_get_path('module', 'captcha') .'/captcha.admin.inc');
         $captcha = _captcha_generate_example_challenge('image_captcha', 'Image');
         $img = $captcha['captcha_image']['#value'];
-        $output .= t('<p>Example image, generated with the current settings:</p>!img', array('!img' => $img));
+        $output .= '<p>'. t('Example image, generated with the current settings:') .'</p>'. $img;
       }
       return $output;
   }
@@ -101,7 +102,7 @@ function _image_captcha_utf8_split($str) {
 }
 
 /**
- * Implementation of hook_captcha
+ * Implementation of hook_captcha().
  */
 function image_captcha_captcha($op, $captcha_type='', $arg3='') {
   switch ($op) {

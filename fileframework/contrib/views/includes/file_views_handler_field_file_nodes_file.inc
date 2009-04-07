@@ -1,5 +1,5 @@
 <?php
-// $Id: file_views_handler_field_file_nodes_uri.inc,v 1.3 2008/11/06 12:57:34 miglius Exp $
+// $Id: file_views_handler_field_file_nodes_file.inc,v 1.1 2009/03/31 08:50:08 miglius Exp $
 
 /**
  * @file
@@ -7,9 +7,9 @@
  */
 
 /**
- * Field handler to present a file thumbnail.
+ * Field handler to present a file or a thumbnail.
  */
-class file_views_handler_field_file_nodes_uri extends views_handler_field {
+class file_views_handler_field_file_nodes_file extends views_handler_field {
   function construct() {
     parent::construct();
     $this->additional_fields['nid'] = 'nid';
@@ -31,6 +31,11 @@ class file_views_handler_field_file_nodes_uri extends views_handler_field {
       '#options' => array(t('No link'), t('Node'), t('Download')),
       '#description' => t('A link for the thumbnail display.'),
     );
+  }
+
+  function query() {
+    $this->ensure_my_table();
+    $this->add_additional_fields();
   }
 
   function render($values) {

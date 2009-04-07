@@ -1,5 +1,5 @@
 <?php
-// $Id: file_document.pages.inc,v 1.2 2009/03/13 20:31:14 miglius Exp $
+// $Id: file_document.pages.inc,v 1.3 2009/03/25 09:55:01 miglius Exp $
 
 /**
  * @file
@@ -33,7 +33,7 @@ function file_document_mm($nid, $vid, $hash) {
   $uri = bitcache_uri($hash);
 
   // Check if the requested uri is a derivatie of the original one.
-  if ($file->uri != $uri && !rdf_exists($uri, rdf_qname_to_uri('dc:source'), $file->uri)) {
+  if ($file->uri != $uri && !rdf_exists($uri, rdf_qname_to_uri('dc:source'), $file->uri, array('repository' => FILE_RDF_REPOSITORY))) {
     // The URI is not the node iteslf, nor the derivative.
     drupal_access_denied();
     exit;

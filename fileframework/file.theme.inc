@@ -1,5 +1,5 @@
 <?php
-// $Id: file.theme.inc,v 1.31 2009/02/12 10:23:06 miglius Exp $
+// $Id: file.theme.inc,v 1.32 2009/03/23 16:14:23 miglius Exp $
 
 /**
  * @file
@@ -40,7 +40,7 @@ function theme_file_admin_handler_settings($form) {
       $element['weight']['#attributes']['class'] = "handler-weight";
       $row[] = array('data' => drupal_render($element['enabled']), 'class' => 'checkbox');
       $row[] = drupal_render($element['weight']);
-      $rows[] = array('data' => $row, 'class' => 'draggable'. (isset($element['enabled']['#default_value']) ? ' menu-enabled' : ' menu-disabled'));
+      $rows[] = array('data' => $row, 'class' => 'draggable'. ($element['enabled']['#default_value'] ? ' menu-enabled' : ' menu-disabled'));
       unset($form['handler'][$handler]);
     }
   }

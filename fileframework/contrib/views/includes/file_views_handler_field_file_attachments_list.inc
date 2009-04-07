@@ -1,5 +1,5 @@
 <?php
-// $Id: file_views_handler_field_file_attachments_nid.inc,v 1.2 2008/10/05 19:11:13 miglius Exp $
+// $Id: file_views_handler_field_file_attachments_list.inc,v 1.1 2009/03/31 08:50:08 miglius Exp $
 
 /**
  * @file
@@ -7,9 +7,9 @@
  */
 
 /**
- * Field handler to present a nodes the file is attached to.
+ * Field handler to present a list of node attachments.
  */
-class file_views_handler_field_file_attachments_nid extends views_handler_field_prerender_list {
+class file_views_handler_field_file_attachments_list extends views_handler_field_prerender_list {
   function construct() {
     parent::construct();
     $this->additional_fields['nid'] = array('table' => 'node', 'field' => 'nid');
@@ -43,20 +43,12 @@ class file_views_handler_field_file_attachments_nid extends views_handler_field_
       if (!empty($this->options['only_listed'])) {
         $where = " AND fa.list <> 0";
       }
-      $result = db_query("SELECT fa.fnid, fa.nid, n.title FROM {file_attachments} fa LEFT JOIN {node} n ON fa.nid = n.nid WHERE fa.nid IN (". implode(', ', $nids) .")". $where ." ORDER BY fa.weight");
-      while ($row = db_fetch_object($result)) {
-        $this->items[$row->fnid][$row->nid] = $this->render_link(check_plain($row->title), $row->nid);
+      $result = db_query("SELECT fa.nid AS pnid, fn.*, nf.title AS name FROM {file_attachments} fa INNER JOIN {file_nodes} fn ON fa.fnid = fn.nid INNER JOIN {node} na ON fa.vid = na.vid INNER JOIN {node} nf ON fn.vid = nf.vid WHERE fa.nid IN (". implode(', ', $nids) .")". $where ." ORDER BY fa.weight");
+      while ($file = db_fetch_object($result)) {
+        $file->name = drupal_strlen($file->name) > FILE_VIEWS_TITLE_LENGTH_SHORT ? drupal_substr($file->name, 0, FILE_VIEWS_TITLE_LENGTH_SHORT - 3) .'...' : $file->name;
+        $this->items[$file->pnid][$file->nid] = theme('file_render', $file);
       }
     }
-  }
-
-  /**
-   * Render title as a link to the node or file.
-   *
-   * Data should be made XSS safe prior to calling this function.
-   */
-  function render_link($title, $nid) {
-    return l($title, 'node/'. $nid);
   }
 }
 

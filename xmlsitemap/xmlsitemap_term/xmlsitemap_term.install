@@ -1,5 +1,5 @@
 <?php
-// $Id: xmlsitemap_term.install,v 1.5.2.36 2009/03/28 19:14:57 kiam Exp $
+// $Id: xmlsitemap_term.install,v 1.5.2.37 2009/04/06 14:46:55 kiam Exp $
 
 /**
  * @file
@@ -333,9 +333,16 @@ function xmlsitemap_term_update_6110() {
 
 /**
  * Implementation of hook_update_N().
- *
  */
 function xmlsitemap_term_update_6111() {
+  return array();
+}
+
+/**
+ * Implementation of hook_update_N().
+ *
+ */
+function xmlsitemap_term_update_6112() {
   drupal_load('module', 'xmlsitemap_helper');
   module_load_include('inc', 'xmlsitemap_helper', 'includes/xmlsitemap_helper.install');
   xmlsitemap_helper_add_database_batch_operation(

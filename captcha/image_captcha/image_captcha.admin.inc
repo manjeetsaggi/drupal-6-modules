@@ -1,5 +1,10 @@
 <?php
-// $Id: image_captcha.admin.inc,v 1.12 2009/01/03 22:14:45 soxofaan Exp $
+// $Id: image_captcha.admin.inc,v 1.14 2009/03/21 22:33:59 soxofaan Exp $
+
+/**
+ * @file
+ * Functions for administration/settings interface.
+ */
 
 /**
  * function to get a list of available fonts
@@ -152,10 +157,10 @@ function image_captcha_settings_form() {
     '#default_value' => (int) variable_get('image_captcha_distortion_amplitude', 6),
     '#description' => t('Set the degree of wave distortion in the image.'),
   );
-  $form['image_captcha_distortion_and_noise']['image_captcha_bilinair_interpolation'] = array(
+  $form['image_captcha_distortion_and_noise']['image_captcha_bilinear_interpolation'] = array(
     '#type' => 'checkbox',
     '#title' => t('Smooth distortion'),
-    '#default_value' => variable_get('image_captcha_bilinair_interpolation', FALSE),
+    '#default_value' => variable_get('image_captcha_bilinear_interpolation', FALSE),
     '#description' => t('This option enables bilinear interpolation of the distortion which makes the image look smoother, but it is more CPU intensive.'),
   );
   //double vision
@@ -224,10 +229,10 @@ function image_captcha_settings_form_validate($form, &$form_state) {
   }
 
   // check color settings
- if (!preg_match('/^#([0-9a-fA-F]{3}){1,2}$/', $form_state['values']['image_captcha_background_color'])){
-  form_set_error('image_captcha_background_color', t('Background color is not a valid hexadecimal color value.'));
+  if (!preg_match('/^#([0-9a-fA-F]{3}){1,2}$/', $form_state['values']['image_captcha_background_color'])) {
+    form_set_error('image_captcha_background_color', t('Background color is not a valid hexadecimal color value.'));
   }
-  if (!preg_match('/^#([0-9a-fA-F]{3}){1,2}$/', $form_state['values']['image_captcha_foreground_color'])){
+  if (!preg_match('/^#([0-9a-fA-F]{3}){1,2}$/', $form_state['values']['image_captcha_foreground_color'])) {
     form_set_error('image_captcha_foreground_color', t('Text color is not a valid hexadecimal color value.'));
   }
 }
