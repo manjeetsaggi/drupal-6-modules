@@ -1,5 +1,5 @@
 <?php
-// $Id: user_relationships_ui.module,v 1.1.2.8 2008/10/28 11:28:44 alexk Exp $
+// $Id: user_relationships_ui.module,v 1.1.2.13 2009/03/24 11:07:55 alexk Exp $
 /**
  * @file
  * UI components of user_relationships
@@ -89,6 +89,7 @@ function _user_relationships_ui_default_messages() {
       'non_existant_type'       => 'This relationship type does not exist.',
       'unknown_error'           => 'An error has occurred. Please contact the site administrator.',
       'relationship_type_not_set' => 'Please choose the type of relationship.',
+      'relationship_type_not_allowed' => 'You may not create %relationship_name relationships.',
     ),
   );
 }
@@ -201,7 +202,7 @@ function _user_relationships_ui_actions_between(&$viewer, &$viewed) {
   $types_count = (int)db_result(db_query("SELECT COUNT(*) FROM {user_relationship_types}"));
   //relationship request link(s)
   $relationships_count = user_relationships_load(array('between' => array($viewer->uid, $viewed->uid)), array('count' => TRUE));
-  if (!$relationships_count || (variable_get('user_relationships_ui_allow_multiple', TRUE) && ($relationships_count < $types_count))) {
+  if (!$relationships_count || (variable_get('user_relationships_allow_multiple', TRUE) && ($relationships_count < $types_count))) {
     //if configured, create direct links
     if (variable_get('user_relationships_show_direct_links', 1)) {
       //draw a single link, or one for each relationship type
@@ -209,6 +210,10 @@ function _user_relationships_ui_actions_between(&$viewer, &$viewed) {
       $all_relationships = user_relationships_types_load();
       foreach ($all_relationships as $rtid => $relationship) {
         if ($existing_relationships[$rtid]) {
+          continue;
+        }
+        //check this type can be requested
+        if (!user_relationships_api_can_request($viewer, $relationship)) {
           continue;
         }
         $list[] = theme('user_relationships_request_relationship_direct_link', $viewed, $relationship);
@@ -308,6 +313,11 @@ function user_relationships_ui_init() {
   drupal_add_js(USER_RELATIONSHIPS_UI_PATH .'/user_relationships_ui.js');
   drupal_add_css(USER_RELATIONSHIPS_UI_PATH .'/user_relationships_ui.css');
   $settings['user_relationships_ui']['loadingimage'] = url(USER_RELATIONSHIPS_UI_PATH .'/images/loadingAnimation.gif');
+  $settings['user_relationships_ui']['position'] = array(
+    'position' => variable_get('user_relationships_position', 'absolute'), 
+    'left' => variable_get('user_relationships_left', '0'), 
+    'top' => variable_get('user_relationships_top', '0'),
+  );
   drupal_add_js($settings, 'setting');
 }
 
@@ -461,7 +471,7 @@ function user_relationships_ui_menu() {
   $items['user/%user/relationships'] = array(
     'title'             => t('Relationships'),
     'access callback'   => 'user_relationships_ui_check_access',
-    'access arguments'  => array('admin'),
+    'access arguments'  => array(array('admin', 'user'), 1),
     'page callback'     => 'user_relationships_page',
     'page arguments'    => array(1),
     'file'              => 'user_relationships_ui.pages.inc',
@@ -471,14 +481,14 @@ function user_relationships_ui_menu() {
       'type'              => MENU_NORMAL_ITEM|MENU_DEFAULT_LOCAL_TASK,
       'weight'            => -10,
       'access callback'   => 'user_relationships_ui_check_access',
-      'access arguments'  => array('admin'),
+      'access arguments'  => array(array('admin', 'user'), 1),
     );
     $items['user/%user/relationships/requests'] = array(
       'title'             => t('Pending'),
       'type'              => MENU_NORMAL_ITEM|MENU_LOCAL_TASK,
       'weight'            => -9,
       'access callback'   => 'user_relationships_ui_check_access',
-      'access arguments'  => array('admin'),
+      'access arguments'  => array(array('admin', 'user'), 1),
       'page callback'     => 'user_relationships_pending_requests_page',
       'page arguments'    => array(1),
       'file'              => 'user_relationships_ui.pages.inc',
@@ -489,7 +499,7 @@ function user_relationships_ui_menu() {
         'title'             => t($relationship->plural_name ? $relationship->plural_name : $relationship->name),
         'type'              => MENU_NORMAL_ITEM|MENU_LOCAL_TASK,
         'access callback'   => 'user_relationships_ui_check_access',
-        'access arguments'  => array('admin'),
+        'access arguments'  => array(array('admin', 'user'), 1),
         'page callback'     => 'user_relationships_page',
         'page arguments'    => array(1, 3),
         'file'              => 'user_relationships_ui.pages.inc',
@@ -580,7 +590,7 @@ function user_relationships_ui_user($type, &$edit, &$account, $category = NULL) 
         '#weight' => 5
       );
 
-      if (variable_get('user_relationships_ui_allow_auto_approve', FALSE) && ($relationships = user_relationships_types_load())) {
+      if (variable_get('user_relationships_allow_auto_approve', FALSE) && ($relationships = user_relationships_types_load())) {
         if (!is_array($edit['user_relationships_ui_auto_approve'])) {
           $edit['user_relationships_ui_auto_approve'] = array();
         }

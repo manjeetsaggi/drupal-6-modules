@@ -1,5 +1,5 @@
 <?php
-// $Id: user_relationships_ui.forms.inc,v 1.1.2.7 2008/10/28 11:28:44 alexk Exp $
+// $Id: user_relationships_ui.forms.inc,v 1.1.2.10 2009/02/27 18:16:47 alexk Exp $
 
 /**
  * @file
@@ -13,13 +13,18 @@ module_load_include('inc', 'user_relationships_ui', 'user_relationships_ui.actio
 function user_relationships_ui_request_form($requester, $requestee, $form_values = NULL) {
   $current_relationships = user_relationships_load(array('between' => array($requester, $requestee)), array('sort' => 'rtid'));
 
-  $results = db_query(
-    "SELECT * FROM {user_relationship_types}" . ($current_relationships ? " WHERE rtid NOT IN ('%s') ORDER BY name" : ''),
-    implode(',', array_keys($current_relationships))
-  );
+  $relationship_types = user_relationships_types_load();
   $relationships = array();
-  while ($result = db_fetch_object($results)) {
-    $relationships[$result->rtid] = $result->name;
+  foreach ($relationship_types as $rtype) {
+    //exclude already established relationships
+    if ($current_relationships[$rtype->rtid]) {
+      continue;
+    }
+    //exclude types that are not allowed
+    if (!user_relationships_api_can_request($requester, $rtype)) {
+      continue;
+    }
+    $relationships[$rtype->rtid] = $rtype->name;
   }
   //try to find out desired relationship type
   if ($form_values['rtid']) {//given through form
@@ -108,6 +113,16 @@ function user_relationships_ui_request(&$form_state, $requestee) {
     );
     return $form;
   }
+  else if (!variable_get('user_relationships_allow_multiple', TRUE) &&
+           $relationships_count = user_relationships_load(array('between' => array($requester->uid, $requestee->uid)), array('count' => TRUE))) {
+    $form['error'] = array(
+      '#type' => 'markup',
+      '#prefix' => '<div>',
+      '#suffix' => '</div>',
+      '#value' => user_relationships_ui_get_message('too_many_relationships') . $script
+    );
+    return $form;
+  }
   // This is the default which means we will display the form
   $form = user_relationships_ui_request_form($requester->uid, $requestee->uid, $form_state);
   if (!$form['rtid']) {
@@ -171,16 +186,21 @@ function user_relationships_ui_pending_requested(&$form_state, $action, $account
   //pick the correct question message: approve and disapprove are requests to current user, cancel is a request from current user
   switch ($action) {
     case 'approve':
+      $confirmation_message = 'Are you sure you want to approve the %relationship_name relationship request from !name?';
+      $action_message = 'Approve relationship';
+      break;
     case 'disapprove':
-      $confirmation_message = 'Are you sure you want to @action the %relationship_name relationship request from !name?';
+      $confirmation_message = 'Are you sure you want to disapprove the %relationship_name relationship request from !name?';
+      $action_message = 'Disapprove relationship';
       break;
     default:
-      $confirmation_message = 'Are you sure you want to @action your %relationship_name relationship request to !name?';
+      $confirmation_message = 'Are you sure you want to cancel your %relationship_name relationship request to !name?';
+      $action_message = 'Cancel relationship';
   }
 
   $output = confirm_form(
     $form,
-    t('@action relationship', array('@action' => ucfirst($action))),
+    t($action_message),
     ($viewed_id == $user->id ? 'relationships/requests' : "user/{$viewed_id}/relationships/requests"),
 
     t($confirmation_message, array(
