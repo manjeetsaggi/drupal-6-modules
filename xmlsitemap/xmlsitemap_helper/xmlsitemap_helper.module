@@ -1,5 +1,5 @@
 <?php
-// $Id: xmlsitemap_helper.module,v 1.1.2.4 2009/03/18 21:04:15 kiam Exp $
+// $Id: xmlsitemap_helper.module,v 1.1.2.5 2009/04/07 15:06:23 kiam Exp $
 
 /**
  * @file
@@ -158,6 +158,25 @@ function xmlsitemap_helper_update_sitemap($module = 'xmlsitemap') {
     $modules[$module] = TRUE;
     variable_set('xmlsitemap_update_sitemap_request', $modules);
   }
+}
+
+/**
+ * Return an array used to add additional form fields in the user form.
+ */
+function xmlsitemap_helper_user_form_fieldset() {
+  static $done = FALSE;
+  $form = array();
+  if (!$done) {
+    $form['xmlsitemap'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('XML site map'),
+      '#collapsible' => TRUE,
+      '#access' => user_access('override profile settings') || user_access('administer users'),
+      '#weight' => 7,
+    );
+    $done = TRUE;
+  }
+  return $form;
 }
 
 /**

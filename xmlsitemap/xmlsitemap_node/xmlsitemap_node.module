@@ -1,5 +1,5 @@
 <?php
-// $Id: xmlsitemap_node.module,v 1.19.2.82 2009/03/28 19:18:29 kiam Exp $
+// $Id: xmlsitemap_node.module,v 1.19.2.83 2009/04/07 15:06:29 kiam Exp $
 
 /**
  * @file
@@ -244,13 +244,7 @@ function xmlsitemap_node_user($op, &$edit, &$account, $category = NULL) {
         return array();
       }
     case 'register':
-      $form['xmlsitemap'] = array(
-        '#type' => 'fieldset',
-        '#title' => t('XML site map'),
-        '#collapsible' => TRUE,
-        '#access' => user_access('override profile settings') || user_access('administer users'),
-        '#weight' => 7,
-      );
+      $form = xmlsitemap_helper_user_form_fieldset();
       $form['xmlsitemap']['xmlsitemap_node_posts_count'] = array(
         '#type' => 'select',
         '#title' => t('User posts threshold'),
