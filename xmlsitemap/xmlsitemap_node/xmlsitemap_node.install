@@ -1,5 +1,5 @@
 <?php
-// $Id: xmlsitemap_node.install,v 1.9.2.47 2009/04/06 14:47:01 kiam Exp $
+// $Id: xmlsitemap_node.install,v 1.9.2.48 2009/04/07 14:35:35 kiam Exp $
 
 /**
  * @file
@@ -79,6 +79,11 @@ function xmlsitemap_node_schema() {
 function xmlsitemap_node_install() {
   drupal_install_schema('xmlsitemap_node');
   db_query("UPDATE {system} SET weight = 5 WHERE name = 'xmlsitemap_node'");
+  module_load_include('inc', 'xmlsitemap_helper', 'includes/xmlsitemap_helper.install');
+  xmlsitemap_helper_add_database_batch_operation(
+    drupal_get_path('module', 'xmlsitemap_node') .'/xmlsitemap_node.install',
+    '_xmlsitemap_node_update_database_batch'
+  );
 }
 
 /**

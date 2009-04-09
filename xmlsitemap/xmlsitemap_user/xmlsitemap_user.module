@@ -1,5 +1,5 @@
 <?php
-// $Id: xmlsitemap_user.module,v 1.12.2.59 2009/03/28 19:18:25 kiam Exp $
+// $Id: xmlsitemap_user.module,v 1.12.2.60 2009/04/07 15:06:26 kiam Exp $
 
 /**
  * @file
@@ -100,6 +100,7 @@ function xmlsitemap_user_user($op, &$edit, &$account, $category = NULL) {
       else {
         $default_priority = variable_get('xmlsitemap_user_default_priority', 0.5);
       }
+      $form = xmlsitemap_helper_user_form_fieldset();
       $form['xmlsitemap']['xmlsitemap_user_priority'] = array(
         '#type' => 'select',
         '#title' => t('User priority'),
