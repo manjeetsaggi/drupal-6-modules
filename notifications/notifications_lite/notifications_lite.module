@@ -1,5 +1,5 @@
 <?php
-// $Id: notifications_lite.module,v 1.1.4.5 2008/12/26 17:19:36 jareyero Exp $
+// $Id: notifications_lite.module,v 1.1.4.6 2009/02/21 18:38:00 jareyero Exp $
 /**
  * @file
  *   Simple notifications API
@@ -157,6 +157,8 @@ function notifications_lite_messaging($op, $arg1 = NULL, $arg2 = NULL, $arg3 = N
         'module' => 'notifications_lite',
         'name' => t('Simple notifications'),
         'help' => t('The subject and main body will be provided by the event itself'),
+        'description' => t('Simple notifications triggered by other modules using the Notifications Lite API module.'),
+        'fallback' => 'notifications-event',
       );
       return $info;
     case 'message keys':      

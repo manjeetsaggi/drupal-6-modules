@@ -1,5 +1,5 @@
 <?php
-// $Id: xmlsitemap_file.install,v 1.1.4.31 2009/03/11 16:01:11 kiam Exp $
+// $Id: xmlsitemap_file.install,v 1.1.4.32 2009/04/18 17:08:33 kiam Exp $
 
 /**
  * @file
@@ -14,7 +14,6 @@
  * Implementation of hook_enable().
  */
 function xmlsitemap_file_enable() {
-  drupal_load('module', 'xmlsitemap_helper');
   xmlsitemap_helper_update_sitemap('xmlsitemap_file');
 }
 
@@ -22,7 +21,6 @@ function xmlsitemap_file_enable() {
  * Implementation of hook_disable().
  */
 function xmlsitemap_file_disable() {
-  drupal_load('module', 'xmlsitemap_helper');
   xmlsitemap_helper_update_sitemap('xmlsitemap_file');
 }
 
@@ -57,7 +55,6 @@ function xmlsitemap_file_update_6111() {
  */
 function xmlsitemap_file_update_6112() {
   $ret[] = update_sql("DELETE FROM {xmlsitemap} WHERE module = 'xmlsitemap_file'");
-  drupal_load('module', 'xmlsitemap_helper');
   xmlsitemap_helper_update_sitemap('xmlsitemap_file');
   return $ret;
 }

@@ -1,5 +1,5 @@
 <?php
-// $Id: xmlsitemap_helper.module,v 1.1.2.5 2009/04/07 15:06:23 kiam Exp $
+// $Id: xmlsitemap_helper.module,v 1.1.2.12 2009/04/19 10:53:28 kiam Exp $
 
 /**
  * @file
@@ -44,6 +44,18 @@ function xmlsitemap_helper_batch_operations_finished($success, $results, $operat
 }
 
 /**
+ * Return the string used to identify the cache file for the site map content.
+ */
+function xmlsitemap_helper_cache_id() {
+  static $id;
+  global $base_url, $language;
+  if (!isset($id)) {
+    $id = substr(md5($language->language . $base_url), 0, 8);
+  }
+  return $id;
+}
+
+/**
  * Determine the frequency of updates to a link.
  * @param $interval
  *  The number of seconds since the last change, or the number of seconds
@@ -70,6 +82,17 @@ function xmlsitemap_helper_frequency($interval) {
     }
   }
   return $frequency;
+}
+
+/**
+ * Return the number of links present in xmlsitemap table.
+ */
+function xmlsitemap_helper_link_count() {
+  static $link_count;
+  if (!isset($link_count)) {
+    $link_count = db_result(db_query("SELECT COUNT(xsm.loc)". xmlsitemap_helper_sitemap_query()));
+  }
+  return $link_count;
 }
 
 /**
@@ -112,6 +135,7 @@ function xmlsitemap_helper_priority_options($option = '') {
 function xmlsitemap_helper_sitemap_query() {
   global $language;
   $default = language_default();
+  $language_query = "AND xsm.language IN ('". $language->language ."', '')";
   switch(variable_get('language_negotiation', LANGUAGE_NEGOTIATION_NONE)) {
     case LANGUAGE_NEGOTIATION_NONE:
       $language_query = '';
@@ -121,12 +145,7 @@ function xmlsitemap_helper_sitemap_query() {
       if (variable_get('xmlsitemap_all_links_to_default_language', 0) && $language->language == $default->language) {
         $language_query = '';
       }
-      else {
-        $language_query = "AND (xsm.language = '". $language->language ."' OR xsm.language = '')";
-      }
       break;
-    case LANGUAGE_NEGOTIATION_DOMAIN:
-      $language_query = "AND (xsm.language = '". $language->language ."' OR xsm.language = '')";
   }
   return "
     FROM {xmlsitemap} xsm
@@ -146,7 +165,6 @@ function xmlsitemap_helper_sitemap_query() {
  */
 function xmlsitemap_helper_update_sitemap($module = 'xmlsitemap') {
   menu_rebuild();
-  db_query("DELETE FROM {cache_page} WHERE cid LIKE '%%sitemap%%.xml'");
   if (!variable_get('xmlsitemap_sitemap_is_changed', FALSE)) {
     variable_set('xmlsitemap_sitemap_is_changed', TRUE);
   }

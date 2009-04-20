@@ -1,5 +1,5 @@
 <?php
-// $Id: xmlsitemap_node.module,v 1.19.2.83 2009/04/07 15:06:29 kiam Exp $
+// $Id: xmlsitemap_node.module,v 1.19.2.84 2009/04/15 18:17:31 kiam Exp $
 
 /**
  * @file
@@ -328,8 +328,10 @@ function xmlsitemap_node_xmlsitemap_links($modules) {
         }
         $priority += $node->comment_ratio * variable_get('xmlsitemap_node_comment_priority', 0.2);
       }
-      $row->priority = min(max(round($priority, 1), 0.0), 1.0);
-      drupal_write_record('xmlsitemap', $row);
+      if ($priority != -1.0) {
+        $row->priority = min(max(round($priority, 1), 0.0), 1.0);
+        drupal_write_record('xmlsitemap', $row);
+      }
     }
   }
 }

@@ -1,15 +1,43 @@
-// $Id: CHANGELOG.txt,v 1.1.2.11.2.35 2009/01/30 20:45:46 jareyero Exp $
+// $Id: CHANGELOG.txt,v 1.1.2.11.2.51.2.1 2009/04/17 18:48:58 jareyero Exp $
 
 TO DO
 ------
-* Add CAN-SPAM complicance, 'Unsubscribe from all'..
 * Use actions and triggers instead of old notifications' events, see http://drupal.org/node/260100
-* Streamline the UI. Replace the user account tabs with a single page using collapsible fieldsets providing some more global options for each type (method, interval for each subscription type)
-* Move some left parts of the UI provided by modules into the notifications_ui module so we can have a drop-in replacement to provide a yet more simple UI.
 * Support for persistent notifications that will be triggered with a given interval until the user takes some action. Look into the subscription system to see whether this is currently possible with a plug-in or we need some api extensions.
 * Support for notifications in multiple languages, depending on user language
 
-6.x-1.0 to ......
+6.x-1.2-beta1 to ..........
+---------------------------
+- Fixed WSOD with notifications_ui, renamed old functions, #434766
+- Fixing releases, moved new development to DRUPAL--6-2 branch
+
+6.x-1.1 to 6.x-1.2-beta1
+---------------------------
+- Added subscription options to user account, optionally in block too.
+- Reworked UI module, more options, moved some stuff from other modules there.
+- Improved query builder used for notifications_get_subscriptions() and notifications_delete_subscriptions()
+- New UI for creating new subscriptions with autocomplete fields and drop downs.
+- User account tabs now provided by Notifications UI, can be disabled.
+- Added new account overview page and administration page
+- Fixed upgrade script error (pending pgsql testing), #375746
+- Added field type handling for the query builder (performance++ and pgsql support)
+- Fixed comment token parameters, by peter.swietoslawski, #420342
+- Notifications UI improvements. Better API, new form option for nodes..
+- Created node library for functions to be reused by multiple plug-ins.
+- Updated FeedAPI plug-in for 6.x (untested). Added some theming for feed items
+- Fixed: Leftover debug message, by David Lesieur, #402306
+- Fixed: Autosubscribe on Create and Comment - but NOT on update, by a_c_m, #406072
+- Changed node/comment form fieldset so it works better with notifications_team, by David Goode.
+- Reworded and simplified the 'Disable notifications' option
+- Fixed events where being deleted when doing a test run
+- Fixed bulk deletion for 'manage subscriptions' page
+- Fixed wrong placeholders for subscription names, #376298
+- Fixed typo in node comment template, by bas.hr, #374725
+- Added fallback information for message templates, some better help texts.
+- Fixed notifications for unpublished nodes, #369633
+- New plug-in notifications_views, by Young Hahn and David Goode, #260435
+
+6.x-1.0 to 6.x-1.1
 -----------------
 - Reworked notifications_save_subscription(): allow similar subscriptions and return status value
 - Vocabularies default to disabled for tag subscriptions, #329208

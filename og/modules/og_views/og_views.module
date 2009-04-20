@@ -1,5 +1,5 @@
 <?php
-// $Id: og_views.module,v 1.18 2009/04/07 20:57:06 weitzman Exp $
+// $Id: og_views.module,v 1.18.4.1 2009/04/10 03:32:02 weitzman Exp $
 
 /**
  * Implementation of hook_menu().
@@ -32,6 +32,7 @@ function og_views_menu() {
 // An menu access callback.
 function og_menu_access_picture($gid) {
   $view = views_get_view('og_members_faces');
+  // Not working properly. See  http://drupal.org/node/345144.
   return og_is_picture() && og_is_group_member($gid) && !$view->disabled;
 }
 
