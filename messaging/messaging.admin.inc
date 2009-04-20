@@ -1,5 +1,5 @@
 <?php
-// $Id: messaging.admin.inc,v 1.1.2.13 2009/04/01 11:54:50 jareyero Exp $
+// $Id: messaging.admin.inc,v 1.1.2.13.2.1 2009/04/19 12:02:44 jareyero Exp $
 /**
  * @file
  * Messaging Framework - Admin UI
@@ -220,12 +220,12 @@ function messaging_admin_message_form_submit($form, &$form_state) {
   foreach ($form_state['values']['messages'] as $key => $messages) {
     foreach ($messages as $method => $text) {
       db_query("DELETE FROM {messaging_message_parts} WHERE type = '%s' AND msgkey = '%s' AND method = '%s'", $group, $key, $method);
-      if ($text = trim($text)) {
+      if (trim($text)) {
         db_query("INSERT INTO {messaging_message_parts} (type, msgkey, method, module, message) VALUES('%s', '%s', '%s', '', '%s')", $group, $key, $method, $text);
       }
     }
   }
-  drupal_set_message('The messages have been updated');
+  drupal_set_message('The message templates have been updated');
 }
 
 /**
