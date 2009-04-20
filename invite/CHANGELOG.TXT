@@ -1,7 +1,16 @@
-// $Id: CHANGELOG.TXT,v 1.7.2.1 2008/10/06 13:03:08 smk Exp $
+// $Id: CHANGELOG.TXT,v 1.7.2.5 2009/04/19 21:13:29 sun Exp $
 
 Invite 6.x-2.x, xxxx-xx-xx
 --------------------------
+
+
+Invite 6.x-2.0-ALPHA-1, 2009-04-19
+----------------------------------
+#310775 by Barrett, sun: Fixed SQL error when no emails are left after filtering
+  out registered users.
+#323661 by tcconway: Removed "Track" from local task title "Track Invitations".
+#214426 by barako: Updated French translation.
+
 New features:
 - #219266 by jcfiala, wojtha, smk-ka: Port to D6.
 - Added administrator interface showing invite history.
