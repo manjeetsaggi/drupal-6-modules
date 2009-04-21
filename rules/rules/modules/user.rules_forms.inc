@@ -1,5 +1,7 @@
 <?php
-// $Id: user.rules_forms.inc,v 1.1.2.2 2008/07/14 15:48:28 fago Exp $
+// $Id: user.rules_forms.inc,v 1.1.2.4 2009/04/19 15:03:43 fago Exp $
+
+
 /**
  * @file Rules configuration forms for the user module
  */
@@ -16,7 +18,6 @@ function rules_condition_user_hasrole_form($settings, &$form) {
     '#description' => t('If matching against all selected roles the user must have <em>all</em> the roles checked in the list above.'),
     '#default_value' => isset($settings['operation']) ? $settings['operation'] : 'OR',
   );
-  return $form;
 }
 
 function rules_condition_user_hasrole_submit(&$settings, $form, $form_state) {
@@ -73,13 +74,13 @@ function rules_action_load_user_form($settings, &$form) {
     '#autocomplete_path' => 'user/autocomplete',
     '#default_value' => isset($settings['username']) ? $settings['username'] : '',
     '#weight' => -1,
-    '#description' => t('Name of the user to be loaded.')
+    '#description' => t('Name of the user to be loaded.'),
   );
   $form['settings']['userid'] = array(
     '#type' => 'textfield',
     '#title' => t('User id'),
     '#default_value' => isset($settings['userid']) ? $settings['userid'] : '',
-    '#description' => t('Id of the user to be loaded.')
+    '#description' => t('Id of the user to be loaded.'),
   );
 }
 
@@ -88,3 +89,4 @@ function rules_action_load_user_validate($form, $form_state) {
     form_set_error('username', t('You have to enter the user name or the user id.'));
   }
 }
+

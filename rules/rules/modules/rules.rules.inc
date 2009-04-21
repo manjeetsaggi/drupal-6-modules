@@ -1,5 +1,7 @@
 <?php
-// $Id: rules.rules.inc,v 1.1.2.29 2009/02/05 10:18:38 fago Exp $
+// $Id: rules.rules.inc,v 1.1.2.32 2009/04/19 21:21:31 fago Exp $
+
+
 /**
  * @file rules integration for the rules module
  */
@@ -72,7 +74,6 @@ class rules_data_type_string extends rules_data_type {
  * @ingroup rules
  */
 class rules_data_type_number extends rules_data_type_string {
-
   function check_value($info, $value) {
     return (float)$value;
   }
@@ -83,12 +84,11 @@ class rules_data_type_number extends rules_data_type_string {
  * @ingroup rules
  */
 class rules_data_type_date extends rules_data_type_string {
-
   function get_default_input_form($info, $value) {
     $info += array('long' => FALSE, 'required' => TRUE, 'description' => '');
     $value = isset($value) ? $value : date('Y-m-d H:i:s', time() + 86400);
     $info['description'] = $info['description'] .' '. t('Format: %format or other values known by the PHP !strtotime function like "+1 day". ', array('%format' => date('Y-m-d H:i:s', time() + 86400), '!strtotime' => l('strtotime()', 'http://php.net/strtotime')));
-    $info['description'] .= '<br />'. t('You may also enter a timestamp in GMT. E.g. use !code together with the PHP input evalutor to specify a date one day after the evaluation time. ', array('!code' => '<pre>'. check_plain('<?php echo time() + 86400 * 1; ?>'). '</pre>'));
+    $info['description'] .= '<br />'. t('You may also enter a timestamp in GMT. E.g. use !code together with the PHP input evalutor to specify a date one day after the evaluation time. ', array('!code' => '<pre>'. check_plain('<?php echo time() + 86400 * 1; ?>') .'</pre>'));
     return array(
       '#type' => $info['long'] ? 'textarea' : 'textfield',
       '#title' => $info['label'],
@@ -112,13 +112,11 @@ class rules_data_type_date extends rules_data_type_string {
   }
 }
 
-
 /**
  * Rules boolean data type
  * @ingroup rules
  */
 class rules_data_type_boolean extends rules_data_type_string {
-
   function check_value($info, $value) {
     return (boolean)$value;
   }
@@ -135,7 +133,6 @@ class rules_data_type_boolean extends rules_data_type_string {
     );
   }
 }
-
 
 /**
  * Implementation of hook_rules_condition_info().
@@ -171,7 +168,6 @@ function rules_rules_condition_info() {
   );
 }
 
-
 /**
  * Condition Implementation: Textual comparison.
  */
@@ -186,8 +182,10 @@ function rules_condition_number_compare($number1, $number2, $settings) {
   switch ($settings['operation']) {
     case 'greater':
       return $number1 > $number2;
+
     case 'equal':
       return $number1 == $number2;
+
     case 'less':
       return $number1 < $number2;
   }
@@ -200,9 +198,6 @@ function rules_condition_check_boolean($boolean) {
   return (bool)$boolean;
 }
 
-
-
-
 /**
  * Implementation of hook_rules_action_info().
  * @ingroup rules
@@ -211,7 +206,7 @@ function rules_rules_action_info() {
   $items = array();
   // Add actions for all rule sets.
   foreach (rules_get_configured_items('rule_sets') as $name => $set_info) {
-    $items[ 'rules_action_invoke_set_'. $name ] = $set_info + array(
+    $items['rules_action_invoke_set_'. $name] = $set_info + array(
       'module' => 'Rule Sets',
       'base' => 'rules_action_invoke_set',
       'set' => $name,
@@ -221,14 +216,14 @@ function rules_rules_action_info() {
   $core_actions = actions_list();
   foreach ($core_actions as $name => $core_action_info) {
     $type_map = rules_gather_data('rules_action_type_map');
-    $items[ 'rules_core_'. $name ] = rules_core_action_transform_info($name, $core_action_info, $type_map);
+    $items['rules_core_'. $name] = rules_core_action_transform_info($name, $core_action_info, $type_map);
   }
   $items = array_filter($items);
 
   // Add an action to add a new variable for all not identifiable data types
   foreach (rules_get_data_types() as $name => $type_info) {
     if (isset($type_info['identifiable']) && !$type_info['identifiable'] && (!isset($type_info['hidden']) || !$type_info['hidden'])) {
-      $items[ 'rules_add_var_'. $name ] = array(
+      $items['rules_add_var_'. $name] = array(
         'module' => 'Rules',
         'base' => 'rules_action_save_variable',
         'label' => t('Add a new @type variable', array('@type' => drupal_strtolower($type_info['label']))),
@@ -248,7 +243,7 @@ function rules_rules_action_info() {
   // Add an action to save savable data types intelligently
   foreach (rules_get_data_types() as $name => $type_info) {
     if (isset($type_info['savable']) && $type_info['savable'] && (!isset($type_info['hidden']) || !$type_info['hidden'])) {
-      $items[ 'rules_save_var_'. $name ] = array(
+      $items['rules_save_var_'. $name] = array(
         'module' => isset($type_info['module']) ? $type_info['module'] : 'Rules',
         'base' => 'rules_action_save_variable',
         'label' => t('Save a @type', array('@type' => drupal_strtolower($type_info['label']))),
@@ -263,18 +258,46 @@ function rules_rules_action_info() {
 }
 
 /**
- * Base action implementation for invoking all rule sets
+ * Base action implementation for invoking all rule sets.
+ *
+ * We could just call rules_invoke_rule_set(), but then the changed variables
+ * would be saved immediately. Instead we create a new evaluation state,
+ * mapping to existing variables, so the outer state takes care of saving changes
+ * for those variables.
  */
 function rules_action_invoke_set() {
-  $args = func_get_args();
-  $state = array_pop($args);
-  $element = array_pop($args);
+  $args     = func_get_args();
+  $state    = array_pop($args);
+  $element  = array_pop($args);
   $settings = array_pop($args);
+  $set_name = $element['#info']['set'];
+  $set      = rules_get_rule_set($set_name);
 
-  array_unshift($args, $element['#info']['set']);
-  call_user_func_array('rules_invoke_rule_set', $args);
+  // We create a new evaluation state, that maps the variables to the outer
+  // state whenever possible. If necessary, we initialize new variables. So
+  // we have to care for saving the changes of the new variables only.
+  $new_state = array('set_info' => $set['info']);
+  $new_vars = array();
+  $map = rules_get_mapped_argument_names($element);
+
+  foreach (array_keys($set['info']['arguments']) as $i => $name) {
+    if (isset($map[$name]) && isset($state['variables'][$map[$name]])) {
+      $new_state['variables'][$name] =& $state['variables'][$map[$name]];
+    }
+    else {
+      $variable = new rules_variable;
+      $variable->construct($new_state, $name, $args[$i]);
+      $new_vars[] =& $variable;
+    }
+  }
+  // Evaluate, but don't save all variables.
+  rules_evaluate_rule_set($set_name, $set, $new_state, FALSE);
+
+  // Newly created variables are dropped now, so save changes.
+  foreach ($new_vars as $variable) {
+    $variable->save_changes();
+  }
 }
-
 
 /**
  * Base action implementation for adding a new variable and saving variables
@@ -282,8 +305,6 @@ function rules_action_invoke_set() {
 function rules_action_save_variable($name, $variable) {
   return array($name => $variable);
 }
-
-
 
 /**
  * Transforms action info written for core to the rules format.
@@ -305,7 +326,7 @@ function rules_core_action_transform_info($name, $core_action_info, $type_map) {
   // Special handling of labels for node actions
   // For consistency with the rule naming convention of calling a node "content".
   if ($core_action_info['type'] == 'node') {
-    $info['label'] = str_replace('post', t('content'), $info['label']);
+    $info['label'] = str_replace(t('post'), t('content'), $info['label']);
   }
 
   $info['base'] = 'rules_core_action_execute';
@@ -335,7 +356,7 @@ function rules_core_action_execute_form($settings, &$form, &$form_state) {
   $element = $form_state['element'];
   $info = rules_get_element_info($element);
   if ($info['configurable']) {
-    $function = $info['action_name']. '_form';
+    $function = $info['action_name'] .'_form';
     $form['settings'] = $function($settings);
   }
   if ($info['arguments']) {
@@ -361,7 +382,7 @@ function rules_core_action_execute_form($settings, &$form, &$form_state) {
 function rules_core_action_execute_validate(&$form, &$form_state) {
   $element = $form_state['element'];
   $info = rules_get_element_info($element);
-  if ($info['configurable'] && function_exists($function = $info['action_name']. '_validate')) {
+  if ($info['configurable'] && function_exists($function = $info['action_name'] .'_validate')) {
     $function($form['settings'], $form_state);
   }
 }
@@ -373,11 +394,10 @@ function rules_core_action_execute_submit(&$settings, &$form, &$form_state) {
   $element = $form_state['element'];
   $info = rules_get_element_info($element);
   if ($info['configurable']) {
-    $function = $info['action_name']. '_submit';
+    $function = $info['action_name'] .'_submit';
     $settings = $function($form['settings'], $form_state) + $settings;
   }
 }
-
 
 /**
  * Implementation of hook_rules_action_type_map().
@@ -403,7 +423,7 @@ function rules_rules_action_type_map() {
         'comment' => array(
           'label' => t('Comment'),
           'type' => 'comment',
-         ),
+        ),
       ),
     ),
     'user' => array(
@@ -417,3 +437,4 @@ function rules_rules_action_type_map() {
     ),
   );
 }
+

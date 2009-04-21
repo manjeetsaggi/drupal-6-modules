@@ -1,11 +1,12 @@
 <?php
-// $Id: rules.admin_export.inc,v 1.1.2.8 2009/02/25 10:48:25 fago Exp $
+// $Id: rules_admin.export.inc,v 1.1.2.5 2009/04/20 11:26:45 fago Exp $
+
 
 /**
  * @file Rules Import/Export Admin UI
  */
 
-require_once drupal_get_path('module', 'rules') . '/rules.admin.inc';
+rules_include('rules_admin');
 
 /**
  * Imports a configuration of rules, rule sets, ..
@@ -59,11 +60,14 @@ function rules_item_rule_import(&$name, &$rule) {
     }
   }
   if (isset($rule['#status']) && $rule['#status'] == 'custom' && (!isset($rules[$name]) || $rules[$name]['#label'] != $rule['#label'] || $rules[$name]['#set'] != $rule['#set'])) {
-    //generate a new unique name for this rule
-    $name = _rules_admin_rule_get_new_unique_name();
+    if (strpos($name, 'rules_') === 0) {
+      // Generate a new unique name for this rule, but only if it's "our rule".
+      $name = _rules_admin_rule_get_new_unique_name();
+    }
     $rule['#status'] = 'custom';
   }
 }
+
 /**
  * Item type callback: Customize to be imported rule sets
  */
@@ -113,8 +117,6 @@ function rules_admin_import_workflow_ng($import) {
   return TRUE;
 }
 
-
-
 /**
  * Exports one ore more configurations
  */
@@ -123,10 +125,27 @@ function rules_admin_form_export($form_state) {
   if (!isset($form_state['export'])) {
     $form['export'] = array('#tree' => TRUE);
     foreach (rules_get_items() as $name => $info) {
-      $form['export'][$name] = array(
+      $items = rules_admin_get_grouped_labels(rules_get_configured_items($name));
+      if (count($items)) {
+        $form['export'][$name] = array(
+          '#type' => 'select',
+          '#title' => t('Select the %label to export', array('%label' => $info['label'])),
+          '#options' => array(0 => '-') + $items,
+          '#multiple' => TRUE,
+          '#default_value' => 0,
+        );
+      }
+      else {
+        $msg = t('There are no %label to be exported.', array('%label' => $info['label']));
+        $form['export'][$name] = array('#value' => '<p>'. $msg .'</p>');
+      }
+    }
+    // Add the possibility to export by category
+    if ($tags = rules_admin_get_categories('rules') + rules_admin_get_categories('rule_sets')) {
+      $form['export_by_tag'] = array(
         '#type' => 'select',
-        '#title' => t('Select the %label to export', array('%label' => $info['label'])),
-        '#options' => rules_admin_get_grouped_labels(rules_get_configured_items($name)),
+        '#title' => t('Export by category'),
+        '#options' => array(0 => '-') + $tags,
         '#multiple' => TRUE,
         '#default_value' => 0,
       );
@@ -152,12 +171,26 @@ function rules_admin_form_export_submit($form, &$form_state) {
   foreach (array_filter($form_state['values']['export']) as $item_type => $item_names) {
     $items = rules_get_configured_items($item_type);
     $export[$item_type] = array_intersect_key($items, array_filter($item_names));
-    //allow item specific adaption
-    foreach ($export[$item_type] as $item_name => $item) {
-      rules_item_type_invoke($item_type, 'export', array($item_name, &$export[$item_type][$item_name], &$export));
+  }
+  if (isset($form_state['values']['export_by_tag']) && $tags_to_export = array_filter($form_state['values']['export_by_tag'])) {
+    // Search all items for the given tag.
+    foreach (rules_get_items() as $item_type => $info) {
+      $items = array_filter(rules_get_configured_items($item_type), 'rules_admin_element_filter');
+      foreach ($items as $name => $item) {
+        $categories = isset($item['categories']) ? $item['categories'] : (isset($item['#categories']) ? $item['#categories'] : array());
+        if (array_intersect($tags_to_export, $categories)) {
+          $export[$item_type][$name] = $item;
+        }
+      }
     }
   }
-  if ($export) {
+  if (array_filter($export)) {
+    foreach (array_keys($export) as $item_type) {
+      // Allow item specific adaption before exporting
+      foreach ($export[$item_type] as $item_name => $item) {
+        rules_item_type_invoke($item_type, 'export', array($item_name, &$export[$item_type][$item_name], &$export));
+      }
+    }
     $form_state['export'] = $export;
   }
   else {
@@ -177,3 +210,4 @@ function rules_item_rule_set_export($set_name, &$rule_set, &$export) {
     }
   }
 }
+

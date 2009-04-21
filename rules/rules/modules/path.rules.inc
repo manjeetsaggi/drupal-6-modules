@@ -1,5 +1,6 @@
 <?php
-// $Id: path.rules.inc,v 1.1.2.4 2008/10/03 10:21:04 fago Exp $
+// $Id: path.rules.inc,v 1.1.2.5 2009/04/19 15:03:43 fago Exp $
+
 
 /**
  * @file Rules integration for the path module
@@ -95,3 +96,4 @@ function rules_clean_path($path, $replace) {
     return $path;
   }
 }
+

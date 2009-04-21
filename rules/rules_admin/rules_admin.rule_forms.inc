@@ -1,23 +1,13 @@
 <?php
-// $Id: rules.admin.inc,v 1.1.2.71 2009/02/25 21:29:34 fago Exp $
+// $Id: rules_admin.rule_forms.inc,v 1.1.2.8 2009/04/19 21:21:31 fago Exp $
+
 
 /**
  * @file Rules Admin UI
+ *   Implements rule management and configuration screens.
  */
-require_once drupal_get_path('module', 'rules') . '/rules.admin_rule_proxy.inc';
 
-/**
- * Implementation of hook_help().
- */
-function rules_help($path, $arg) {
-  switch ($path) {
-    case 'admin/rules/rule_sets':
-      return '<p>' . t('Rule sets are similar in concept to subroutines and can be invoked by actions or manually by code or another module.') . '</p>';
-    case 'admin/rules/trigger':
-      return '<p>' . t('This is an overview about rules that are triggered by a certain event. A rule may contain conditions and actions, which are executed only when the conditions are met.') . '</p>';
-  }
-}
-
+rules_include('rules_admin');
 
 /**
  * Lists the available rules.
@@ -29,7 +19,7 @@ function rules_admin_form_overview(&$form_state) {
     '#type' => 'fieldset',
     '#title' => t('Filter'),
     '#collapsible' => TRUE,
-    '#collapsed' => isset($form_state['values']),
+    '#collapsed' => isset($form_state['values']) || count(rules_get_configured_items('rules')) < 20,
   );
   $form['filter']['set'] = array(
     '#type' => 'select',
@@ -40,7 +30,7 @@ function rules_admin_form_overview(&$form_state) {
   $form['filter']['category'] = array(
     '#type' => 'select',
     '#title' => t('Filter by category'),
-    '#options' => array(0 => '<All>') + rules_admin_get_categories(),
+    '#options' => array(0 => '<All>') + rules_admin_get_categories('rules'),
     '#default_value' => isset($form_state['values']['category']) ? $form_state['values']['category'] : 0,
   );
   $form['filter']['submit'] = array('#type' => 'submit', '#value' => t('Filter'));
@@ -48,14 +38,14 @@ function rules_admin_form_overview(&$form_state) {
   $category = !empty($form_state['values']['category']) ? $form_state['values']['category'] : FALSE;
   $set = !empty($form_state['values']['set']) ? 'event_'. $form_state['values']['set'] : FALSE;
 
-  $form['active_header'] = array('#value' => '<h3>'. t('Active rules'). '</h3>');
+  $form['active_header'] = array('#value' => '<h3>'. t('Active rules') .'</h3>');
   $form['active'] = rules_admin_overview_table(array('category' => $category, 'set' => $set, 'active' => TRUE));
   $form['active']['#suffix'] = '<br />';
-  $form['inactive_header'] = array('#value' => '<h3>'. t('Inactive rules'). '</h3>');
+  $form['inactive_header'] = array('#value' => '<h3>'. t('Inactive rules') .'</h3>');
   $form['inactive'] = rules_admin_overview_table(array('category' => $category, 'set' => $set, 'active' => FALSE));
 
   if (variable_get('rules_show_fixed', FALSE)) {
-    $form['fixed_header'] = array('#value' => '<h3>'. t('Fixed rules'). '</h3>');
+    $form['fixed_header'] = array('#value' => '<h3>'. t('Fixed rules') .'</h3>');
     $form['fixed'] = rules_admin_overview_table(array('category' => $category, 'set' => $set, 'active' => TRUE, 'fixed' => TRUE));
   }
   return $form;
@@ -63,65 +53,6 @@ function rules_admin_form_overview(&$form_state) {
 
 function rules_admin_form_overview_submit($form_id, &$form_state) {
   $form_state['rebuild'] = TRUE;
-}
-
-/**
- * Returns a table of rules filtered by the given parameters
- *
- * Supported parameters: fixed, category, set, active.
- * Category and set may be set to NULL to hide their columns.
- */
-function rules_admin_overview_table($params) {
-  $rules = rules_get_configured_items('rules');
-  _rules_element_defaults($rules);
-  rules_sort_children($rules);
-
-  //set parameter defaults
-  $params += array('category' => NULL, 'set' => NULL, 'active' => TRUE, 'fixed' => FALSE);
-  extract($params);
-
-  $is_set = $set && strpos($set, 'event_') === FALSE;
-
-  $header = array(t('Label'), $is_set ? t('Set') : t('Event'), t('Category'), t('Status'), t('Operations'));
-  $rows = array();
-
-  foreach (element_children($rules) as $name) {
-    $rule = $rules[$name];
-    _rules_element_defaults($rule);
-
-    if ((!$category || in_array($category, $rule['#categories'])) && (!$set && strpos($rule['#set'], 'event_') === 0 || $rule['#set'] == $set) && $rule['#active'] == $active && ($rule['#status'] == 'fixed') == $fixed) {
-      $path = RULES_ADMIN_RULE_PATH .'/'. $name;
-      $ops = array();
-      if ($rule['#status'] == 'custom') {
-        $ops[] = l(t('delete'), $path .'/delete', array('query' => drupal_get_destination()));
-      }
-      else if ($rule['#status'] == 'altered') {
-        $ops[] = l(t('revert'), $path .'/revert', array('query' => drupal_get_destination()));
-      }
-      $ops[] = l(t('clone'), $path .'/clone', array(), drupal_get_destination());
-      $categories = array_map('check_plain', $rule['#categories']);
-
-      $set_info = rules_get_rule_sets($rule['#set']);
-      // If the set info is missing, the module providing the event is gone and the
-      // rule can't be edited.
-      $rows[] = array(
-      $set_info ? l($rule['#label'], $path .'/edit') : check_plain($rule['#label']),
-      $set_info ? check_plain(rules_get_element_label($set_info)) : array('class' => 'error', 'data' => check_plain($rule['#set'])),
-      implode(', ', $categories),
-      rules_admin_configuration_status($rule['#status']),
-      implode(' ', $ops),
-      );
-      if (!$set_info) {
-        rules_handle_error_msg('%set can\'t be found. Probably the providing module has been deactivated.', array('%set' => $rule['#set']));
-      }
-    }
-  }
-
-  if (count($rows)) {
-    return array('#value' => theme('table', $header, $rows, array('class' => 'rules-rule-configurations')));
-  }
-
-  return array('#value' => '<p>'. t('None') .'</p>');
 }
 
 /**
@@ -135,26 +66,6 @@ function rules_admin_check_token() {
   if (!variable_get('rules_hide_token_message', FALSE) && !module_exists('token')) {
     drupal_set_message(t('If you install the token module from !href, token replacements will be supported. <a href="@hide">Hide this message.</a>', array('!href' => l('http://drupal.org/project/token', 'http://drupal.org/project/token'), '@hide' => url('admin/rules/settings'))));
   }
-}
-
-/**
- * Returns the status of the configuration as html.
- */
-function rules_admin_configuration_status($status) {
-  if ($status == 'altered') {
-    $help = t('This rule has been provided by a module, but has been modified.');
-    return '<span title="'. $help .'">'. t('Modified'). '</span>';
-  }
-  else if ($status == 'fixed') {
-    $help = t("This rule has been provided by a module and can't be customized.");
-    return '<span title="'. $help .'">'. t('Fixed') .'</span>';
-  }
-  else if ($status == 'custom') {
-    $help = t('A custom defined rule.');
-    return '<span title="'. $help .'">'. t('Custom'). '</span>';
-  }
-  $help = t('This rule has been provided by a module.');
-  return '<span title="'. $help .'">'. t('Default') .'</span>';
 }
 
 /**
@@ -173,6 +84,7 @@ function rules_admin_form_add_rule_submit($form_id, &$form_state) {
   foreach (array('set', 'label', 'active', 'weight') as $key) {
     $rule['#'. $key] = $form_state['values'][$key];
   }
+  $rule['#categories'] = array_filter(array_map('trim', explode(',', $form_state['values']['categories'])));
   $rule['#status'] = 'custom';
 
   //get an unique name
@@ -180,8 +92,8 @@ function rules_admin_form_add_rule_submit($form_id, &$form_state) {
 
   rules_item_save('rules', $rule_name, $rule);
   rules_clear_cache();
-  drupal_set_message(t("The rule %label has been added.", array('%label' => $rule['#label'])));
-  $form_state['redirect'] =  RULES_ADMIN_RULE_PATH .'/'. $rule_name;
+  drupal_set_message(t("The rule %label has been added. You can start adding some conditions or actions now.", array('%label' => $rule['#label'])));
+  $form_state['redirect'] = RULES_ADMIN_RULE_PATH .'/'. $rule_name;
 }
 
 /**
@@ -210,7 +122,7 @@ function rules_admin_form_rule_settings($rule, $is_set = FALSE) {
   );
   if ($is_set) {
     $form['settings']['set'] += array(
-      '#title' =>t('Rule set'),
+      '#title' => t('Rule set'),
       '#options' => rules_admin_get_grouped_labels(rules_admin_get_compatible_sets($rule, rules_get_configured_items('rule_sets'))),
       '#description' => t('Select to which rule set this rule should belong.'),
     );
@@ -222,6 +134,13 @@ function rules_admin_form_rule_settings($rule, $is_set = FALSE) {
       '#description' => t('Select the event on which you want to evaluate this rule.'),
     );
   };
+  $form['settings']['categories'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Categories'),
+    '#default_value' => isset($rule['#categories']) ? implode(', ', $rule['#categories']) : '',
+    '#description' => t('A comma-separated list of terms describing this rule. Example: funny, bungee jumping.'),
+    '#autocomplete_path' => RULES_ADMIN_PATH .'/autocomplete',
+  );
   $form['settings']['active'] = array(
     '#title' => t('This rule is active and should be evaluated when the associated event occurs.'),
     '#type' => 'checkbox',
@@ -230,7 +149,7 @@ function rules_admin_form_rule_settings($rule, $is_set = FALSE) {
   $form['settings']['weight'] = array(
     '#title' => t('Weight'),
     '#type' => 'weight',
-    '#description' => t('Adjust the weight to customize the ordering of rules.'),
+    '#description' => t('Adjust the weight to customize the evaluation order of rules.'),
     '#default_value' => isset($rule['#weight']) ? $rule['#weight'] : 0,
   );
   $form['settings']['button'] = array('#type' => 'submit', '#weight' => 10, '#value' => t('Save changes'));
@@ -246,12 +165,17 @@ function rules_admin_form_edit_rule(&$form_state, $proxy) {
   $rule = $proxy->get_rule();
   _rules_element_defaults($rule);
 
-  $is_set = strpos($rule['#set'], 'event_') === FALSE;
-  rules_admin_fix_breadcrumb($is_set, $rule['#set'], $proxy->get_set_info());
+  $is_set = strpos($rule['#set'], 'event_') !== 0;
   $form = rules_admin_form_rule_settings($rule, $is_set);
+  $form['settings']['#collapsed'] = TRUE;
 
-  //help
+  // Add help
   rules_admin_element_help($form, $proxy->get_set_info());
+
+  // Show a warning when editing custom rules form other modules
+  if ($rule['#status'] == 'custom' && strpos($proxy->get_rule_name(), 'rules_') !== 0) {
+    drupal_set_message(t('<em>Warning</em>: This rule has been provided by another module. <br />Be aware that any changes made through this interface might be overwritten once the providing module updates the rule.'));
+  }
 
   $form['elements'] = array(
     '#type' => 'fieldset',
@@ -260,7 +184,7 @@ function rules_admin_form_edit_rule(&$form_state, $proxy) {
   );
 
   //this will render the whole rule with the help of drupal_render(),
-  //see rules.admin_render.inc
+  //see rules_admin.render.inc
   $form['elements']['rule'] = $proxy->get_indexed_rule();
   $form['elements']['rule']['#name'] = $proxy->get_rule_name();
   $form['elements']['rule']['#theme'] = array('rules_admin_rule_render');
@@ -273,6 +197,7 @@ function rules_admin_form_edit_rule_submit($form, &$form_state) {
   foreach (array('label', 'active', 'weight', 'set') as $key) {
     $rule_ref['#'. $key] = $form_state['values'][$key];
   }
+  $rule_ref['#categories'] = array_filter(array_map('trim', explode(',', $form_state['values']['categories'])));
 
   $form_state['proxy']->save_changes();
   drupal_set_message(t("The rule %label has been updated.", array('%label' => $rule_ref['#label'])));
@@ -295,7 +220,7 @@ function rules_admin_form_add(&$form_state, $proxy, $type, $parent_id = NULL) {
       //initial step!
       $form_state += array('element' => array('#type' => $type), 'step' => 0);
     }
-    $element =& $form_state['element'];
+    $element = &$form_state['element'];
     $element += array('#id' => NULL, '#settings' => array());
 
     // Due to adding storage during the form build, the form will be rebuilt
@@ -337,7 +262,7 @@ function rules_admin_form_add_action(&$form_state, &$element) {
     '#options' => rules_admin_get_grouped_labels($satisfied_actions),
     '#required' => TRUE,
   );
-  if (!empty($unsatisfied_actions)){
+  if (!empty($unsatisfied_actions)) {
     // Hold all the actions that are disabled because argument(s) are missing.
     $form['unsatisfied'] = array(
       '#type' => 'fieldset',
@@ -355,7 +280,7 @@ function rules_admin_form_add_action(&$form_state, &$element) {
   $form['submit'] = array(
     '#type' => 'submit',
     '#weight' => 10,
-    '#value' => t('Forward'),
+    '#value' => t('Next'),
     '#submit' => array('rules_admin_form_add_submit'),
   );
   return $form;
@@ -377,25 +302,25 @@ function rules_admin_form_add_condition(&$form_state, &$element, $parent) {
       '#options' => rules_admin_get_grouped_labels($satisfied_conditions),
       '#required' => TRUE,
     );
-    if (!empty($unsatisfied_conditions)){
-    // Hold all the actions that are disabled because argument(s) are missing.
-    $form['unsatisfied'] = array(
-      '#type' => 'fieldset',
-      '#title' => format_plural(count($unsatisfied_conditions), '1 condition is not configurable', '@count conditions are not configurable'),
-      '#description' => t("The following conditions aren't available in this context because they require arguments that don't exist in your rule. If you want to use any of these conditions, you must first add some action that adds variables of this kind in a previous rule, or have an event that passes the required variables."),
-      '#collapsible' => TRUE,
-      '#collapsed' => TRUE,
-    );
-    $form['unsatisfied']['items'] = array(
-      '#type' => 'item',
-      '#unsatisfied_grouped_options' => $unsatisfied_conditions,
-      '#theme' => 'rules_admin_unsatisfied_elements',
-    );
-  }
+    if (!empty($unsatisfied_conditions)) {
+      // Hold all the actions that are disabled because argument(s) are missing.
+      $form['unsatisfied'] = array(
+        '#type' => 'fieldset',
+        '#title' => format_plural(count($unsatisfied_conditions), '1 condition is not configurable', '@count conditions are not configurable'),
+        '#description' => t("The following conditions aren't available in this context because they require arguments that don't exist in your rule. If you want to use any of these conditions, you must first add some action that adds variables of this kind in a previous rule, or have an event that passes the required variables."),
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+      );
+      $form['unsatisfied']['items'] = array(
+        '#type' => 'item',
+        '#unsatisfied_grouped_options' => $unsatisfied_conditions,
+        '#theme' => 'rules_admin_unsatisfied_elements',
+      );
+    }
     $form['submit'] = array(
       '#type' => 'submit',
       '#weight' => 10,
-      '#value' => t('Forward'),
+      '#value' => t('Next'),
       '#submit' => array('rules_admin_form_add_submit'),
     );
     return $form;
@@ -408,7 +333,7 @@ function rules_admin_form_add_condition(&$form_state, &$element, $parent) {
  * determine which operation is to be added.
  */
 function rules_admin_form_add_op(&$form_state, $element, $parent) {
-  $parent_ref =& $form_state['proxy']->get_element($form_state['parent_id']);
+  $parent_ref = &$form_state['proxy']->get_element($form_state['parent_id']);
 
   //determine the appropriate operation and apply it
   $op = rules_admin_determine_operation($form_state['proxy'], $form_state['parent_id']);
@@ -441,7 +366,7 @@ function rules_admin_form_add_submit($form, &$form_state) {
 function rules_admin_form_pack_storage($form, &$form_state) {
   foreach (array('proxy', 'step', 'element', 'parent_id') as $key) {
     if (isset($form_state[$key])) {
-      $form_state['storage'][$key] =& $form_state[$key];
+      $form_state['storage'][$key] = &$form_state[$key];
     }
   }
   // Add a mechanism that includes arbitrary files needed by the form.
@@ -449,9 +374,9 @@ function rules_admin_form_pack_storage($form, &$form_state) {
   $form['#after_build'][] = 'rules_after_build_include_files';
 
   // Register an after build callback that unpacks the storage.
-  // However let the rules.admin.inc file be included previously, so that
+  // However let the rules_admin.rule_forms.inc file be included previously, so that
   // #ahah callbacks from other modules keep working.
-  $form['#includes'][] = "./". drupal_get_path('module', 'rules') ."/rules.admin.inc";
+  $form['#includes'][] = "./". drupal_get_path('module', 'rules_admin') ."/rules_admin.rule_forms.inc";
   $form['#after_build'][] = 'rules_admin_form_unpack_storage';
   return $form;
 }
@@ -464,15 +389,14 @@ function rules_admin_form_unpack_storage($form, &$form_state) {
   if (!isset($form_state['unpacked'])) {
     foreach (array('proxy', 'step', 'element', 'parent_id') as $key) {
       if (isset($form_state['storage'][$key]) && !isset($form_state[$key])) {
-        $form_state[$key] =& $form_state['storage'][$key];
+        $form_state[$key] = &$form_state['storage'][$key];
       }
     }
     $form_state['unpacked'] = TRUE;
   }
-  
+
   return $form;
 }
-
 
 /**
  * Returns the form for the edit operation
@@ -539,7 +463,7 @@ function rules_admin_form_edit_action(&$form_state, $element) {
  * Apply the changes to the element
  */
 function rules_admin_form_edit_action_submit($form, &$form_state) {
-  $element =& $form_state['element'];
+  $element = &$form_state['element'];
   $element['#weight'] = $form_state['values']['weight'];
   rules_admin_default_argument_form_submit($form, $form_state, $element);
   rules_admin_new_variables_form_submit($form, $form_state, $element);
@@ -547,7 +471,6 @@ function rules_admin_form_edit_action_submit($form, &$form_state) {
   rules_admin_element_alter_form_submit($form, $form_state, $element);
   drupal_set_message(t('The action %label has been saved.', array('%label' => rules_get_element_label($element))));
 }
-
 
 /**
  * Returns the edit form for a condition
@@ -607,7 +530,7 @@ function rules_admin_form_edit_condition(&$form_state, $element) {
  * Apply the changes to the element
  */
 function rules_admin_form_edit_condition_submit($form, &$form_state) {
-  $element =& $form_state['element'];
+  $element = &$form_state['element'];
   foreach (array('negate', 'weight') as $key) {
     $element['#'. $key] = $form_state['values'][$key];
   }
@@ -663,7 +586,7 @@ function rules_admin_form_edit_op(&$form_state, $element) {
  * Apply the changes to the element
  */
 function rules_admin_form_edit_op_submit($form, &$form_state) {
-  $element =& $form_state['element'];
+  $element = &$form_state['element'];
   foreach (array('negate', 'weight') as $key) {
     $element['#'. $key] = $form_state['values'][$key];
   }
@@ -675,18 +598,18 @@ function rules_admin_form_edit_op_submit($form, &$form_state) {
  * Actually saves the element. Note that this handles also saving newly added elements.
  */
 function rules_admin_form_edit_save($form, &$form_state) {
-  $element =& $form_state['element'];
+  $element = &$form_state['element'];
   //remove empty values
   $element = array_filter($element);
 
   if (isset($element['#id']) && $element['#id']) {
     //save edited element
-    $element_ref =& $form_state['proxy']->get_element($element['#id']);
+    $element_ref = &$form_state['proxy']->get_element($element['#id']);
     $element_ref = $element;
     unset($element_ref['#id']);
   }
   else {
-    $parent_ref =& $form_state['proxy']->get_element($form_state['parent_id']);
+    $parent_ref = &$form_state['proxy']->get_element($form_state['parent_id']);
     //just add the element to the parent
     unset($element['#id']);
     $parent_ref = rules_configure($parent_ref, $element);
@@ -700,11 +623,11 @@ function rules_admin_form_edit_save($form, &$form_state) {
  * Just redirect to the delete form
  */
 function rules_admin_form_edit_delete_submit($form, &$form_state) {
-  $element =& $form_state['element'];
+  $element = &$form_state['element'];
   $base_path = RULES_ADMIN_RULE_PATH .'/'. $form_state['proxy']->get_rule_name();
   unset($_REQUEST['destination']);
   $form_state['redirect'] = array(
-    'path' => $base_path . '/delete/'. $element['#id'],
+    'path' => $base_path .'/delete/'. $element['#id'],
     'query' => 'destination='. $base_path,
   );
   // We need to empty the storage or there will be no redirect.
@@ -775,7 +698,7 @@ function rules_admin_new_variables_form(&$form, &$form_state, $element) {
 }
 
 function rules_admin_new_variables_form_validate($form, &$form_state) {
-  $variables = $form_state['proxy']->get_defined_variables($form_state['element']['#id']);
+  $variables = $form_state['proxy']->get_defined_variables();
   foreach ($form_state['values']['new'] as $old_name => $values) {
     // If the variable name changed or we add a new element we have to ensure
     // that the variable name is not taken yet.
@@ -799,7 +722,7 @@ function rules_admin_new_variables_form_submit(&$form, &$form_state, &$element) 
       if ($old_name != $values['name']) {
         //add it to the argument map
         $default_name = array_search($old_name, $element['#settings']['#argument map']);
-        $element['#settings']['#argument map'][ $default_name ] = $values['name'];
+        $element['#settings']['#argument map'][$default_name] = $values['name'];
         //and alter the info about the variable to reflect the name change
         $element['#info']['new variables'][ $values['name'] ] = $element['#info']['new variables'][$old_name];
         unset($element['#info']['new variables'][$old_name]);
@@ -816,7 +739,7 @@ function rules_admin_default_argument_form(&$form, &$form_state, $element) {
   $form['settings'] = array('#tree' => TRUE);
   $form['map'] = array('#tree' => TRUE);
 
-  $function = $element['#name']. '_form';
+  $function = $element['#name'] .'_form';
   $info = rules_retrieve_element_info($element);
 
   if (isset($info['arguments']) && count($info['arguments'])) {
@@ -834,7 +757,7 @@ function rules_admin_default_argument_form(&$form, &$form_state, $element) {
           '#type' => 'select',
           '#title' => $arg_info['label'],
           '#options' => $args,
-          '#default_value' => rules_admin_map_get_configured_argument($name, $element),
+          '#default_value' => rules_admin_element_map_variable_name($name, $element),
           '#description' => isset($arg_info['description']) ? $arg_info['description'] : '',
         );
       }
@@ -857,39 +780,6 @@ function rules_admin_default_argument_form_submit($form, &$form_state, &$element
   //add in values of not identifiable variables
   if (isset($form_state['values']['settings'])) {
     $element['#settings'] = $form_state['values']['settings'] + $element['#settings'];
-  }
-}
-
-/*
- * Gets the in the argument map configured argument for the given argument - or the default value
- */
-function rules_admin_map_get_configured_argument($name, $element) {
-  if (!isset($element['#settings']['#argument map'])) {
-    //per default try the the same name
-    return $name;
-  }
-  $map = $element['#settings']['#argument map'];
-  return isset($map[$name]) ? $map[$name] : $name;
-}
-
-/**
- * Shows the element help
- */
-function rules_admin_element_help(&$form, $element) {
-  $info = rules_retrieve_element_info($element);
-  if (isset($info['help']) || isset($element['help'])) {
-    $help = isset($element['help']) ? t($element['help']) : t($info['help']);
-  }
-  else if (isset($element['#type']) && in_array($element['#type'], array('action', 'condition'))) {
-    rules_include('rules_forms');
-    $help = rules_element_invoke($element, 'help', array());
-  }
-  if (isset($help) && $help) {
-    $form['help'] = array(
-      '#type' => 'fieldset',
-      '#title' => t('Description'),
-      '#description' => $help,
-    );
   }
 }
 
@@ -957,99 +847,6 @@ function rules_admin_form_clone(&$form_state, $proxy) {
 }
 
 /**
- * Gets all compatible sets, which means that all arguments are available in the other set too
- */
-function rules_admin_get_compatible_sets($rule, $sets) {
-  if (isset($rule['#set']) && $rule['#set']) {
-    $set = rules_get_rule_sets($rule['#set']);
-    foreach ($sets as $key => $this_set) {
-      if (array_diff(array_keys($set['arguments']), array_keys($this_set['arguments']))) {
-        unset($sets[$key]);
-      }
-    }
-  }
-  return $sets;
-}
-
-/**
- * Gets an array of element labels grouped by modules
- *
- * @param $elements
- *   An array of info elements, e.g. as returned from rules_get_events().
- * @param $key
- *   The key for which the value is used for grouping the elements.
- */
-function rules_admin_get_grouped_labels($elements, $key = 'module') {
-  $grouped = array();
-  $ungrouped = array();
-
-  foreach (array_filter($elements, 'rules_admin_element_filter') as $name => $element) {
-    if (isset($element[$key])) {
-      $grouped[$element[$key]][$name] = rules_get_element_label($element);
-    }
-    else {
-      $ungrouped[$name] = rules_get_element_label($element);
-    }
-  }
-  foreach ($grouped as $name => $group) {
-    asort($grouped[$name]);
-  }
-  ksort($grouped);
-  asort($ungrouped);
-  return $ungrouped + $grouped;
-}
-
-/**
- * This is used for filtering the rules, action and conditions that should be shown.
- * Rules and sets are filtered when they are fixed and the variable 'rules_show_fixed'
- * is  not set to on. Actions and conditions are filtered out if they are marked as
- * being hidden.
- *
- * @return TRUE, when the element should be kept. Else FALSE.
- */
-function rules_admin_element_filter($element) {
-  if (!variable_get('rules_show_fixed', FALSE)) {
-    if (isset($element['#status']) && $element['#status'] == 'fixed') {
-      return FALSE;
-    }
-    if (isset($element['status']) && $element['status'] == 'fixed') {
-      return FALSE;
-    }
-  }
-  if (isset($element['hidden']) && $element['hidden']) {
-    return FALSE;
-  }
-  return TRUE;
-}
-
-/**
- * Determines if the given data type is valid for the given argument.
- *
- * @param $data_type
- *   The data type to check.
- * @param $arg_type
- *   The arguments needed data type.
- * @return
- *   True or false.
- */
-function rules_admin_is_valid_data_type($data_type, $arg_type) {
-  if (is_array($arg_type)) {
-    foreach ($arg_type as $type) {
-      // We have multiple options to check for.
-      if (rules_admin_is_valid_data_type($data_type, $type)) {
-        return TRUE;
-      }
-    }
-    return FALSE;
-  }
-  if ($arg_type == '*') {
-    return TRUE;
-  }
-  return $arg_type == $data_type;
-}
-
-
-/**
  * Determines which operation should be added
  * If the parent operation is an AND, we add an OR, and vice versa.
  */
@@ -1060,6 +857,7 @@ function rules_admin_determine_operation(&$proxy, $id) {
     case 'rule':
     case 'AND':
       return 'OR';
+
     case 'OR':
       return 'AND';
   }
@@ -1077,70 +875,6 @@ function rules_admin_elements_get_logical_ops() {
 
 function _rules_admin_element_is_logical_op($element) {
   return isset($element['#logical_op']) && $element['#logical_op'];
-}
-
-/**
- * Filters the info about elements (actions, conditions), so that only elements
- * compatible with the given variables are kept, which means suiting variables
- * for all arguments are available, so that the action/condition can be
- * configured.
- * Additionally, arguments having no suiting variables are recorded
- * in the 'unsatisfied arguments' slot of the element in $infos.
- */
-function rules_admin_filter_info($variables, &$infos) {
-  $filtered = array();
-  foreach ($infos as $key => $info) {
-    if (isset($info['arguments']) && is_array($info['arguments'])) {
-      foreach ($info['arguments'] as $name => $argument_info) {
-        if (!rules_admin_argument_satisifable($argument_info, $variables)) {
-          // Get the unsatisfied arguments.
-          $infos[$key] += array('unsatisfied arguments' => array());
-          $infos[$key]['unsatisfied arguments'][$name] = $argument_info['label'];
-        }
-      }
-      if (empty($infos[$key]['unsatisfied arguments'])) {
-        $filtered[$key] = $info;
-      }
-    }
-    else {
-      $filtered[$key] = $info;
-    }
-  }
-  return $filtered;
-}
-
-/**
- * Determines whether the argument can be configured properly, so whether
- * there are matching variables available or needed.
- */
-function rules_admin_argument_satisifable($info, $variables) {
-  if ($info['type'] == '*') {
-    return TRUE;
-  }
-  if (($type_info = rules_get_data_types($info['type']))) {
-    // For backward compatibility use_input_form is interpreted as !identifiable if it's unset.
-    if (!empty($type_info['use_input_form']) || (!isset($type_info['use_input_form']) && empty($type_info['identifiable']))) {
-      // Argument value will be set on configuration time.
-      return TRUE;
-    }
-  }
-  if (count(rules_admin_map_get_possible_arguments($info, $variables))) {
-    return TRUE;
-  }
-  return FALSE;
-}
-
-/**
- * Gets the possible arguments (= of the same entity) for an argument
- */
-function rules_admin_map_get_possible_arguments($arg_info, $variables) {
-  $matches = array();
-  foreach ($variables as $name => $info) {
-    if (rules_admin_is_valid_data_type($info['type'], $arg_info)) {
-      $matches[$name] = $info['label'];
-    }
-  }
-  return $matches;
 }
 
 /**
@@ -1179,27 +913,23 @@ function theme_rules_admin_unsatisfied_elements_group($grouped_rules, $elements)
 }
 
 /**
- * Returns an array of all existing categories
+ * Menu callback for the autocompletion of categories.
  */
-function rules_admin_get_categories() {
-  $categories = array();
-  foreach (rules_get_configured_items('rules') as $rule) {
-    if (isset($rule['#categories']) && is_array($rule['#categories']) && rules_admin_element_filter($rule)) {
-      foreach ($rule['#categories'] as $category) {
-        if (!in_array($category, $categories)) {
-          $categories[$category] = $category;
-        }
-      }
+function rules_admin_categories_autocomplete($string) {
+  // The user enters a comma-separated list of tags. We only autocomplete the last tag.
+  $array = array_filter(drupal_explode_tags($string));
+  // Fetch last tag
+  $last_string = drupal_strtolower(trim(array_pop($array)));
+  $prefix = count($array) ? implode(', ', $array) .', ' : '';
+  $tags = rules_admin_get_categories('rules') + rules_admin_get_categories('rule_sets');
+
+  $matches = array();
+  foreach ($tags as $tag) {
+    if ($last_string && strpos(drupal_strtolower($tag), $last_string) !== FALSE) {
+      $matches[$prefix . $tag] = check_plain($tag);
     }
   }
-  return $categories;
-}
-
-function _rules_admin_rule_get_new_unique_name() {
-  $id = variable_get('rules_counter', 0);
-  $id++;
-  variable_set('rules_counter', $id);
-  return 'rules_'. $id;
+  drupal_json($matches);
 }
 
 /**
@@ -1207,55 +937,7 @@ function _rules_admin_rule_get_new_unique_name() {
  */
 function rules_admin_save_element_label($form, &$form_state, &$element) {
   $info = _rules_admin_get_label($form_state, rules_get_element_info($element), $element, $form_state['values']['label'], TRUE);
-  // This makes sure we don't save the applied defaults
   $element['#info'] = $info + $element['#info'];
-}
-
-/**
- * Gets the label for the info of the given element by apply label callbacks.
- * Note that this is also used for argument infos.
- *
- * @param $cfirst
- *   If TRUE, capitalize the first letter, if FALSE lower case the first letter.
- * @return An array of changed properties of the given info
- */
-function _rules_admin_get_label(&$form_state, $info, $element, $value, $cfirst = NULL) {
-  $info_changes = array();
-
-  if (drupal_strtolower($info['label']) != drupal_strtolower($value)) {
-    //label has been customized
-    $info_changes['label'] = $value;
-    $info_changes['label callback'] = FALSE;
-  }
-  else if (isset($info['label callback']) && $info['label callback'] && function_exists($info['label callback'])) {
-    $argument_labels = rules_admin_get_argument_labels($form_state['proxy'], $element);
-    $info_changes['label'] = $info['label callback']($element['#settings'], $argument_labels, $element);
-    // Labels are treated as user input, so we decode any entites.
-    $info_changes['label'] = decode_entities($info_changes['label']);
-    if (isset($cfirst)) {
-      $function = $cfirst ? 'drupal_strtoupper' : 'drupal_strtolower';
-      $info_changes['label'] = $function(drupal_substr($info_changes['label'], 0, 1)) . drupal_substr($info_changes['label'], 1);
-    }
-  }
-  return $info_changes;
-}
-
-
-/**
- * Gets the labels of the variables, which are configured to be passed as arguments
- * to the given element.
- */
-function rules_admin_get_argument_labels($proxy, $element, $prefix = '@') {
-  $labels = array();
-  $names = rules_get_mapped_argument_names($element);
-  $vars = $proxy->get_available_variables();
-  $labels = array();
-  foreach ($names as $argument_name => $variable_name) {
-    if (isset($vars[$variable_name]['label'])) {
-      $labels[$prefix . $argument_name] = $vars[$variable_name]['label'];
-    }
-  }
-  return $labels;
 }
 
 /**
@@ -1282,18 +964,3 @@ function rules_admin_settings(&$form_state) {
   );
   return system_settings_form($form);
 }
-
-
-/**
- * Fixes the breadcrumb on the rule edit/delete/revert
- */
-function rules_admin_fix_breadcrumb($is_set = FALSE, $set_name, $set_info) {
-  $breadcrumb = drupal_get_breadcrumb();
-  $item = menu_get_item($is_set ? RULES_ADMIN_SET_PATH : RULES_ADMIN_TRIGGER_PATH);
-  $breadcrumb[] = l($item['title'], $item['href'], $item['localized_options']);
-  if ($is_set) {
-    $breadcrumb[] = l($set_info['label'], RULES_ADMIN_SET_PATH .'/'. $set_name);
-  }
-  drupal_set_breadcrumb($breadcrumb);
-}
-

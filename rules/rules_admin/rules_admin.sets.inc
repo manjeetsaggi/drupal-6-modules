@@ -1,13 +1,12 @@
 <?php
-// $Id: rules.admin_sets.inc,v 1.1.2.10 2008/09/02 14:47:52 fago Exp $
+// $Id: rules_admin.sets.inc,v 1.1.2.7 2009/04/19 20:21:53 fago Exp $
+
 
 /**
  * @file Rules Sets Admin UI
  */
 
-require_once drupal_get_path('module', 'rules') . '/rules.admin.inc';
-
-
+rules_include('rules_admin');
 
 function rules_admin_sets_overview() {
   $sets = rules_get_configured_items('rule_sets');
@@ -22,9 +21,6 @@ function rules_admin_sets_overview() {
 
     $path = RULES_ADMIN_SET_PATH .'/'. $name;
     $ops = array();
-    if ($set_info['status'] != 'fixed') {
-      $ops[] = l(t('edit'), $path .'/edit');
-    }
     if ($set_info['status'] == 'custom') {
       $ops[] = l(t('delete'), $path .'/delete', array('query' => drupal_get_destination()));
     }
@@ -37,7 +33,7 @@ function rules_admin_sets_overview() {
       l($set_info['label'], $path .'/edit'),
       check_plain($name),
       implode(', ', $categories),
-      rules_admin_configuration_status($set_info['status']),
+      theme('rules_admin_configuration_status', $set_info['status']),
       implode(' ', $ops),
     );
   }
@@ -112,7 +108,6 @@ function rules_item_rule_set_delete($set_name) {
   }
 }
 
-
 /**
  * Shows the rule set edit page form
  */
@@ -120,22 +115,21 @@ function rules_admin_form_edit_rule_set(&$form_state, $set_info) {
   $form_state['set'] = $set_info;
   $form = rules_admin_form_rule_set_settings($set_info);
 
-  $form['active_header'] = array('#value' => '<br /><h3>'. t('Active rules'). '</h3>');
+  $form['active_header'] = array('#value' => '<br /><h3>'. t('Active rules') .'</h3>');
   $form['active'] = rules_admin_overview_table(array('set' => $set_info['name'], 'active' => TRUE));
   $form['active']['#suffix'] = '<br />';
-  $form['inactive_header'] = array('#value' => '<h3>'. t('Inactive rules'). '</h3>');
+  $form['inactive_header'] = array('#value' => '<h3>'. t('Inactive rules') .'</h3>');
   $form['inactive'] = rules_admin_overview_table(array('set' => $set_info['name'], 'active' => FALSE));
 
   if (variable_get('rules_show_fixed', FALSE)) {
-    $form['fixed_header'] = array('#value' => '<h3>'. t('Fixed rules'). '</h3>');
+    $form['fixed_header'] = array('#value' => '<h3>'. t('Fixed rules') .'</h3>');
     $form['fixed'] = rules_admin_overview_table(array('set' => $set_info['name'], 'active' => TRUE, 'fixed' => TRUE));
   }
   return $form;
 }
 
-
 /**
- * Returns the form for the settings of a rule
+ * Returns the form for the settings of a rule set
  */
 function rules_admin_form_rule_set_settings($set_info = array(), $add = FALSE) {
   $form['settings'] = array(
@@ -159,6 +153,13 @@ function rules_admin_form_rule_set_settings($set_info = array(), $add = FALSE) {
       '#required' => TRUE,
     );
   }
+  $form['settings']['categories'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Categories'),
+    '#default_value' => isset($set_info['categories']) ? implode(', ', $set_info['categories']) : '',
+    '#description' => t('A comma-separated list of terms describing this rule set. Example: funny, bungee jumping.'),
+    '#autocomplete_path' => RULES_ADMIN_PATH .'/autocomplete',
+  );
   $form['settings']['button'] = array('#type' => 'submit', '#weight' => 10, '#value' => t('Save changes'));
   return $form;
 }
@@ -169,11 +170,11 @@ function rules_admin_form_edit_rule_set_submit($form, &$form_state) {
   if (!isset($set_info['status']) || $set_info['status'] == 'default') {
     $set_info['status'] = 'altered';
   }
+  $set_info['categories'] = array_filter(array_map('trim', explode(',', $form_state['values']['categories'])));
   unset($set_info['name']);
   rules_item_save('rule_sets', $form_state['set']['name'], $set_info);
   drupal_set_message(t("The rule set %label has been updated.", array('%label' => $set_info['label'])));
 }
-
 
 /**
  * Form for adding a rule set
@@ -306,7 +307,7 @@ function rules_admin_form_js($callback) {
   // process it. We retreive the cached form, add the element, and resave.
   $form = form_get_cache($form_build_id, $form_state);
 
-  $render =& $callback($form);
+  $render = &$callback($form);
 
   form_set_cache($form_build_id, $form, $form_state);
   $form += array(
@@ -315,7 +316,6 @@ function rules_admin_form_js($callback) {
   );
   // Rebuild the form.
   $form = form_builder($_POST['form_id'], $form, $form_state);
-
   // Render the new output.
   print drupal_to_js(array('data' => drupal_render($render), 'status' => TRUE));
   exit();
@@ -336,7 +336,7 @@ function &rules_admin_form_add_rule_set_add_arguments(&$form) {
  * Themes the rules set arguments adding form
  */
 function theme_rules_admin_form_arguments($form) {
-  drupal_add_js(drupal_get_path('module', 'rules'). '/rules.admin.js', 'module');
+  drupal_add_js(drupal_get_path('module', 'rules_admin') .'/rules_admin.js', 'module');
 
   $rows = array();
   $headers = array(
@@ -371,12 +371,13 @@ function theme_rules_admin_form_arguments($form) {
   return $output;
 }
 
-
 function rules_admin_form_add_rule_set_submit($form, &$form_state) {
   $set_info = $form_state['set'];
   $set_info['status'] = 'custom';
+  $set_info['categories'] = array_filter(array_map('trim', explode(',', $form_state['values']['categories'])));
   unset($set_info['name']);
   rules_item_save('rule_sets', 'rules_'. $form_state['set']['name'], $set_info);
   drupal_set_message(t("The rule set %label has been added.", array('%label' => $set_info['label'])));
   $form_state['redirect'] = RULES_ADMIN_SET_PATH;
 }
+
