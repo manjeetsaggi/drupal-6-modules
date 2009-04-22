@@ -1,5 +1,5 @@
 <?php
-// $Id: notifications.admin.inc,v 1.5.2.6.2.19.2.1 2009/04/18 14:10:35 jareyero Exp $
+// $Id: notifications.admin.inc,v 1.5.2.6.2.19.2.2 2009/04/20 15:19:04 jareyero Exp $
 
 /**
  * Admin settings
@@ -119,7 +119,7 @@ function notifications_send_intervals_form() {
     '#title' => t('Send intervals'),
     '#tree' => TRUE,
     '#theme' => 'notifications_send_intervals',
-    '#description' => t('To delete an interval, set the time unit and the name empty.'),
+    '#description' => t('To delete an interval, set the time unit and the name empty. If the time is negative, notifications will never be sent.'),
   );
   $intervals = _notifications_send_intervals() + array('new1' => '', 'new2' => '');
   $index = 0;

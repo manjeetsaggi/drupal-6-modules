@@ -1,5 +1,5 @@
 <?php
-// $Id: notifications.cron.inc,v 1.6.2.6.2.20.2.2 2009/04/20 12:51:09 jareyero Exp $
+// $Id: notifications.cron.inc,v 1.6.2.6.2.20.2.3 2009/04/21 20:51:45 jareyero Exp $
 /**
  * Notifications module. Queue processing.
  * 
@@ -426,15 +426,6 @@ function notifications_process_compose($account, $events, $subscriptions, $send_
         }
       }
       $messages[] = $message;
-    }
-  }
-  // Now send messages, not if testing enabled
-  $test = notifications_process('option', 'test');
-  foreach ($messages as $message) {
-    notifications_process('count', 'send');
-    notifications_log('Sending out', array('method' => $send_method, 'message' => $message));
-    if (!$test) {
-      notifications_message_send($account, $message, $send_method);
     }
   }
   return $messages;

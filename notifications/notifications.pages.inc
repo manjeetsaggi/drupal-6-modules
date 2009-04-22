@@ -1,5 +1,5 @@
 <?php
-// $Id: notifications.pages.inc,v 1.1.2.8.2.2 2009/04/20 12:51:09 jareyero Exp $
+// $Id: notifications.pages.inc,v 1.1.2.8.2.3 2009/04/20 15:19:04 jareyero Exp $
 /**
  * @file
  * User pages for Notifications
@@ -95,14 +95,14 @@ function notifications_add_subscription_form($form_state, $account, $type) {
     '#type' => 'select',
     '#title' => t('Send interval'),
     '#options' => _notifications_send_intervals(),
-    '#default_value' => $subscription->send_interval,
+    '#default_value' => notifications_user_setting('send_interval', $account),
   );
-  $send_methods = _notifications_send_methods();
+  $send_methods = _notifications_send_methods($account);
   $form['send_method'] = array(
     '#type' => 'select',
     '#title' => t('Send method'),
     '#options' => $send_methods,
-    '#default_value' => $subscription->send_method,
+    '#default_value' => notifications_user_setting('send_method', $account),
   );
 
   $form['buttons']['save'] = array('#type' => 'submit', '#value' => t('Create subscription'));
