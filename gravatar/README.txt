@@ -1,4 +1,4 @@
-$Id: README.txt,v 1.1.2.7 2008/12/12 21:10:25 davereid Exp $
+$Id: README.txt,v 1.1.2.6 2008/12/10 20:25:14 davereid Exp $
 
 CONTENTS OF THIS FILE
 ---------------------

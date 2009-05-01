@@ -1,5 +1,5 @@
 <?php
-// $Id: notifications_content.module,v 1.4.2.9.2.36.2.5 2009/04/20 18:55:26 jareyero Exp $
+// $Id: notifications_content.module,v 1.4.2.9.2.36.2.8 2009/04/28 10:22:01 jareyero Exp $
 /**
  * @file
  * Subscriptions to content events
@@ -108,12 +108,7 @@ function notifications_content_form_alter(&$form, &$form_state, $form_id) {
       // Load the node which is possibly cached to get the node type
       $node = node_load($form['nid']['#value']);
       if (notifications_content_type_enabled($node->type)) {    
-        $form['notifications']['notifications_content_disable'] = array(
-          '#type'          => 'checkbox',
-          '#title'         => t('Do not send notifications for this comment.'),
-          '#default_value' => 0,
-          '#access' => user_access('skip notifications'),
-        );
+        _notifications_content_add_disable_field($form);
         // If editing the comment, add values to remember
         if (!empty($form['cid']['#value']) && !empty($form['admin']['status'])) {
           $form['notifications_comment_status'] = array('#type' => 'value', '#value' => $form['admin']['status']['#default_value']);
@@ -150,25 +145,26 @@ function notifications_content_form_alter(&$form, &$form_state, $form_id) {
       if (isset($form['type']) && isset($form['#node']) && $form['type']['#value'] .'_node_form' == $form_id) {
         $types = notifications_content_types(NULL);
         if (notifications_content_type_enabled($form['#node']->type)) {
-          $noprevious = !isset($form['notifications']);
-          $form['notifications']['#type'] = 'fieldset';
-          $form['notifications']['#title'] = t('Notifications');
-          $form['notifications']['#collapsible'] = TRUE;
-          $form['notifications']['#weight'] = 1;
-          //don't want to hide/change access on modules that already used the notifications fieldset for something
-          if ($noprevious) {
-            $form['notifications']['#collapsed']   = TRUE;
-            $form['notifications']['#access'] = user_access('skip notifications');
-          }
-          $form['notifications']['notifications_content_disable'] = array(
-            '#type'          => 'checkbox',
-            '#title'         => t('Do not send notifications for this update.'),
-            '#default_value' => 0,
-            '#access' => user_access('skip notifications'),
-          );
+          _notifications_content_add_disable_field($form);
         }
       }
   }
+}
+
+/**
+ * Add disable (skip notifications) field set
+ */
+function _notifications_content_add_disable_field(&$form) {
+  // Add fieldset without affecting any other elements there
+  $form['notifications']['#type'] = 'fieldset';
+  $form['notifications']['#title'] = t('Notifications');
+  $form['notifications']['#collapsible'] = TRUE;  
+  $form['notifications']['notifications_content_disable'] = array(
+    '#type'          => 'checkbox',
+    '#title'         => t('Do not send notifications for this update.'),
+    '#default_value' => 0,
+    '#access' => user_access('skip notifications'),
+  );  
 }
 
 /**
@@ -479,7 +475,7 @@ function notifications_content_messaging($op, $arg1 = NULL, $arg2 = NULL, $arg3 
         case 'notifications-digest-node-nid':
         case 'notifications-digest-node-type':
           $parts['title'] = t('Group title');
-          $parts['footer'] = t('Group footer');
+          $parts['closing'] = t('Group footer');
           return $parts;
       }
       break;
@@ -526,14 +522,16 @@ function notifications_content_messaging($op, $arg1 = NULL, $arg2 = NULL, $arg3 
             ),
           );
         case 'notifications-digest-node-nid':
+          // Define only group title and group footer (closing)
+          // The 'closing' statement is typically a 'read more' link
           return array(
             'title' => t('Updates for [type-name]: [title]'),
-            'footer' => t('Read more [node-url]'),
+            'closing' => t('Read more [node-url]'),
           );
         case 'notifications-digest-node-type':
           return array(
             'title' => t('New content of type [type-name] has been submitted'),
-            'footer' => '<none>',
+            'closing' => '<none>',
           );       
       }
       break;
@@ -721,9 +719,17 @@ function notifications_content_comment($comment, $op) {
  * Implementation of hook node_type
  */
 function notifications_content_node_type($op, $info) {
-  if ($op == 'delete') {
-    // Remove all subscriptions for this node type
-    notifications_delete_subscriptions(array('event_type' => 'node'), array('type' => $info->type));
+  switch ($op) {
+    case 'delete':
+      // Remove all subscriptions for this node type
+      notifications_delete_subscriptions(array('event_type' => 'node'), array('type' => $info->type));
+      break;
+    case 'update':
+      // When changing node type machine name, update all subscriptions
+      if (!empty($info->old_type) && $info->old_type != $info->type) {
+        db_query("UPDATE {notifications_fields} SET value = '%s' WHERE field = 'type' AND value = '%s'", $info->type, $info->old_type);
+      }
+      break;
   }
 }
 

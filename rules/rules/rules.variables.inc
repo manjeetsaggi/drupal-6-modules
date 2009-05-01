@@ -1,5 +1,5 @@
 <?php
-// $Id: rules.variables.inc,v 1.1.2.30 2009/04/19 15:03:44 fago Exp $
+// $Id: rules.variables.inc,v 1.1.2.32 2009/04/30 11:58:30 fago Exp $
 
 
 /**
@@ -352,13 +352,13 @@ class rules_variable {
   function save_changes() {
     //if the variable is not saved automatically, save it
     if ($this->_changed && !$this->info['saved'] && $this->data->is_savable()) {
-      $return = $this->data->save();
+      rules_log(t('Saved variable @name of type @type.', array('@name' => $this->info['label'], '@type' => $this->info['type'])));
 
-      if ($return) {
-        rules_log(t('Saved variable @name of type @type.', array('@name' => $this->info['label'], '@type' => $this->info['type'])));
-      }
-      else {
-        rules_log(t('Failed saving variable @name of type @type.', array('@name' => $this->info['label'], '@type' => $this->info['type'])));
+      $return = $this->data->save();
+      $this->_changed = FALSE;
+
+      if (!$return) {
+        rules_log(t('Failed saving variable @name of type @type.', array('@name' => $this->info['label'], '@type' => $this->info['type'])), TRUE);
       }
     }
   }

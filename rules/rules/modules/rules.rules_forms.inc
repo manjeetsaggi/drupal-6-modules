@@ -1,5 +1,5 @@
 <?php
-// $Id: rules.rules_forms.inc,v 1.1.2.5 2009/04/19 18:19:06 fago Exp $
+// $Id: rules.rules_forms.inc,v 1.1.2.6 2009/04/30 11:58:30 fago Exp $
 
 
 /**
@@ -36,6 +36,19 @@ function rules_condition_number_compare_form($settings = array(), &$form) {
 
 function rules_condition_check_boolean_help() {
   return t('Check a <a href="http://en.wikipedia.org/wiki/Logical_value">truth value</a>, i.e. TRUE or FALSE.');
+}
+
+function rules_action_save_variable_form($settings, &$form, $form_state) {
+  // Only add this form for the save variable action, not for the add variable action.
+  if (!isset($form_state['element']['#info']['new variables'])) {
+    $settings += array('immediate' => 0);
+    $form['settings']['immediate'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Force immediate saving.'),
+      '#description' => t('If enabled, intelligent saving is bypassed to ensure immediate saving.'),
+      '#default_value' => $settings['immediate'],
+    );
+  }
 }
 
 function rules_action_save_variable_help() {

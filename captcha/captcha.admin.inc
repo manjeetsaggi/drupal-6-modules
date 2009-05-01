@@ -1,5 +1,5 @@
 <?php
-// $Id: captcha.admin.inc,v 1.15 2009/02/02 19:44:08 soxofaan Exp $
+// $Id: captcha.admin.inc,v 1.19 2009/04/15 20:58:01 soxofaan Exp $
 
 /**
  * Return an array with the available CAPTCHA types, for use as options array
@@ -26,6 +26,8 @@ function _captcha_available_challenge_types() {
  * Form builder function for the general CAPTCHA configuration
  */
 function captcha_admin_settings() {
+  module_load_include('inc', 'captcha');
+
   // Configuration of which forms to protect, with what challenge.
   $form['captcha_form_protection'] = array(
     '#type' => 'fieldset',
@@ -166,20 +168,6 @@ function theme_captcha_admin_settings_captcha_points($form) {
 }
 
 /**
- * Helper function for adding/updating a CAPTCHA point.
- */
-function _captcha_update_captcha_point($form_id, $captcha_type) {
-  db_query("DELETE FROM {captcha_points} WHERE form_id = '%s'", $form_id);
-  if ($captcha_type == 'none') {
-    db_query("INSERT INTO {captcha_points} (form_id, module, type) VALUES ('%s', NULL, NULL)", $form_id);
-  }
-  else {
-    list($module, $type) = explode('/', $captcha_type);
-    db_query("INSERT INTO {captcha_points} (form_id, module, type) VALUES ('%s', '%s', '%s')", $form_id, $module, $type);
-  }
-}
-
-/**
  * Validation handler for captcha_admin_settings form.
  */
 function captcha_admin_settings_validate($form, $form_state) {
@@ -198,14 +186,14 @@ function captcha_admin_settings_submit($form, &$form_state) {
 
   // Process CAPTCHA points
   foreach ($form_state['values']['captcha_form_id_overview']['captcha_captcha_points'] as $captcha_point_form_id => $data) {
-    _captcha_update_captcha_point($captcha_point_form_id, $data['captcha_type']);
+    captcha_set_form_id_setting($captcha_point_form_id, $data['captcha_type']);
   }
 
   // Add new CAPTCHA point?
   $captcha_point_form_id = $form_state['values']['captcha_form_id_overview']['captcha_new_captcha_point']['form_id'];
   if (!empty($captcha_point_form_id)) {
     $captcha_type = $form_state['values']['captcha_form_id_overview']['captcha_new_captcha_point']['captcha_type'];
-    _captcha_update_captcha_point($captcha_point_form_id, $captcha_type);
+    captcha_set_form_id_setting($captcha_point_form_id, $captcha_type);
     drupal_set_message(t('Added CAPTCHA point.'), 'status');
   }
 
@@ -259,8 +247,7 @@ function captcha_point_admin_form($form_state, $captcha_point_form_id=NULL) {
       '#value' => check_plain($captcha_point_form_id),
       '#disabled' => TRUE,
     );
-    $result = db_query("SELECT * FROM {captcha_points} WHERE form_id = '%s'", $captcha_point_form_id);
-    $captcha_point = db_fetch_object($result);
+    $captcha_point = captcha_get_form_id_setting($captcha_point_form_id);
     if ($captcha_point) {
       $default_captcha_type = "{$captcha_point->module}/{$captcha_point->type}";
     }
@@ -308,7 +295,7 @@ function captcha_point_admin_form_validate($form, $form_state) {
 function captcha_point_admin_form_submit($form, $form_state) {
   $captcha_point_form_id = $form_state['values']['captcha_point_form_id'];
   $captcha_type = $form_state['values']['captcha_type'];
-  _captcha_update_captcha_point($captcha_point_form_id, $captcha_type);
+  captcha_set_form_id_setting($captcha_point_form_id, $captcha_type);
   drupal_set_message(t('Saved CAPTCHA point settings.'), 'status');
 }
 
@@ -355,6 +342,7 @@ function captcha_point_disable_confirm_submit($form, &$form_state) {
 
 /**
  * Helper function for generating an example challenge.
+ * TODO: port this to hook_elements() usage.
  */
 function _captcha_generate_example_challenge($module, $type) {
   $captcha_sid = _captcha_generate_captcha_session(CAPTCHA_STATUS_EXAMPLE);
@@ -373,6 +361,8 @@ function _captcha_generate_example_challenge($module, $type) {
  * CAPTCHA.
  */
 function captcha_examples($form_state, $module, $challenge) {
+  module_load_include('inc', 'captcha');
+
   $form = array();
   if ($module && $challenge) {
     // Generate 10 example challenges.

@@ -1,5 +1,5 @@
 <?php
-// $Id: rules.rules.inc,v 1.1.2.32 2009/04/19 21:21:31 fago Exp $
+// $Id: rules.rules.inc,v 1.1.2.35 2009/04/30 11:58:30 fago Exp $
 
 
 /**
@@ -240,9 +240,9 @@ function rules_rules_action_info() {
       );
     }
   }
-  // Add an action to save savable data types intelligently
+  // Add an action to save savable data types
   foreach (rules_get_data_types() as $name => $type_info) {
-    if (isset($type_info['savable']) && $type_info['savable'] && (!isset($type_info['hidden']) || !$type_info['hidden'])) {
+    if (!empty($type_info['savable']) && empty($type_info['hidden']) && empty($type_info['use_input_form'])) {
       $items['rules_save_var_'. $name] = array(
         'module' => isset($type_info['module']) ? $type_info['module'] : 'Rules',
         'base' => 'rules_action_save_variable',
@@ -276,34 +276,38 @@ function rules_action_invoke_set() {
   // We create a new evaluation state, that maps the variables to the outer
   // state whenever possible. If necessary, we initialize new variables. So
   // we have to care for saving the changes of the new variables only.
-  $new_state = array('set_info' => $set['info']);
-  $new_vars = array();
+  $new_state = array('set_info' => $set['info'], 'variables' => array());
+  $mapped_vars = array();
   $map = rules_get_mapped_argument_names($element);
 
+  $set['info'] += array('arguments' => array());
   foreach (array_keys($set['info']['arguments']) as $i => $name) {
     if (isset($map[$name]) && isset($state['variables'][$map[$name]])) {
       $new_state['variables'][$name] =& $state['variables'][$map[$name]];
+      $mapped_vars[] = $name;
     }
     else {
       $variable = new rules_variable;
       $variable->construct($new_state, $name, $args[$i]);
-      $new_vars[] =& $variable;
     }
   }
-  // Evaluate, but don't save all variables.
-  rules_evaluate_rule_set($set_name, $set, $new_state, FALSE);
-
-  // Newly created variables are dropped now, so save changes.
-  foreach ($new_vars as $variable) {
-    $variable->save_changes();
-  }
+  // Evaluate, but don't save mapped variables.
+  rules_evaluate_rule_set($set_name, $set, $new_state, $mapped_vars);
 }
 
 /**
- * Base action implementation for adding a new variable and saving variables
+ * Base action implementation for adding a new variable and saving variables.
  */
-function rules_action_save_variable($name, $variable) {
-  return array($name => $variable);
+function rules_action_save_variable($name, $variable, $settings, $element, &$state) {
+  if (!empty($settings['immediate'])) {
+    $map = rules_get_mapped_argument_names($element);
+    // Force imediate saving!
+    $state['variables'][$map[$name]]->save();
+    $state['variables'][$map[$name]]->save_changes();
+  }
+  else {
+    return array($name => $variable);
+  }
 }
 
 /**
