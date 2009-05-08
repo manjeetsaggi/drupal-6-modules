@@ -1,4 +1,4 @@
-/* $Id: admin_menu.js,v 1.7.2.7.2.8 2009/04/04 15:23:18 sun Exp $ */
+/* $Id: admin_menu.js,v 1.7.2.7.2.9 2009/05/07 01:28:38 sun Exp $ */
 
 Drupal.admin = Drupal.admin || { behaviors: {}, hashes: {} };
 
@@ -64,7 +64,7 @@ Drupal.behaviors.adminMenuCollapseModules = function (context) {
  * Drupal behavior.
  */
 Drupal.behaviors.adminMenuMarginTop = function (context) {
-  if (Drupal.settings.admin_menu.margin_top) {
+  if (!Drupal.settings.admin_menu.suppress && Drupal.settings.admin_menu.margin_top) {
     $('body:not(.admin-menu)', context).addClass('admin-menu');
   }
 };

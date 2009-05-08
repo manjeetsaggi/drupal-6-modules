@@ -96,7 +96,8 @@ Configuration
    
    4. Disable the WYSIWYG editor for the "guests you like to invite" / "Add guests" textarea which 
    is part of the "manage guests" form when creating an invitation. 
-   The Wysiwyg editor should be disabled by default(Tested with FcK).
+   The Wysiwyg editor should be disabled for those fields by default(Tested with FcK). If the editor is visible,
+   Please exclude field "edit-recipients" in the editors settings manually.
 
 
 

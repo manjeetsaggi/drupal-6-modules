@@ -1,5 +1,5 @@
 <?php
-// $Id: rsvp.module,v 1.22.2.25 2009/03/18 18:46:51 ulf1 Exp $
+// $Id: rsvp.module,v 1.22.2.27 2009/04/21 21:17:05 ulf1 Exp $
 
 /**
  * @module rsvp
@@ -546,7 +546,7 @@ function rsvp_nodeapi(&$node, $op, $teaser, $page) {
       $rsvps = rsvp_function_load_invitations($node->nid);
       while ($rsvp = db_fetch_object($rsvps)) {
         //Now verify if user received an invitation or not. 
-        //We have to do this two step approcah because users (not guests) might be allowed to see an invitation by role.
+        //We have to do this two step approach because users (not guests) might be allowed to see an invitation by role.
         $invite_target = rsvp_function_load_invitation_rid($rsvp->rid, NULL, false);
         if ($invite_target == false)
           $invite_target = NULL;
@@ -556,12 +556,12 @@ function rsvp_nodeapi(&$node, $op, $teaser, $page) {
         $is_guestlist_visible = _rsvp_visible_guestlist_access($connector, $rsvp, $invite_target);  
         list($perm_byrole, $perm_guestonly) = rsvp_function_invitation_by_invite_accessarray($connector, $rsvp, NULL, NULL, array(RSVP_ACCESS_BYROLE, RSVP_ACCESS_GUESTONLY), NULL);
 
-        if ($perm_guestonly == true) {  
+        if ($perm_guestonly == true && $rsvp->reply_blind_node == RSVP_REPLY_SHOW) {  
           $params['replybox'] = drupal_get_form('rsvp_reply_form', $rsvp, $invite_target);
           $display = true;
         }
 
-        if ($is_guestlist_visible == true) {  
+        if ($is_guestlist_visible == true && $rsvp->response_blind_node == RSVP_RESPONSE_SHOW) {  
           $params['guestlist'] = rsvp_show_guestlist($rsvp, NULL);
           $display = true;
         }
@@ -4162,7 +4162,7 @@ function template_preprocess_rsvp_invitation(&$variables) {
   $donate_text = '';
   $perm_moderator = rsvp_function_invitation_by_invite_access($connector, $rsvp, $invite_target, NULL, RSVP_ACCESS_MAINTAIN);
   if ($perm_moderator == true) {
-    $donate_text .= '<br /><div style="width:80%; border-style:solid; padding:5px"><b>Visible to maintainer only:<br />If you like this module, please consider donating to support the <a href="http://drupal.org/project/rsvp">rsvp project</a> at http://drupal.org/project/rsvp</b></div><br />';   
+    $donate_text .= '<br /><div style="width:80%; border-style:solid; padding:5px"><b>Visible to maintainer only:<br />If you like to support my work on RSVP for Drupal 6, please consider donating to the <a href="http://drupal.org/project/rsvp">rsvp project</a> at http://drupal.org/project/rsvp</b></div><br />';   
   }
   
   $variables['totalsarray'][RSVP_ATT_ALL]   = array(check_plain($params['totalsarray'][RSVP_ATT_ALL]),    'not.gif',  t('All'));

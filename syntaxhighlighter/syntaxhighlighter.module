@@ -1,5 +1,5 @@
 <?php
-// $Id: syntaxhighlighter.module,v 1.5 2009/02/17 21:01:15 mattyoung Exp $
+// $Id: syntaxhighlighter.module,v 1.6 2009/05/03 04:07:31 mattyoung Exp $
 
 /**
  * @file
@@ -68,4 +68,39 @@ function syntaxhighlighter_init() {
   }
   $code[] = '});';
   drupal_add_js(join("\n", $code), 'inline');
+}
+
+
+function syntaxhighlighter_filter_tips($delta, $format, $long = FALSE) {
+  $tag_name = variable_get('syntaxhighlighter_tagname', 'pre');
+  return $long ?
+    t('<p>Syntax highlight code surrounded by the !ex0 tags, where LANG is a language aliase, optionally followed by option strings separated by \';\'.</p><p>Example: !ex1 syntax highlights PHP code, initially collapsed, start line number at 50.</p><p>See <a href="!url0">usage</a>, <a href="!url1">language aliases</a> and <a href="!url2">options</a> for additional helps.</p>',
+       array('!ex0' => "&lt;$tag_name class=\"brush: LANG\"&gt;...&lt;/$tag_name&gt;",
+             '!ex1' => "&lt;$tag_name class=\"brush: php;collapse: true;first-line:50\"&gt;...&lt;/$tag_name&gt;",
+             '!url0' => 'http://alexgorbatchev.com/wiki/SyntaxHighlighter:Usage#Adding_code_blocks',
+             '!url1' => 'http://alexgorbatchev.com/wiki/SyntaxHighlighter:Brushes#About',
+             '!url2' => 'http://alexgorbatchev.com/wiki/SyntaxHighlighter:Configuration#SyntaxHighlighter.defaults'))
+    : t('Syntax highlight code surrounded by the !ex0 tags. See <a href="/filter/tips">here</a> for details.',
+         array('!ex0' => "&lt;$tag_name class=\"brush: LANG\"&gt;...&lt;/$tag_name&gt;"));
+}
+
+
+function syntaxhighlighter_filter($op, $delta = 0, $format = -1, $text = '') {
+  switch ($op) {
+    case 'list':
+      return array(0 => t('Syntax Highlighter'));
+
+    case 'description':
+      return syntaxhighlighter_filter_tips(0, 0, FALSE);
+
+      // We don't actually do filtering on the server side, caching is no problem
+    case 'no cache':
+      return FALSE;
+
+    // do nothing
+    case 'prepare':
+    case 'process':
+    default:
+      return $text;
+  }
 }

@@ -1,19 +1,21 @@
-$Id: README.txt,v 1.1.4.2 2009/04/02 13:39:32 alexb Exp $
+$Id: README.txt,v 1.1.4.4 2009/05/01 13:31:10 alexb Exp $
 
 Feed Element Mapper
 ===================
 
-Use Date Mapper with caution as it is not stable. There is a patch in the queue 
-for improving it: http://drupal.org/node/215979
-
 About
 =====
 
-Add on module for FeedAPI that maps elements on a feed item such as tags or the 
+Add-on module for FeedAPI that maps elements on a feed item such as tags or the 
 author name to taxonomy or CCK fields. These mappings are configurable by point 
 and click.
 
-Turorials
+Documentation
+=============
+
+For implementing mappers refer to API documentation in feedapi_mapper.api.php
+
+Tutorials
 =========
 
 Blog post with screen cast explaining how to use Feed Element Mapper.

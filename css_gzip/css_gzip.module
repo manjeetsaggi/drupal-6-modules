@@ -1,5 +1,5 @@
 <?php
-// $Id: css_gzip.module,v 1.1 2009/03/24 10:33:55 mikeytown2 Exp $
+// $Id: css_gzip.module,v 1.2 2009/05/02 21:44:47 mikeytown2 Exp $
 
 /**
  * Implementation of hook_help().
@@ -63,7 +63,7 @@ function css_gzip_preprocess_page(&$variables) {
         }
 
         // Make sure the .htaccess file is active to handle GZipped CSS files.
-        if (variable_get('css_aggregator_gzip_no_htaccess', FALSE)==TRUE || !file_exists($htaccess) || variable_get('css_aggregator_gzip_htaccess_size', NULL)!=filesize($htaccess)) {
+        if (variable_get('css_aggregator_gzip_no_htaccess', FALSE)==FALSE) {
           $htaccess_contents = <<<EOT
 <FilesMatch "\.(css.gz)$">
   AddEncoding x-gzip .gz
@@ -77,8 +77,10 @@ function css_gzip_preprocess_page(&$variables) {
   RewriteRule ^(.*)\.css $1.css.gz [L,QSA]
 </IfModule>
 EOT;
-          file_save_data($htaccess_contents, $htaccess, FILE_EXISTS_REPLACE);
-          variable_set('css_aggregator_gzip_htaccess_size', filesize($htaccess));
+          if (file_exists($htaccess)==FALSE || variable_get('css_aggregator_gzip_htaccess_size', NULL)!=filesize($htaccess)) {
+            file_save_data($htaccess_contents, $htaccess, FILE_EXISTS_REPLACE);
+            variable_set('css_aggregator_gzip_htaccess_size', filesize($htaccess));
+          }
         }
       }
       

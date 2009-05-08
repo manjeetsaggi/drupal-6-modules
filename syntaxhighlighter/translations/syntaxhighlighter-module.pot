@@ -1,19 +1,18 @@
-# $Id: syntaxhighlighter-module.pot,v 1.3 2009/02/17 20:57:23 mattyoung Exp $
+# $Id: syntaxhighlighter-module.pot,v 1.4 2009/05/03 04:07:31 mattyoung Exp $
 #
 # LANGUAGE translation of Drupal (general)
 # Copyright YEAR NAME <EMAIL@ADDRESS>
 # Generated from files:
-#  syntaxhighlighter.potx.php: n/a
-#  syntaxhighlighter.admin.inc,v 1.2 2009/02/11 22:52:25 mattyoung
-#  syntaxhighlighter.module,v 1.4 2009/02/12 18:20:49 mattyoung
+#  syntaxhighlighter.admin.inc,v 1.3 2009/02/17 21:01:15 mattyoung
+#  syntaxhighlighter.module,v 1.5 2009/02/17 21:01:15 mattyoung
 #  syntaxhighlighter.info,v 1.5 2009/02/11 18:20:30 mattyoung
-#  syntaxhighlighter.install,v 1.2 2009/02/11 22:52:25 mattyoung
+#  syntaxhighlighter.install,v 1.3 2009/02/17 20:52:12 mattyoung
 #
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
-"POT-Creation-Date: 2009-02-17 12:47-0800\n"
+"POT-Creation-Date: 2009-05-02 20:51-0700\n"
 "PO-Revision-Date: YYYY-mm-DD HH:MM+ZZZZ\n"
 "Last-Translator: NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <EMAIL@ADDRESS>\n"
@@ -21,102 +20,6 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
-
-#: syntaxhighlighter.potx.php:18
-msgid "Bash"
-msgstr ""
-
-#: syntaxhighlighter.potx.php:19
-msgid "CSharp"
-msgstr ""
-
-#: syntaxhighlighter.potx.php:20
-msgid "Cpp"
-msgstr ""
-
-#: syntaxhighlighter.potx.php:21
-msgid "Css"
-msgstr ""
-
-#: syntaxhighlighter.potx.php:22
-msgid "Delphi"
-msgstr ""
-
-#: syntaxhighlighter.potx.php:23
-msgid "Diff"
-msgstr ""
-
-#: syntaxhighlighter.potx.php:24
-msgid "Groovy"
-msgstr ""
-
-#: syntaxhighlighter.potx.php:25;26
-msgid "JScript"
-msgstr ""
-
-#: syntaxhighlighter.potx.php:27
-msgid "Java"
-msgstr ""
-
-#: syntaxhighlighter.potx.php:28
-msgid "OCaml"
-msgstr ""
-
-#: syntaxhighlighter.potx.php:29
-msgid "Perl"
-msgstr ""
-
-#: syntaxhighlighter.potx.php:30
-msgid "Php"
-msgstr ""
-
-#: syntaxhighlighter.potx.php:31
-msgid "Plain"
-msgstr ""
-
-#: syntaxhighlighter.potx.php:32
-msgid "Python"
-msgstr ""
-
-#: syntaxhighlighter.potx.php:33
-msgid "Ruby"
-msgstr ""
-
-#: syntaxhighlighter.potx.php:34
-msgid "Sql"
-msgstr ""
-
-#: syntaxhighlighter.potx.php:35
-msgid "Vb"
-msgstr ""
-
-#: syntaxhighlighter.potx.php:36
-msgid "Xml"
-msgstr ""
-
-#: syntaxhighlighter.potx.php:38
-msgid "Default"
-msgstr ""
-
-#: syntaxhighlighter.potx.php:39
-msgid "Django"
-msgstr ""
-
-#: syntaxhighlighter.potx.php:40
-msgid "Emacs"
-msgstr ""
-
-#: syntaxhighlighter.potx.php:41
-msgid "FadeToGrey"
-msgstr ""
-
-#: syntaxhighlighter.potx.php:42
-msgid "Midnight"
-msgstr ""
-
-#: syntaxhighlighter.potx.php:43
-msgid "RDark"
-msgstr ""
 
 #: syntaxhighlighter.admin.inc:24
 msgid "Syntax highlighter enabled languages"
@@ -194,6 +97,18 @@ msgstr ""
 msgid "Brush wasn't made for html-script option: "
 msgstr ""
 
+#: syntaxhighlighter.module:77
+msgid "<p>Syntax highlight code surrounded by the !ex0 tags, where LANG is a language aliase, optionally followed by option strings separated by ';'.</p><p>Example: !ex1 syntax highlights PHP code, initially collapsed, start line number at 50.</p><p>See <a href=\"!url0\">usage</a>, <a href=\"!url1\">language aliases</a> and <a href=\"!url2\">options</a> for additional helps.</p>"
+msgstr ""
+
+#: syntaxhighlighter.module:83
+msgid "Syntax highlight code surrounded by the !ex0 tags. See <a href=\"/filter/tips\">here</a> for details."
+msgstr ""
+
+#: syntaxhighlighter.module:91
+msgid "Syntax Highlighter"
+msgstr ""
+
 #: syntaxhighlighter.module:18 syntaxhighlighter.info:0
 msgid "Syntax highlighter"
 msgstr ""
@@ -206,16 +121,20 @@ msgstr ""
 msgid "syntaxhighlighter"
 msgstr ""
 
-#: syntaxhighlighter.install:27
+#: syntaxhighlighter.install:29
 msgid "Syntax highlighter module"
 msgstr ""
 
-#: syntaxhighlighter.install:28
+#: syntaxhighlighter.install:30
 msgid "The required Syntax Highlighter Javascript library has not been installed.  Please see README.txt."
 msgstr ""
 
-#: syntaxhighlighter.install:30
-msgid "Required SyntaxHighlighter JS lib not installed"
+#: syntaxhighlighter.install:32
+msgid "The required SyntaxHighlighter Javascript library is not installed."
+msgstr ""
+
+#: (duplicate) syntaxhighlighter.install:45 
+msgid "You can now <a href=\"!admin\">configure the Syntax Highlighter module</a>."
 msgstr ""
 
 #: syntaxhighlighter.info:0

@@ -1,5 +1,5 @@
 <?php
-// $Id: rsvp.views.inc,v 1.1.2.5 2009/03/09 21:51:54 ulf1 Exp $
+// $Id: rsvp.views.inc,v 1.1.2.6 2009/03/24 00:12:32 ulf1 Exp $
 
 /**
  * @module rsvp
@@ -18,7 +18,7 @@
  */
 function rsvp_views_data() {
 
-  $data['rsvp']['table']['group'] = t('Invitation');
+  $data['rsvp']['table']['group'] = t('RSVP');
   
   // Advertise this table as a possible base table
   $data['rsvp']['table']['base'] = array(
@@ -31,7 +31,7 @@ function rsvp_views_data() {
     'left_field' => 'nid',
     'field' => 'nid',
   );
-
+/*
   $data['node']['table']['join']['rsvp'] = array(
     'left_field' => 'nid',
     'field' => 'nid',
@@ -42,7 +42,7 @@ function rsvp_views_data() {
     'left_field' => 'vid',
     'field' => 'vid',
   );
-  
+*/  
   
   $data['rsvp']['rid'] = array(
     'title' => t('Invitation Id'),
@@ -121,7 +121,7 @@ function rsvp_views_data() {
   );
   
   $data['rsvp']['timestamp'] = array(
-    'title' => t('Last Update time.'),
+    'title' => t('Last Update time'),
     'help' => t('Last time when invitation has been updated.'),
     'field' => array(
       'handler' => 'views_handler_field_date',
@@ -158,6 +158,16 @@ function rsvp_views_data() {
     ),
   );
   
+  $data['rsvp']['rsvp_user_is_organizer'] = array(
+    'title' => t('Current user organizer'),
+    'real field' => 'uid',
+    'filter' => array(
+      'handler' => 'rsvp_views_handler_filter_user_is_organizer',
+      'help' => t('This allows you to filter by whether or not the logged in user is organizer of an invitation.'),
+    ),
+  );
+  
+/*  
   $data['rsvp']['total_rsvps'] = array(
     'title' => t(' Total Invitations'),
     'help' => t('Display total number of Invitations for the node.'),
@@ -171,11 +181,11 @@ function rsvp_views_data() {
 //        ),
         
   );  
+*/  
   
   
   
-  
-  $data['rsvp_invite']['table']['group'] = t('Invitations');
+  $data['rsvp_invite']['table']['group'] = t('RSVP');
 
   $data['rsvp_invite']['table']['join']['rsvp'] = array(
     'left_field' => 'rid',
@@ -225,9 +235,17 @@ function rsvp_views_data() {
       'help' => t('Email address of a user (authenticated or anonymous) who received an invitation.') .' <strong>'. t('WARNING: only expose this data in a view that is restricted to users whom you can trust with such sensitive information.') .'</strong>',
     ),
   );
+
+  $data['rsvp_invite']['hash'] = array(
+    'title' => t('Invitation'),
+    'field' => array(
+      'handler' => 'views_handler_field',
+      'help' => t('The hash of the user the invitation belongs to.'),
+    ),
+  );
   
   $data['rsvp_invite']['rsvp_user_invited'] = array(
-    'title' => t('Current User invited'),
+    'title' => t('Current user invited'),
     'real field' => 'uid',
     'filter' => array(
       'handler' => 'views_handler_filter_user_current',
@@ -235,8 +253,6 @@ function rsvp_views_data() {
     ),
   );
 
-  //SELECT DISTINCT n.* FROM node n LEFT JOIN rsvp r ON n.nid = r.nid LEFT JOIN rsvp_invite ri ON r.rid = ri.rid
-  //WHERE ri.uid = 1 AND ri.response = 'no';
   $data['rsvp_invite']['rsvp_user_response'] = array(
     'title' => t('Response'),
     'real field' => 'response',
@@ -250,7 +266,8 @@ function rsvp_views_data() {
       'label' => t('Response:'),
     ),
   );
-    
+
+/*  
   $data['rsvp_invite']['total_invites'] = array(
     'title' => t('Total number of guests'),
     'help' => t('Display total number of guests for all invitations on the node.'),
@@ -258,12 +275,12 @@ function rsvp_views_data() {
       'handler' => 'rsvp_views_handler_field_rsvp_invite_total_invites',
       'click sortable' => true,
     ),
-/*          'sort' => array(
-            'help' => t('Sort by the total invites in all RSVPs on a node'),
-          ),
-*/
+//          'sort' => array(
+//            'help' => t('Sort by the total invites in all RSVPs on a node'),
+//          ),
+
   );    
-  
+*/  
   
   return $data;
 	
@@ -281,16 +298,21 @@ function rsvp_views_handlers() {
       'rsvp_views_handler_filter_rsvp_startdate' => array(
         'parent' => 'views_handler_filter_numeric',
       ),
+      'rsvp_views_handler_filter_user_is_organizer' => array(
+        'parent' => 'views_handler_filter_boolean_operator',
+      ),
       'rsvp_views_handler_field_rsvp_name' => array(
         'parent' => 'views_handler_field',
       ),
       'rsvp_views_handler_field_rsvp_startdate' => array(
         'parent' => 'views_handler_field_date',
       ),
-      'rsvp_views_handler_field_rsvp_total_rsvps' => array(
+      
+/*      'rsvp_views_handler_field_rsvp_total_rsvps' => array(
         'parent' => 'views_handler_field',
       ),
-      
+*/
+            
 /*      'rsvp_handler_field_rsvp_invite_total_invites' => array(
         'parent' => 'views_handler_field',
       ),
@@ -301,11 +323,3 @@ function rsvp_views_handlers() {
   );
 }
 
-
-
-///////////////////
-
-/*function views_rsvp_sort_handler_total_rsvp($action, &$query, $sortinfo, $sort) {
-  $query->orderby[] = "rsvp.rsvp_total_rsvps $sort[sortorder]";
-}
-*/

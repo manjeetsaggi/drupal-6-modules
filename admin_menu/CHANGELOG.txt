@@ -1,4 +1,4 @@
-// $Id: CHANGELOG.txt,v 1.33.2.48.2.14 2009/04/25 21:00:28 davereid Exp $
+// $Id: CHANGELOG.txt,v 1.33.2.48.2.16 2009/05/07 01:28:38 sun Exp $
 
 Admin Menu x.x-x.x, xxxx-xx-xx
 ------------------------------
@@ -6,6 +6,8 @@ Admin Menu x.x-x.x, xxxx-xx-xx
 
 Admin Menu 6.x-3.x, xxxx-xx-xx
 ------------------------------
+by sun: Fixed admin_menu_suppress() does not suppress margin-top.
+#451270 by sun: Added visual indication when working as uid 1.
 by Dave Reid: Updated for getInfo() in tests.
 #420828 by sun: Added dynamic replacements for cached administration menu.
 #420840 by sun: Fixed Drupal.behaviors.adminMenu must be only executed once.

@@ -6,9 +6,9 @@ dependencies[] = rsvp
 dependencies[] = buddylist_api
 core = 6.x
 
-; Information added by drupal.org packaging script on 2009-03-19
-version = "6.x-2.0-beta3"
+; Information added by drupal.org packaging script on 2009-05-05
+version = "6.x-2.0-rc1"
 core = "6.x"
 project = "rsvp"
-datestamp = "1237505462"
+datestamp = "1241562114"
 

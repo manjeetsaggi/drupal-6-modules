@@ -1,3 +1,9 @@
+04/21/09: fixed by ulf1- guestlist and replybox have always be shown below the node. 
+                         The settings 'Display guest list inside event/node' and
+                         'Display reply box inside event/node' have not been considered when displaying the data. 
+
+03/23/09: improoved by ulf1- views
+
 03/18/09: fixed by ulf1- removed unnecessary message "RSVP: Association for content type..." when saving a content type.
 
 

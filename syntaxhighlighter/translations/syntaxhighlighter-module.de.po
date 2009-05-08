@@ -1,4 +1,4 @@
-# $Id: syntaxhighlighter-module.de.po,v 1.1 2009/02/17 20:56:51 mattyoung Exp $
+# $Id: syntaxhighlighter-module.de.po,v 1.2 2009/05/03 04:07:31 mattyoung Exp $
 #
 # LANGUAGE translation of Drupal (general)
 # Copyright YEAR NAME <EMAIL@ADDRESS>
@@ -10,15 +10,18 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: PROJECT VERSION\n"
-"POT-Creation-Date: 2009-02-16 16:56-0800\n"
-"PO-Revision-Date: 2009-02-16 17:08-0800\n"
+"Project-Id-Version: 1\n"
+"POT-Creation-Date: 2009-05-02 20:51-0700\n"
+"PO-Revision-Date: 2009-05-02 20:54-0800\n"
 "Last-Translator: Matthew Young <matthew@hddigitalworks.com>\n"
-"Language-Team: LANGUAGE <EMAIL@ADDRESS>\n"
+"Language-Team: HD Digitalworks <info@hddigitalworks.com>\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Poedit-Language: German\n"
+"X-Poedit-Country: GERMANY\n"
+"X-Poedit-SourceCharset: utf-8\n"
 
 #: syntaxhighlighter.admin.inc:24
 msgid "Syntax highlighter enabled languages"
@@ -100,6 +103,19 @@ msgstr "Kann keinen Brush finden für:"
 msgid "Brush wasn't made for html-script option: "
 msgstr "Brush wurde nicht gemacht für die HTML-Skript Option:"
 
+#: syntaxhighlighter.module:77
+msgid "<p>Syntax highlight code surrounded by the !ex0 tags, where LANG is a language aliase, optionally followed by option strings separated by ';'.</p><p>Example: !ex1 syntax highlights PHP code, initially collapsed, start line number at 50.</p><p>See <a href=\"!url0\">usage</a>, <a href=\"!url1\">language aliases</a> and <a href=\"!url2\">options</a> for additional helps.</p>"
+msgstr ""
+
+#: syntaxhighlighter.module:83
+msgid "Syntax highlight code surrounded by the !ex0 tags. See <a href=\"/filter/tips\">here</a> for details."
+msgstr ""
+
+#: syntaxhighlighter.module:91
+#, fuzzy
+msgid "Syntax Highlighter"
+msgstr "Syntax highlighter"
+
 #: syntaxhighlighter.module:18
 #: syntaxhighlighter.info:0
 msgid "Syntax highlighter"
@@ -113,19 +129,29 @@ msgstr "Konfiguriere syntax highlighter"
 msgid "syntaxhighlighter"
 msgstr "syntaxhighlighter"
 
-#: syntaxhighlighter.install:27
+#: syntaxhighlighter.install:29
 msgid "Syntax highlighter module"
 msgstr "Syntax highligther Modul"
 
-#: syntaxhighlighter.install:28
+#: syntaxhighlighter.install:30
 msgid "The required Syntax Highlighter Javascript library has not been installed.  Please see README.txt."
 msgstr "Die benötigte Syntax Hightlighter Javascript Bibliothek wurde nicht installiert. Siehe README.txt."
 
-#: syntaxhighlighter.install:30
-msgid "Required SyntaxHighlighter JS lib not installed"
-msgstr "Die benötigte Syntax Hightlighter Javascript Bibliothek wurde nicht installiert."
+#: syntaxhighlighter.install:32
+#, fuzzy
+msgid "The required SyntaxHighlighter Javascript library is not installed."
+msgstr "Die benötigte Syntax Hightlighter Javascript Bibliothek wurde nicht installiert. Siehe README.txt."
+
+#: (duplicate) syntaxhighlighter.install:45
+msgid "You can now <a href=\"!admin\">configure the Syntax Highlighter module</a>."
+msgstr ""
 
 #: syntaxhighlighter.info:0
 msgid "Integrates the Syntax Highlighter Javascript Library to your site."
 msgstr "Integriert die Syntax Highlighter Javascript-Bibliothek auf Ihrer Website."
+
+#~ msgid "Required SyntaxHighlighter JS lib not installed"
+#~ msgstr ""
+#~ "Die benötigte Syntax Hightlighter Javascript Bibliothek wurde nicht "
+#~ "installiert."
 
