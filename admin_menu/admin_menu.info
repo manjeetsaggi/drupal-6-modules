@@ -4,9 +4,9 @@ description = Provides a dropdown menu to most administrative tasks and other co
 package = Administration
 core = 6.x
 
-; Information added by drupal.org packaging script on 2009-05-07
+; Information added by drupal.org packaging script on 2009-05-10
 version = "6.x-3.x-dev"
 core = "6.x"
 project = "admin_menu"
-datestamp = "1241697743"
+datestamp = "1241913677"
 
