@@ -1,5 +1,5 @@
 <?php
-// $Id: addthis.module,v 1.13.2.12 2009/02/15 10:06:35 wesku Exp $
+// $Id: addthis.module,v 1.13.2.15 2009/04/29 06:40:48 wesku Exp $
 
 /**
  * @file
@@ -113,13 +113,15 @@ function _addthis_create_button($node=NULL, $teaser = FALSE) {
 	    addthis_logo_color = \'%s\';
 	    addthis_brand = \'%s\';
 	    addthis_options = \'%s\';
+	    addthis_disable_flash = \'%s\';
 	',
         addslashes(variable_get('addthis_username', 'my-username')),
         addslashes(variable_get('addthis_logo', 'http://www.addthis.com/images/yourlogo.png')),
         addslashes(variable_get('addthis_logo_background', 'EFEFFF')),
         addslashes(variable_get('addthis_logo_color', '666699')),
         addslashes(variable_get('addthis_brand', 'Your Site')),
-        addslashes(variable_get('addthis_options', 'favorites, email, digg, delicious, myspace, facebook, google, live, more'))
+        addslashes(variable_get('addthis_options', 'favorites, email, digg, delicious, myspace, facebook, google, live, more')),
+        variable_get('addthis_options', FALSE) ? 'true' : 'false'
       ), 'inline');
   }
 
@@ -136,7 +138,7 @@ function theme_addthis_button($node, $teaser) {
         onclick="addthis_url   = location.href; addthis_title = document.title; return addthis_click(this);">
       <img src="%s" width="%d" height="%d" %s /></a>
       ',
-      addslashes(variable_get('addthis_image', 'http://s9.addthis.com/button1-share.gif')),
+      $_SERVER['HTTPS'] == 'on' ? addslashes(variable_get('addthis_image_secure', 'https://secure.addthis.com/button1-share.gif')) : addslashes(variable_get('addthis_image', 'http://s9.addthis.com/button1-share.gif')),
       addslashes(variable_get('addthis_image_width', '125')),
       addslashes(variable_get('addthis_image_height', '16')),
       addslashes(variable_get('addthis_image_attributes', 'alt=""'))
@@ -148,14 +150,15 @@ function theme_addthis_button($node, $teaser) {
         onmouseover="return addthis_open(this, \'\', \'%s\', \'%s\')"
         onmouseout="addthis_close()"
         onclick="return addthis_sendto()"><img src="%s" width="%d" height="%d" %s /></a>
-      <script type="text/javascript" src="http://s7.addthis.com/js/152/addthis_widget.js"></script>
+      <script type="text/javascript" src="%s/js/' . variable_get('addthis_widget_version', '152') . '/addthis_widget.js"></script>
       ',
       $teaser ? url('node/'. $node->nid, array('absolute' => 1) ) : '[URL]',
       $teaser ? addslashes($node->title) : '[TITLE]',
-      addslashes(variable_get('addthis_image', 'http://s9.addthis.com/button1-share.gif')),
+      $_SERVER['HTTPS'] == 'on' ? addslashes(variable_get('addthis_image_secure', 'https://secure.addthis.com/button1-share.gif')) : addslashes(variable_get('addthis_image', 'http://s9.addthis.com/button1-share.gif')),
       addslashes(variable_get('addthis_image_width', '125')),
       addslashes(variable_get('addthis_image_height', '16')),
-      variable_get('addthis_image_attributes', 'alt=""')
+      variable_get('addthis_image_attributes', 'alt=""'),
+      $_SERVER['HTTPS'] == 'on' ? 'https://secure.addthis.com' : 'http://s7.addthis.com'
     ));
   }
 }

@@ -1,5 +1,5 @@
 <?php
-// $Id: addthis.admin.inc,v 1.1.2.4 2009/02/15 10:02:37 wesku Exp $
+// $Id: addthis.admin.inc,v 1.1.2.7 2009/04/29 06:40:48 wesku Exp $
 
 /**
  * @file
@@ -49,6 +49,12 @@ function addthis_admin_settings() {
     '#title'         => t('Button image url'),
     '#default_value' => variable_get('addthis_image', 'http://s9.addthis.com/button1-share.gif'),
     '#description'   => t('URL for small image in the button. Example: http://s9.addthis.com/button1-share.gif'),
+  );
+  $form['addthis_button_settings']['addthis_image_secure'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('Button image url for secure https connection'),
+    '#default_value' => variable_get('addthis_image_secure', 'https://secure.addthis.com/button1-share.gif'),
+    '#description'   => t('This is only required if your site uses secure https connections. Example: https://secure.addthis.com/button1-share.gif'),
   );
   $form['addthis_button_settings']['addthis_image_width'] = array(
     '#type'          => 'textfield',
@@ -124,6 +130,22 @@ function addthis_admin_settings() {
     '#title'         => t('Offset top'),
     '#default_value' => variable_get('addthis_offset_left', '2'),
     '#description'   => t('Horizontal offset for the drop-down window (in pixels). Example: 2'),
+  );
+  $form['addthis_widget_settings']['addthis_disable_flash'] = array(
+    '#type'          => 'checkbox',
+    '#title'         => t('Disable Flash cookie'),
+    '#default_value' => variable_get('addthis_disable_flash', '0'),
+    '#description'   => t('AddThis.com uses Flash cookies by default to <a href="http://www.addthis.com/blog/2009/01/05/the-addthis-flash-cookie-we-need-your-feedback/">provide more accurate tracking information</a>. Some people consider this <a href="http://drupal.org/node/364078">a privacy concern</a> and Flash cookies can be replaced with normal ones by checking this checkbox.'),
+  );
+  $form['addthis_widget_settings']['addthis_widget_version'] = array(
+    '#type'          => 'select',
+    '#title'         => t('Widget Version'),
+    '#default_value' => variable_get('addthis_widget_version', '152'),
+    '#options'       => array(
+        152 => t('152 - Uses a popup window for the more option'),
+        200 => t('200 - Adds lightbox support for the more option')
+    ),
+    '#description'   => t('The version of the addthis widget to use.'),
   );
   return system_settings_form($form);
 }

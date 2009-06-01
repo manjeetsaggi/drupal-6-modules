@@ -1,22 +1,20 @@
-div.block_edit_link {
-background-color: #e3efff;
-border: 1px dashed grey;
-font-size: 11px;
-font-weight: bold;
-width: 25px;
-padding: 2px 3px 1px 5px;
-position: absolute;
-z-index: 40;
-display: none;
+/* $Id: block_edit.css,v 1.1.2.4 2009/05/26 22:12:11 psynaptic Exp $ */
+
+div.block-edit-link {
+  font-size: xx-small;
+  padding: 2px 3px 1px 0;
+  position: absolute;
+  z-index: 40;
+  display: none;
+  margin-top: -15px;
 }
 
-div.block_edit_link a {
+div.block-edit-link a {
   text-decoration: none;
-  color: black;
-  font-size: 11px;
-  font-weight: bold;
-} 
+  color: #CCC;
+  font-size: xx-small;
+}
 
-div.block_edit_link a:hover {
-  text-decoration: underline;
-} 
+div.block-edit-link a:hover {
+  color: #000;
+}
