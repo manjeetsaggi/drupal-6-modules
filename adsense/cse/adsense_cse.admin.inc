@@ -1,5 +1,5 @@
 <?php
-// $Id: adsense_cse.admin.inc,v 1.1.2.3 2008/12/12 01:40:00 jcnventura Exp $
+// $Id: adsense_cse.admin.inc,v 1.1.2.5 2009/05/13 00:04:20 jcnventura Exp $
 
 /**
  * @file
@@ -51,7 +51,7 @@ function adsense_cse_settings() {
 
   $form['searchbox']['adsense_cse_color_box_background'] = array(
     '#type' => 'select',
-    '#title' => t('Background Color'),
+    '#title' => t('Background color'),
     '#default_value' => variable_get('adsense_cse_color_box_background', ADSENSE_CSE_COLOR_BOX_BACKGROUND_DEFAULT),
     '#options' => array(
       'FFFFFF' => t('White'),
@@ -73,6 +73,13 @@ function adsense_cse_settings() {
     '#default_value' => variable_get('adsense_cse_textbox_length', ADSENSE_CSE_TEXTBOX_LENGTH_DEFAULT),
     '#size' => 2,
     '#maxlength' => 2,
+  );
+
+  $form['searchbox']['adsense_cse_language'] = array(
+    '#type' => 'select',
+    '#title' => t('Watermark Language'),
+    '#default_value' => variable_get('adsense_cse_language', ADSENSE_CSE_LANGUAGE_DEFAULT),
+    '#options' => _adsense_search_options_language(),
   );
 
   $form['result'] = array(

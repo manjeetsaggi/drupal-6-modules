@@ -1,5 +1,5 @@
 <?php
-// $Id: openflashchart.inc,v 1.8 2008/11/13 01:37:51 brmassa Exp $
+// $Id: openflashchart.inc,v 1.9 2009/05/15 05:30:53 brmassa Exp $
 /**
  * @author Bruno Massa http://drupal.org/user/67164
  * @file
@@ -18,7 +18,7 @@ function _openflashchart_chart(&$chart, &$data) {
   $chart->set_title($data['#title']);
   $chart->set_width($data['#width']);
   $chart->set_height($data['#height']);
-  $chart->set_bg_colour($data['#color']);
+  $chart->set_bg_colour($data['#color']['#background']);
 }
 
 /**

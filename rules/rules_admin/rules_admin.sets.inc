@@ -1,5 +1,5 @@
 <?php
-// $Id: rules_admin.sets.inc,v 1.1.2.7 2009/04/19 20:21:53 fago Exp $
+// $Id: rules_admin.sets.inc,v 1.1.2.8 2009/05/18 12:05:20 fago Exp $
 
 
 /**
@@ -278,6 +278,7 @@ function _rules_admin_form_argument($name = '', $info = array()) {
     '#default_value' => isset($info['label']) ? $info['label'] : '',
   );
   $options = rules_extract_property(array_filter(rules_get_data_types(), 'rules_admin_element_filter'), 'label');
+  $options = array_map('drupal_ucfirst', $options);
   asort($options);
   $form['type'] = array(
     '#type' => 'select',

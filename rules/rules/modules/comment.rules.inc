@@ -1,14 +1,16 @@
 <?php
-// $Id: comment.rules.inc,v 1.1.2.5 2009/04/19 15:03:43 fago Exp $
+// $Id: comment.rules.inc,v 1.1.2.7 2009/05/18 12:05:20 fago Exp $
 
 
 /**
  * @file rules integration for the comment module
+ *
+ * @addtogroup rules
+ * @{
  */
 
 /**
- * Implementation of hook_event_info()
- * @ingroup rules
+ * Implementation of hook_rules_event_info()
  */
 function comment_rules_event_info() {
   return array(
@@ -95,7 +97,6 @@ function rules_events_argument_comment_node_author($comment) {
 
 /**
  * Implementation of hook_rules_action_info().
- * @ingroup rules
  */
 function comment_rules_action_info() {
   return array(
@@ -133,7 +134,7 @@ function rules_action_load_comment($cid) {
 function comment_rules_data_type_info() {
   return array(
     'comment' => array(
-      'label' => t('Comment'),
+      'label' => t('comment'),
       'class' => 'rules_data_type_comment',
       'savable' => FALSE,
       'identifiable' => TRUE,
@@ -156,3 +157,6 @@ class rules_data_type_comment extends rules_data_type {
   }
 }
 
+/**
+ * @}
+ */

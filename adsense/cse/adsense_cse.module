@@ -1,5 +1,5 @@
 <?php
-// $Id: adsense_cse.module,v 1.1.2.5 2008/12/12 00:58:08 jcnventura Exp $
+// $Id: adsense_cse.module,v 1.1.2.8 2009/02/10 01:35:20 jcnventura Exp $
 
 /**
  * @file
@@ -20,12 +20,15 @@ define('ADSENSE_CSE_FRAME_WIDTH_DEFAULT', 800);
 define('ADSENSE_CSE_LOGO_DEFAULT', 'adsense_cse_branding_right');
 define('ADSENSE_CSE_NUMBER_BLOCKS_DEFAULT', 2);
 define('ADSENSE_CSE_TEXTBOX_LENGTH_DEFAULT', 31);
+define('ADSENSE_CSE_LANGUAGE_DEFAULT', 'en');
 
 /**
  * Implementation of hook_menu().
  */
 function adsense_cse_menu() {
   $items = array();
+
+  $results_path = variable_get('clean_url', 0) ? ADSENSE_CSE_RESULTS_PATH : '.';
 
   $items['admin/settings/adsense/cse'] = array(
     'title' => 'Custom Search',
@@ -36,7 +39,7 @@ function adsense_cse_menu() {
     'type' => MENU_LOCAL_TASK,
     'file' => 'adsense_cse.admin.inc',
   );
-  $items[ADSENSE_CSE_RESULTS_PATH] = array(
+  $items[$results_path] = array(
     'title' => 'Search Results',
     'page callback' => '_adsense_cse_results',
     'access callback' => TRUE,
@@ -136,6 +139,9 @@ function _adsense_cse_get_searchbox($client, $slot = NULL) {
   $ad_location = variable_get('adsense_cse_ad_location', ADSENSE_CSE_AD_LOCATION_DEFAULT);
   $encoding = variable_get('adsense_cse_encoding', ADSENSE_CSE_ENCODING_DEFAULT);
   $textbox_length = variable_get('adsense_cse_textbox_length', ADSENSE_CSE_TEXTBOX_LENGTH_DEFAULT);
+  $language = variable_get('adsense_cse_language', ADSENSE_CSE_LANGUAGE_DEFAULT);
+  $search = t('Search');
+  $custom_search = t('Custom Search');
 
   if (variable_get('clean_url', 0)) {
     $results_path = url(ADSENSE_CSE_RESULTS_PATH, array('absolute' => TRUE));
@@ -143,7 +149,7 @@ function _adsense_cse_get_searchbox($client, $slot = NULL) {
   }
   else {
     $results_path = $base_url;
-    $hidden_q_field = '<input type="hidden" name="q" value="'. ADSENSE_CSE_RESULTS_PATH .'" />';
+    $hidden_q_field = '<input type="hidden" name="q" value="." />';
   }
 
   if ($box_background_color == '000000') {
@@ -170,13 +176,17 @@ function _adsense_cse_get_searchbox($client, $slot = NULL) {
     $script = $base_url .'/'. drupal_get_path('module', 'adsense_cse') .'/adsense_cse.js';
     // If there is a watermark, the indentation of the code makes it impossible to re-use the same text
     $output = <<<CSE_TXT1
+<script type="text/javascript"><!--
+drupal_adsense_cse_lang = '$language';
+//-->
+</script>
 <form action="$results_path" id="cse-search-box">
   <div>$hidden_q_field
     <input type="hidden" name="cx" value="partner-$client:$slot" />
     <input type="hidden" name="cof" value="FORID:$forid" />
     <input type="hidden" name="ie" value="$encoding" />
     <input type="text" name="as_q" size="$textbox_length" />
-    <input type="submit" name="sa" value="Search" />
+    <input type="submit" name="sa" value="$search" />
   </div>
 </form>
 <script type="text/javascript" src="$script"></script>
@@ -202,7 +212,7 @@ CSE_TXT1;
         <input type="hidden" name="cof" value="FORID:$forid" />
         <input type="hidden" name="ie" value="$encoding" />
         <input type="text" name="as_q" size="$textbox_length" />
-        <input type="submit" name="sa" value="Search" />
+        <input type="submit" name="sa" value="$search" />
       </div>
     </form>
   </div>
@@ -210,13 +220,11 @@ CSE_TXT1;
     <img src="http://www.google.com/images/poweredby_transparent/poweredby_$box_background_color.gif" alt="Google" />
   </div>
   <div class="cse-branding-text">
-    Custom Search
+    $custom_search
   </div>
 </div>
 CSE_TXT2;
   }
-
-  $output = "<div class='adsense adsense_cse'>\n$output\n</div>";
 
   return $output;
 }

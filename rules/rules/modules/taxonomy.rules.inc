@@ -1,15 +1,16 @@
 <?php
-// $Id: taxonomy.rules.inc,v 1.1.2.5 2009/04/19 18:19:06 fago Exp $
+// $Id: taxonomy.rules.inc,v 1.1.2.8 2009/05/18 12:05:20 fago Exp $
 
 
 /**
- * @file
- * Rules integration for the taxonomy module.
+ * @file Rules integration for the taxonomy module.
+ *
+ * @addtogroup rules
+ * @{
  */
 
 /**
  * Implementation of hook_rules_event_info().
- * @ingroup rules
  */
 function taxonomy_rules_event_info() {
   return array(
@@ -169,7 +170,8 @@ function rules_action_taxonomy_load_vocab($settings) {
  */
 function rules_action_taxonomy_add_vocab($settings) {
   taxonomy_save_vocabulary($settings);
-  return array('taxonomy_vocab' => $settings);
+  $vocabs = taxonomy_get_vocabularies();
+  return array('taxonomy_vocab' => $vocabs[$settings['vid']]);
 }
 
 /**
@@ -178,14 +180,14 @@ function rules_action_taxonomy_add_vocab($settings) {
 function taxonomy_rules_data_type_info() {
   return array(
     'taxonomy_term' => array(
-      'label' => t('Taxonomy term'),
+      'label' => t('taxonomy term'),
       'class' => 'rules_data_type_taxonomy_term',
       'savable' => FALSE,
       'identifiable' => TRUE,
       'module' => 'Taxonomy',
     ),
     'taxonomy_vocab' => array(
-      'label' => t('Taxonomy vocabulary'),
+      'label' => t('taxonomy vocabulary'),
       'class' => 'rules_data_type_taxonomy_vocab',
       'savable' => FALSE,
       'identifiable' => TRUE,
@@ -222,3 +224,6 @@ class rules_data_type_taxonomy_vocab extends rules_data_type {
   }
 }
 
+/**
+ * @}
+ */

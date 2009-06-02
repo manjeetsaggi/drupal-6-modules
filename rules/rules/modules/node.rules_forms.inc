@@ -1,9 +1,12 @@
 <?php
-// $Id: node.rules_forms.inc,v 1.1.2.16 2009/04/19 15:03:43 fago Exp $
+// $Id: node.rules_forms.inc,v 1.1.2.18 2009/05/18 11:40:57 fago Exp $
 
 
 /**
  * @file Rules configuration forms for the node module
+ *
+ * @addtogroup rules
+ * @{
  */
 
 /**
@@ -25,7 +28,7 @@ function rules_condition_content_is_type_form($settings, &$form) {
  */
 function rules_condition_content_is_type_label($settings, $argument_labels) {
   $names = array_intersect_key(node_get_types('names'), $settings['type']);
-  return t('@node is @type', $argument_labels + array('@type' => implode(' or ', $names)));
+  return t('@node is @type', $argument_labels + array('@type' => implode(' '. t('or') .' ', $names)));
 }
 
 function rules_condition_content_is_published_label($settings, $argument_labels) {
@@ -134,3 +137,6 @@ function node_rules_upgrade_event_map() {
   return array('node_submit' => 'node_presave');
 }
 
+/**
+ * @}
+ */

@@ -1,14 +1,16 @@
 <?php
-// $Id: user.rules.inc,v 1.1.2.17 2009/04/19 15:03:43 fago Exp $
+// $Id: user.rules.inc,v 1.1.2.19 2009/05/18 12:05:20 fago Exp $
 
 
 /**
  * @file rules integration for the user module
+ *
+ * @addtogroup rules
+ * @{
  */
 
 /**
  * Implementation of hook_rules_event_info().
- * @ingroup rules
  */
 function user_rules_event_info() {
   return array(
@@ -78,7 +80,6 @@ function rules_events_argument_global_user() {
 
 /**
  * Implementation of hook_rules_condition_info().
- * @ingroup rules
  */
 function user_rules_condition_info() {
   return array(
@@ -136,7 +137,7 @@ function rules_condition_user_hasrole($user, $settings) {
 }
 
 /**
- * Implementation of hook_rules_action_info
+ * Implementation of hook_rules_action_info().
  */
 function user_rules_action_info() {
   return array(
@@ -257,12 +258,11 @@ function rules_action_user_create($user_name, $user_mail) {
 
 /**
  * Implementation of hook_rules_data_type_info().
- * @ingroup rules
  */
 function user_rules_data_type_info() {
   return array(
     'user' => array(
-      'label' => t('User'),
+      'label' => t('user'),
       'class' => 'rules_data_type_user',
       'savable' => FALSE,
       'identifiable' => TRUE,
@@ -272,7 +272,6 @@ function user_rules_data_type_info() {
 
 /**
  * Defines the user data type
- * @ingroup rules
  */
 class rules_data_type_user extends rules_data_type {
   function load($uid) {
@@ -290,7 +289,6 @@ class rules_data_type_user extends rules_data_type {
  *
  * Adapts the action info of some core actions to better fit for being
  * used with rules.
- * @ingroup rules
  */
 function user_rules_action_info_alter(&$actions) {
   // This action doesn't take the user argument.
@@ -299,3 +297,6 @@ function user_rules_action_info_alter(&$actions) {
   $actions['rules_core_user_block_user_action']['label'] = t('Block a user');
 }
 
+/**
+ * @}
+ */

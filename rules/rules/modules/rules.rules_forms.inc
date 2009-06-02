@@ -1,9 +1,12 @@
 <?php
-// $Id: rules.rules_forms.inc,v 1.1.2.6 2009/04/30 11:58:30 fago Exp $
+// $Id: rules.rules_forms.inc,v 1.1.2.7 2009/05/15 13:03:12 fago Exp $
 
 
 /**
- * @file Forsm for the integration provided by rules
+ * @file Forms for the integration provided by rules
+ *
+ * @addtogroup rules
+ * @{
  */
 
 /**
@@ -71,3 +74,6 @@ function workflow_ng_condition_token_numeric_upgrade(&$element) {
   }
 }
 
+/**
+ * @}
+ */

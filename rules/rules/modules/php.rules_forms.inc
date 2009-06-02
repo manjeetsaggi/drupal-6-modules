@@ -1,9 +1,12 @@
 <?php
-// $Id: php.rules_forms.inc,v 1.1.2.7 2009/04/19 15:03:43 fago Exp $
+// $Id: php.rules_forms.inc,v 1.1.2.8 2009/05/15 13:03:12 fago Exp $
 
 
 /**
  * @file Rules configuration forms for the php module
+ *
+ * @addtogroup rules
+ * @{
  */
 
 /**
@@ -119,3 +122,6 @@ function workflow_ng_condition_custom_php_upgrade(&$element) {
   $element['#name'] = 'rules_condition_custom_php';
 }
 
+/**
+ * @}
+ */

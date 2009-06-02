@@ -1,15 +1,17 @@
 <?php
-// $Id: php.rules.inc,v 1.1.2.9 2009/04/19 15:03:43 fago Exp $
+// $Id: php.rules.inc,v 1.1.2.11 2009/05/15 13:03:12 fago Exp $
 
 
 /**
  * @file rules integration for the php module
  * This provides an php input evaluator as well as a execute php code action.
+ *
+ * @addtogroup rules
+ * @{
  */
 
 /**
  * Implementation of hook_rules_evaluator().
- * @ingroup rules
  */
 function php_rules_evaluator() {
   return array(
@@ -50,7 +52,7 @@ function rules_input_evaluator_php_prepare($string, $variables) {
  * @param $string
  *   The string to evaluate.
  * @param $data
- *   If the prepare method is used, the data as return from prepare().
+ *   The data as returned from the prepare() callback.
  * @param $state
  *   The current evaluation state.
  * @param $return_output
@@ -107,7 +109,6 @@ function rules_php_eval_return($code, $arguments = array()) {
 
 /**
  * Implementation of hook_rules_action_info().
- * @ingroup rules
  */
 function php_rules_action_info() {
   return array(
@@ -131,7 +132,6 @@ function rules_action_custom_php($settings, $element, &$state) {
 
 /**
  * Implementation of hook_rules_condition_info().
- * @ingroup rules
  */
 function php_rules_condition_info() {
   return array(
@@ -153,3 +153,6 @@ function rules_condition_custom_php($settings, $element, &$state) {
   return rules_input_evaluator_php_apply($settings['code'], $settings['vars'], $state, FALSE);
 }
 
+/**
+ * @}
+ */

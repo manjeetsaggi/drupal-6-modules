@@ -1,5 +1,5 @@
 <?php
-// $Id: adsense.module,v 1.68.2.14 2009/01/23 00:28:33 jcnventura Exp $
+// $Id: adsense.module,v 1.68.2.18 2009/03/31 14:41:01 jcnventura Exp $
 
 /**
  * @file
@@ -26,6 +26,9 @@ define('ADSENSE_PLACEHOLDER_TEXT_DEFAULT', 'Google AdSense');
 define('ADSENSE_SECTION_TARGETING_DEFAULT', 1);
 define('ADSENSE_TEST_MODE_DEFAULT', 0);
 define('ADSENSE_VISIBILITY_DEFAULT', 0);
+
+define('ADSENSE_SECRET_ADTEST_DEFAULT', 0);
+define('ADSENSE_SECRET_LANGUAGE_DEFAULT', '');
 
 /**
  * This is the array that holds all ad formats.
@@ -94,6 +97,17 @@ function adsense_ad_formats($key = NULL) {
  */
 function adsense_perm() {
   return array('administer adsense', 'hide adsense', 'use PHP for ad visibility');
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function adsense_theme() {
+  return array(
+    'adsense_ad' => array(
+      'arguments' => array('ad' => NULL, 'module' => NULL),
+    ),
+  );
 }
 
 /**
@@ -183,11 +197,11 @@ function adsense_nodeapi(&$node, $op = 'view', $teaser, $page) {
       if (variable_get('adsense_section_targeting', ADSENSE_SECTION_TARGETING_DEFAULT)) {
         $node->content['adsense_start'] = array(
           '#value' => '<!-- google_ad_section_start -->',
-          '#weight' => -1,
+          '#weight' => -5,
           );
         $node->content['adsense_end'] = array(
           '#value' => '<!-- google_ad_section_end -->',
-          '#weight' => 1,
+          '#weight' => 5,
           );
       }
   }
@@ -200,7 +214,7 @@ function adsense_form_filter_admin_format_form_alter(&$form, $form_state) {
   // In Drupal <= 6.9 (or later) the HTML corrector has a bug that causes problems with the use of the AdSense tag filter
   sscanf(VERSION, "%d.%d", $major, $minor);
   if (($major == 6) && ($minor <= 99)) {
-    if ((empty($form_state['post']) && $form['filters']['adsense/0']['#default_value'] && $form['filters']['filter/3']['#default_value']) || 
+    if ((empty($form_state['post']) && $form['filters']['adsense/0']['#default_value'] && $form['filters']['filter/3']['#default_value']) ||
         ((!empty($form_state['post'])) && ($form_state['post']['filters']['adsense/0'] == '1') && ($form_state['post']['filters']['filter/3'] == '1'))) {
       drupal_set_message(t('The HTML corrector filter has a bug that causes problems with the use of the AdSense tag. Disabling the HTML corrector filter is recommended.'), 'warning', TRUE);
     }
@@ -339,7 +353,7 @@ function adsense_get_client_slot_id($format = NULL) {
  * @see adsense_ad_formats()
  * @see _adsense_page_match()
  * @see _adsense_check_if_enabled()
- * @see _adsense_format_placeholder()
+ * @see _adsense_format_box()
  * @see _adsense_can_insert_another()
  * @see _adsense_cse_get_searchbox()
  * @see _adsense_search_get_searchbox()
@@ -386,7 +400,11 @@ function adsense_display() {
   elseif (!_adsense_check_if_enabled()) {
     // Ads are disabled
     if (variable_get('adsense_placeholder', ADSENSE_PLACEHOLDER_DEFAULT)) {
-      $ad = "<!--adsense: placeholder-->\n". _adsense_format_placeholder($ad);
+      $width = array_key_exists('width', $ad) ? $ad['width'] : 0;
+      $height = array_key_exists('height', $ad) ? $ad['height'] : 0;
+      $text = variable_get('adsense_placeholder_text', ADSENSE_PLACEHOLDER_TEXT_DEFAULT) ." ${ad['desc']}";
+
+      $ad = "<!--adsense: placeholder-->\n". _adsense_format_box($text, $width, $height);
     }
     else {
       $ad = '<!--adsense: ads disabled -->';
@@ -417,9 +435,11 @@ function adsense_display() {
       case 'Search Box':
         if (!empty($slot) && module_exists('adsense_cse')) {
           $ad = _adsense_cse_get_searchbox($client, $slot);
+          $module = 'adsense_cse';
         }
         elseif (module_exists('adsense_search')) {
           $ad = _adsense_search_get_searchbox($client, $args['channel']);
+          $module = 'adsense_search';
         }
         else {
           $ad = '<!--adsense: no AdSense for Search module found-->';
@@ -428,22 +448,41 @@ function adsense_display() {
       default:
         if (!empty($slot) && module_exists('adsense_managed')) {
           $ad = _adsense_managed_get_ad($args['format'], $client, $slot);
+          $module = 'adsense_managed';
         }
         elseif (module_exists('adsense_oldcode')) {
           $ad = _adsense_oldcode_get_ad($args['format'], $client, $args['group'], $args['channel']);
+          $module = 'adsense_oldcode';
         }
         else {
           $ad = '<!--adsense: no AdSense for Content module found-->';
         }
 
-        if (variable_get('adsense_test_mode', ADSENSE_TEST_MODE_DEFAULT)) {
-          $ad = preg_replace("/^(google_ad_client.*;)$/m", "\\1\ngoogle_adtest = 'on';", $ad);
-        }
+        $ad = theme('adsense_ad', $ad, $module);
+
         break;
     }
+    // Remove empty lines
+    $ad = str_replace("\n\n", "\n", $ad);
   }
 
   return $ad;
+}
+
+/**
+ * Default AdSense ad unit theming. Simply add a div with the adsense and $module classes
+ *
+ * @param $ad
+ *   string with the generated ad unit
+ * @param $module
+ *   module used to generate the ad
+ *
+ * @return
+ *   string with the modified ad unit
+ * @ingroup themeable
+ */
+function theme_adsense_ad($ad, $module) {
+  return "<div class='adsense $module'>\n$ad\n</div>";
 }
 
 /**
@@ -461,6 +500,9 @@ function _adsense_check_if_enabled() {
     return FALSE;
   }
   if (variable_get('adsense_test_mode', ADSENSE_TEST_MODE_DEFAULT)) {
+    return TRUE;
+  }
+  if (variable_get('adsense_secret_adtest', ADSENSE_SECRET_ADTEST_DEFAULT)) {
     return TRUE;
   }
   if (user_access('hide adsense')) {
@@ -536,16 +578,14 @@ function _adsense_page_match() {
 }
 
 /**
- * Generate the placeholder to display instead of the ad when it is disabled
+ * Generate a box to display instead of the ad when it is disabled
  *
  * @return
- *   string with the placeholder HTML text
+ *   string with the HTML text to create the box
  */
-function _adsense_format_placeholder($ad) {
-  $width = $ad['width'];
-  $height = $ad['height'];
+function _adsense_format_box($text, $width, $height) {
   $dimensions = ((!empty($width)) && (!empty($height)))
                 ? " width:". $width ."px; height:". $height ."px;" : "";
 
-  return "<div class='adsense' style='text-align: center; border:solid 1px;$dimensions'>". variable_get('adsense_placeholder_text', ADSENSE_PLACEHOLDER_TEXT_DEFAULT) ." {$ad['desc']}</div>";
+  return "<div class='adsense' style='text-align:center;display: table-cell;vertical-align:middle;border:solid 1px;${dimensions}'>${text}</div>";
 }

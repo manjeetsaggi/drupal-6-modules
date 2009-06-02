@@ -1,5 +1,5 @@
 <?php
-// $Id: openflashchart.module,v 1.9 2008/07/07 13:14:36 brmassa Exp $
+// $Id: openflashchart.module,v 1.10 2009/05/12 22:54:50 brmassa Exp $
 /**
  * @author Bruno Massa http://drupal.org/user/67164
  * @file
@@ -21,12 +21,7 @@ function openflashchart_charts_info() {
       'file'    => drupal_get_path('module', 'openflashchart') .'/openflashchart.inc',
       'name'    => t('Open Flash Chart'),
       'render'  => '_openflashchart_charts_render',
-      'types'   => array(
-        'line2D'  => t('Line 2D'),
-        'vbar2D'  => t('Vertical Bar 2D'),
-        'vbar3D'  => t('Vertical Bar 3D'),
-        'pie2D'   => t('Pie 2D'),
-      ),
+      'types'   => array('line2D', 'vbar2D', 'vbar3D', 'pie2D'),
     ),
   );
 }

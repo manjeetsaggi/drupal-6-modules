@@ -1,5 +1,5 @@
 <?php
-// $Id: adsense.help.inc,v 1.1.2.6 2008/12/13 23:09:10 jcnventura Exp $
+// $Id: adsense.help.inc,v 1.1.2.7 2009/03/31 14:41:02 jcnventura Exp $
 // Copyright 2005-2008 Khalid Baheyeldin - http://2bits.com
 // Copyright 2008 Joao Ventura - http://www.venturas.org
 
@@ -35,7 +35,7 @@ function adsense_help_text() {
     $custom_search_link = l(t('Custom search help'), 'admin/settings/adsense/cse');
   }
   else {
-    $custom_search_link = t('Adsense CSE module (which must be enabled; !link) and refer to its help', array('!link' => l('modules', 'admin/build/modules')));
+    $custom_search_link = t('Adsense CSE module (which must be enabled; !link) and refer to its help', array('!link' => l(t('modules'), 'admin/build/modules')));
   }
 
   $output = <<<EOF

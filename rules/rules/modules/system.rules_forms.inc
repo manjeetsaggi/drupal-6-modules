@@ -1,9 +1,12 @@
 <?php
-// $Id: system.rules_forms.inc,v 1.1.2.9 2009/04/19 15:03:43 fago Exp $
+// $Id: system.rules_forms.inc,v 1.1.2.10 2009/05/15 13:03:12 fago Exp $
 
 
 /**
  * @file Rules configuration forms for the system module
+ *
+ * @addtogroup rules
+ * @{
  */
 
 /**
@@ -190,3 +193,6 @@ function rules_action_watchdog_form($settings = array(), &$form) {
   );
 }
 
+/**
+ * @}
+ */

@@ -17,8 +17,11 @@ Installation
 
  3) Enable JavaScript Optimization in admin/settings/performance.
  
- 4) See that the aggregated JavaScript file now ends with ".jsmin.js", and
-    contains minified JavaScript.
+ 4) See that the aggregated JavaScript file now ends with ".jsmin.js",
+    and contains minified JavaScript.
+
+ 5) Optionally compress the JavaScript even more by enabling GZip
+    compression.
 
 
 Upgrading

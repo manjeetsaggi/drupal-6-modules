@@ -1,10 +1,13 @@
 <?php
-// $Id: rules.events.inc,v 1.1.2.11 2009/04/19 15:03:43 fago Exp $
+// $Id: rules.events.inc,v 1.1.2.12 2009/05/15 13:03:12 fago Exp $
 
 
 /**
- * @file rules Invokes events for supported modules. Usually this should be directly
- *   in the module providing rules integration instead.
+ * @file Invokes events for supported modules. Usually this should be
+ *   directly in the module providing rules integration instead.
+ *
+ * @addtogroup rules
+ * @{
  */
 
 /**
@@ -92,3 +95,6 @@ function rules_theme_registry_alter(&$items) {
   array_unshift($items['page']['preprocess functions'], '_rules_action_drupal_goto_handler');
 }
 
+/**
+ * @}
+ */

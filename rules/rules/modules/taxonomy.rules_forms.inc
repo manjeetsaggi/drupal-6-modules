@@ -1,10 +1,12 @@
 <?php
-// $Id: taxonomy.rules_forms.inc,v 1.1.2.6 2009/04/19 18:19:06 fago Exp $
+// $Id: taxonomy.rules_forms.inc,v 1.1.2.7 2009/05/15 13:03:12 fago Exp $
 
 
 /**
- * @file
- * Rules configuration forms for the taxonomy module.
+ * @file Rules configuration forms for the taxonomy module.
+ *
+ * @addtogroup rules
+ * @{
  */
 
 /**
@@ -155,3 +157,6 @@ function _rules_action_taxonomy_get_vocab() {
   return $options;
 }
 
+/**
+ * @}
+ */

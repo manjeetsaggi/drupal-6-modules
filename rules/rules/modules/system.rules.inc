@@ -1,14 +1,16 @@
 <?php
-// $Id: system.rules.inc,v 1.1.2.13 2009/04/19 15:03:43 fago Exp $
+// $Id: system.rules.inc,v 1.1.2.16 2009/05/18 12:27:06 fago Exp $
 
 
 /**
  * @file rules integration for the system module
+ *
+ * @addtogroup rules
+ * @{
  */
 
 /**
  * Implementation of hook_rules_event_info().
- * @ingroup rules
  */
 function system_rules_event_info() {
   return array(
@@ -27,7 +29,6 @@ function system_rules_event_info() {
 
 /**
  * Implementation of hook_rules_action_info().
- * @ingroup rules
  */
 function system_rules_action_info() {
   return array(
@@ -63,7 +64,7 @@ function system_rules_action_info() {
       'label' => t('Page redirect'),
       'module' => 'System',
       'eval input' => array('path', 'query', 'fragment'),
-      'help' => 'Enter a Drupal path, path alias, or external URL to redirect to. Enter (optional) queries after "?" and (optional) anchor after "#".',
+      'help' => t('Enter a Drupal path, path alias, or external URL to redirect to. Enter (optional) queries after "?" and (optional) anchor after "#".'),
     ),
     'rules_action_watchdog' => array(
       'label' => t('Log to watchdog'),
@@ -108,7 +109,7 @@ function rules_action_set_breadcrumb($settings) {
 function rules_action_mail_to_user($user, $settings) {
   // We also handle $settings['to'] if it's set.
   $to = isset($settings['to']) ? str_replace(array("\r", "\n"), '', $settings['to']) : $user->mail;
-  $from = isset($settings['from']) ? str_replace(array("\r", "\n"), '', $settings['from']) : NULL;
+  $from = ($settings['from']) ? str_replace(array("\r", "\n"), '', $settings['from']) : NULL;
 
   $message = drupal_mail('rules', 'rules_action_mail', $to, language_default(), $settings, $from);
   if ($message['result']) {
@@ -140,7 +141,7 @@ function rules_action_mail($settings) {
  */
 function rules_action_mail_to_users_of_role($settings) {
   $recipients = $settings['recipients'];
-  $from = isset($settings['from']) ? str_replace(array("\r", "\n"), '', $settings['from']) : NULL;
+  $from = ($settings['from']) ? str_replace(array("\r", "\n"), '', $settings['from']) : NULL;
 
   // All authenticated users, which is everybody.
   if (in_array(DRUPAL_AUTHENTICATED_RID, $recipients)) {
@@ -215,3 +216,6 @@ function rules_action_watchdog($settings) {
   watchdog($settings['type'], $settings['message'], NULL, $settings['severity'], $settings['link']);
 }
 
+/**
+ * @}
+ */

@@ -1,45 +1,47 @@
 <?php
-// $Id: rules.rules.inc,v 1.1.2.35 2009/04/30 11:58:30 fago Exp $
+// $Id: rules.rules.inc,v 1.1.2.37 2009/05/18 12:05:20 fago Exp $
 
 
 /**
  * @file rules integration for the rules module
+ *
+ * @addtogroup rules
+ * @{
  */
 
 define('RULES_DATE_REGEX_LOOSE', '/^(\d{4})-?(\d{2})-?(\d{2})([T\s]?(\d{2}):?(\d{2}):?(\d{2})?)?$/');
 
 /**
  * Implementation of hook_rules_data_type_info().
- * @ingroup rules
  */
 function rules_rules_data_type_info() {
   return array(
     'string' => array(
-      'label' => t('String'),
+      'label' => t('string'),
       'class' => 'rules_data_type_string',
       'identifiable' => FALSE,
       'eval input' => TRUE,
     ),
     'number' => array(
-      'label' => t('Number'),
+      'label' => t('number'),
       'class' => 'rules_data_type_number',
       'identifiable' => FALSE,
       'eval input' => TRUE,
     ),
     'date' => array(
-      'label' => t('Date'),
+      'label' => t('date'),
       'class' => 'rules_data_type_date',
       'identifiable' => FALSE,
       'eval input' => TRUE,
     ),
     'boolean' => array(
-      'label' => t('Truth value'),
+      'label' => t('truth value'),
       'class' => 'rules_data_type_boolean',
       'identifiable' => FALSE,
       'eval input' => TRUE,
     ),
     'value' => array(
-      'label' => t('A fixed value'),
+      'label' => t('a fixed value'),
       'class' => 'rules_data_type',
       'identifiable' => FALSE,
       'hidden' => TRUE,
@@ -49,7 +51,6 @@ function rules_rules_data_type_info() {
 
 /**
  * Rules string data type
- * @ingroup rules
  */
 class rules_data_type_string extends rules_data_type {
 
@@ -71,7 +72,6 @@ class rules_data_type_string extends rules_data_type {
 
 /**
  * Rules number data type
- * @ingroup rules
  */
 class rules_data_type_number extends rules_data_type_string {
   function check_value($info, $value) {
@@ -81,7 +81,6 @@ class rules_data_type_number extends rules_data_type_string {
 
 /**
  * Rules date data type
- * @ingroup rules
  */
 class rules_data_type_date extends rules_data_type_string {
   function get_default_input_form($info, $value) {
@@ -114,7 +113,6 @@ class rules_data_type_date extends rules_data_type_string {
 
 /**
  * Rules boolean data type
- * @ingroup rules
  */
 class rules_data_type_boolean extends rules_data_type_string {
   function check_value($info, $value) {
@@ -136,7 +134,6 @@ class rules_data_type_boolean extends rules_data_type_string {
 
 /**
  * Implementation of hook_rules_condition_info().
- * @ingroup rules
  */
 function rules_rules_condition_info() {
   return array(
@@ -200,7 +197,6 @@ function rules_condition_check_boolean($boolean) {
 
 /**
  * Implementation of hook_rules_action_info().
- * @ingroup rules
  */
 function rules_rules_action_info() {
   $items = array();
@@ -226,7 +222,7 @@ function rules_rules_action_info() {
       $items['rules_add_var_'. $name] = array(
         'module' => 'Rules',
         'base' => 'rules_action_save_variable',
-        'label' => t('Add a new @type variable', array('@type' => drupal_strtolower($type_info['label']))),
+        'label' => t('Add a new @type variable', array('@type' => $type_info['label'])),
         'arguments' => array(
           'var_name' => array('type' => 'value', 'default value' => $name),
           $name => array('type' => $name, 'label' => $type_info['label']),
@@ -246,7 +242,7 @@ function rules_rules_action_info() {
       $items['rules_save_var_'. $name] = array(
         'module' => isset($type_info['module']) ? $type_info['module'] : 'Rules',
         'base' => 'rules_action_save_variable',
-        'label' => t('Save a @type', array('@type' => drupal_strtolower($type_info['label']))),
+        'label' => t('Save a @type', array('@type' => $type_info['label'])),
         'arguments' => array(
           'var_name' => array('type' => 'value', 'default value' => $name),
           $name => array('type' => $name, 'label' => $type_info['label']),
@@ -408,7 +404,6 @@ function rules_core_action_execute_submit(&$settings, &$form, &$form_state) {
  *
  * Maps core action types to rules action info. This provides mappings for all
  * action types used in core.
- * @ingroup rules
  */
 function rules_rules_action_type_map() {
   return array(
@@ -442,3 +437,6 @@ function rules_rules_action_type_map() {
   );
 }
 
+/**
+ * @}
+ */

@@ -1,9 +1,12 @@
 <?php
-// $Id: user.rules_forms.inc,v 1.1.2.4 2009/04/19 15:03:43 fago Exp $
+// $Id: user.rules_forms.inc,v 1.1.2.5 2009/05/15 13:03:12 fago Exp $
 
 
 /**
  * @file Rules configuration forms for the user module
+ *
+ * @addtogroup rules
+ * @{
  */
 
 /**
@@ -90,3 +93,6 @@ function rules_action_load_user_validate($form, $form_state) {
   }
 }
 
+/**
+ * @}
+ */

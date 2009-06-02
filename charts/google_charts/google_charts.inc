@@ -1,10 +1,23 @@
 <?php
-// $Id: google_charts.inc,v 1.14 2008/08/10 16:23:45 brmassa Exp $
+// $Id: google_charts.inc,v 1.18 2009/05/15 04:48:24 brmassa Exp $
 /**
  * @author Bruno Massa http://drupal.org/user/67164
  * @file
  * Use Google Charts on your site.
  */
+
+function _google_charts($type) {
+  $types = array(
+    'line2D'  => array('legend' => TRUE, 'typecode' => 'lc', 'value_attributes' => FALSE),
+    'hbar2D'  => array('legend' => TRUE, 'typecode' => 'bhg', 'value_attributes' => FALSE),
+    'vbar2D'  => array('legend' => TRUE, 'typecode' => 'bvg', 'value_attributes' => FALSE),
+    'pie2D'   => array('legend' => FALSE, 'typecode' => 'p', 'value_attributes' => TRUE),
+    'pie3D'   => array('legend' => FALSE, 'typecode' => 'p3', 'value_attributes' => TRUE),
+    'venn'    => array('legend' => TRUE, 'typecode' => 'v', 'value_attributes' => FALSE),
+    'scatter' => array('legend' => FALSE, 'typecode' => 's', 'value_attributes' => FALSE),
+  );
+  return $types[$type];
+}
 
 /**
  * Convert all Chart-level data.
@@ -20,20 +33,17 @@ function _google_charts_chart(&$chart, &$data) {
   // Convert the chat TYPE into the Google Chart way.
   // Since its a requirement to build the chart on Google, if the value
   // was not found, return nothing and stop the execution.
-  $options = array(
-    'line2D'  => 'lc',
-    'hbar2D'  => 'bhg',
-    'vbar2D'  => 'bvg',
-    'pie2D'   => 'p',
-    'pie3D'   => 'p3',
-    'venn'    => 'v',
-    'scatter' => 's',
-  );
-  if (empty($options[$data['#type']])) {
+  $options = _google_charts($data['#type']);
+  if (empty($options['typecode'])) {
     return t('This type is not possible using %chartplugin',
       array('%chartplugin' => 'Google Chart'));
   }
-  $chart[] = 'cht='. $options[$data['#type']];
+  if ($data['#type'] == 'pie2D' and count(element_children($data)) > 1) {
+    $chart[] = 'cht=pc';
+  }
+  else {
+    $chart[] = 'cht='. $options['typecode'];
+  }
 
   // Convert the chat SIZE into the Google Chart way.
   // Since its a requirement to build the chart on Google, if the value
@@ -50,8 +60,8 @@ function _google_charts_chart(&$chart, &$data) {
 
   // Chart background color. Since the default color
   // is white (#ffffff), only different colors are considered
-  if (!empty($data['#color']) and $data['#color'] != 'ffffff') {
-    $chart[] = 'chf=bg,s,'. $data['#color'];
+  if (!empty($data['#color']['background']) and $data['#color']['background'] != '#ffffff') {
+    $chart[] = 'chf=bg,s,'. substr($data['#color']['background'], 1);
   }
 
   return;
@@ -121,6 +131,8 @@ function _google_charts_render(&$data) {
  *   String. The string presentation of series data
  */
 function _google_charts_series(&$chart, &$data) {
+  $options = _google_charts($data['#type']);
+
   // The final output is going to be build
   $chart_data = '';
 
@@ -145,9 +157,26 @@ function _google_charts_series(&$chart, &$data) {
 
     // For each series of data, scan it
     foreach (array_keys($series_data) as $value) {
+      $svalue = &$data[$series][$value];
       $chart_data .= _google_charts_data_codingsimple($series_data[$value], $max);
 
-      $value_labels_temp[] = empty($data[$series][$value]['#label']) ? NULL : $data[$series][$value]['#label'];
+      $value_labels_temp[] = empty($svalue['#label']) ? NULL : $svalue['#label'];
+
+      // Get the highlight points
+      if (!empty($svalue['#highlight'])
+          or ($data['#type'] == 'scatter' and ($series % 2 == 0))) {
+        $highlight[] = 't'. $svalue['#label'] .','.
+          (empty($svalue['#color']) ? substr($data[$series]['#color'], 1) : substr($svalue['#color'], 1)) .','.
+          $series .','.
+          $value .','.
+          (empty($svalue['#size']) ? 10 : $svalue['#size']);
+      }
+
+      if ($options['value_attributes']
+          or ($data['#type'] == 'scatter' and ($series % 2 == 0))) {
+        // Series legends
+        $value_labels[] = empty($svalue['#label']) ? NULL : $svalue['#label'];
+      }
     }
 
     // Value labels
@@ -155,11 +184,13 @@ function _google_charts_series(&$chart, &$data) {
       $value_labels += $value_labels_temp;
     }
 
-    // Series legends
-    $legends[] = empty($data[$series]['#legend']) ? NULL : $data[$series]['#legend'];
+    if (empty($options['value_attributes'])) {
+      // Series legends
+      $legends[] = empty($data[$series]['#legend']) ? NULL : $data[$series]['#legend'];
 
-    // Series colors
-    $colors[] = empty($data[$series]['#color']) ? NULL : $data[$series]['#color'];
+      // Series colors
+      $colors[] = empty($data[$series]['#color']) ? NULL : substr($data[$series]['#color'], 1);
+    }
   }
 
   // Return the series of data
@@ -170,22 +201,25 @@ function _google_charts_series(&$chart, &$data) {
    // Insert data
   $chart[] = 'chd=s:'. $chart_data;
 
-  // Insert series legend
-  $legends = implode('|', $legends);
-  if (str_replace('|', '', $legends)) {
-    $chart[] = 'chdl='. $legends;
+  // Insert series color
+  if (!empty($colors)) {
+    $chart[] = 'chco='. implode(',', $colors);
   }
 
-  // Insert series legend
-  $colors = implode(',', $colors);
-  if (str_replace(',', '', $value_labels)) {
-    $chart[] = 'chco='. $colors;
+  // Insert values labels
+  if (!empty($value_labels)) {
+    $chart[] = 'chl='. implode('|', $value_labels);
   }
 
-  // Insert values legend
-  $value_labels = implode('|', $value_labels);
-  if (str_replace('|', '', $value_labels)) {
-    $chart[] = 'chl='. $value_labels;
+
+  // Insert multiple series tag
+  if ($options['legend'] and !empty($legends)) {
+    $chart[] = 'chdl='. implode('|', $legends);
+  }
+
+  // Insert values labels
+  if (!empty($highlight)) {
+    $chart[] = 'chm='. implode('|', $highlight);
   }
 
   return;
