@@ -1,5 +1,5 @@
 <?php
-// $Id: rsvp.views_default.inc,v 1.1.2.1 2009/03/24 00:12:32 ulf1 Exp $
+// $Id: rsvp.views_default.inc,v 1.1.2.2 2009/06/01 23:20:31 ulf1 Exp $
 
 /**
  * Implementation of hook_default_view_views().
@@ -7,9 +7,9 @@
 function rsvp_views_default_views() {
 
 $view = new view;
-$view->name = 'rsvp_myinvitations';
+$view->name = 'rsvp_calendar';
 $view->description = 'A multi-dimensional calendar view with back/next navigation helping navigate through your invitations.';
-$view->tag = 'My Invitations';
+$view->tag = 'rsvp';
 $view->view_php = '';
 $view->base_table = 'node';
 $view->is_cacheable = FALSE;
@@ -413,7 +413,7 @@ $handler->override_option('items_per_page', 0);
 $handler->override_option('use_more', 0);
 $handler->override_option('style_plugin', 'calendar_nav');
 $handler = $view->new_display('calendar', 'Calendar page', 'calendar_1');
-$handler->override_option('path', 'my_invitations_calendar');
+$handler->override_option('path', 'rsvp/calendar');
 $handler->override_option('menu', array(
   'type' => 'none',
   'title' => '',
@@ -1226,7 +1226,7 @@ $handler->override_option('style_options', array(
   ),
   'default' => '-1',
 ));
-$handler->override_option('path', 'my_invitations_upcoming');
+$handler->override_option('path', 'rsvp/upcoming');
 $handler->override_option('menu', array(
   'type' => 'none',
   'title' => '',
@@ -1419,7 +1419,7 @@ $handler->override_option('filters', array(
   ),
 ));
 $handler->override_option('style_plugin', 'table');
-$handler->override_option('path', 'my_invitations_created');
+$handler->override_option('path', 'rsvp/created');
 $handler->override_option('menu', array(
   'type' => 'none',
   'title' => '',
@@ -1618,8 +1618,358 @@ $handler->override_option('style_plugin', 'list');
 $handler->override_option('block_description', 'RSVP MyInvitations (created)');
 $handler->override_option('block_caching', -1);
   
+$views[$view->name] = $view;
+
+
+//////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////
+
+
+
+$view = new view;
+$view->name = 'rsvp_invitations';
+$view->description = 'Displays guests for a invitation';
+$view->tag = 'rsvp';
+$view->view_php = '';
+$view->base_table = 'rsvp';
+$view->is_cacheable = FALSE;
+$view->api_version = 2;
+$view->disabled = FALSE; /* Edit this to true to make a default view disabled initially */
+$handler = $view->new_display('default', 'Invitations', 'default');
+$handler->override_option('fields', array(
+  'email_1' => array(
+    'label' => 'Invitee email address',
+    'alter' => array(
+      'alter_text' => 0,
+      'text' => '',
+      'make_link' => 0,
+      'path' => '',
+      'alt' => '',
+      'prefix' => '',
+      'suffix' => '',
+      'help' => '',
+      'trim' => 0,
+      'max_length' => '',
+      'word_boundary' => 1,
+      'ellipsis' => 1,
+      'html' => 0,
+    ),
+    'link_to_user' => 'mailto',
+    'exclude' => 0,
+    'id' => 'email_1',
+    'table' => 'rsvp_invite',
+    'field' => 'email',
+    'relationship' => 'none',
+  ),
+  'rsvp_user_response_1' => array(
+    'label' => 'Invitee response',
+    'alter' => array(
+      'alter_text' => 0,
+      'text' => '',
+      'make_link' => 0,
+      'path' => '',
+      'alt' => '',
+      'prefix' => '',
+      'suffix' => '',
+      'help' => '',
+      'trim' => 0,
+      'max_length' => '',
+      'word_boundary' => 1,
+      'ellipsis' => 1,
+      'html' => 0,
+    ),
+    'exclude' => 0,
+    'id' => 'rsvp_user_response_1',
+    'table' => 'rsvp_invite',
+    'field' => 'rsvp_user_response',
+    'relationship' => 'none',
+  ),
+  'uid' => array(
+    'label' => 'Invitee uid',
+    'alter' => array(
+      'alter_text' => 0,
+      'text' => '',
+      'make_link' => 0,
+      'path' => '',
+      'alt' => '',
+      'prefix' => '',
+      'suffix' => '',
+      'help' => '',
+      'trim' => 0,
+      'max_length' => '',
+      'word_boundary' => 1,
+      'ellipsis' => 1,
+      'html' => 0,
+    ),
+    'link_to_user' => 1,
+    'overwrite_anonymous' => 0,
+    'anonymous_text' => '',
+    'exclude' => 0,
+    'id' => 'uid',
+    'table' => 'rsvp_invite',
+    'field' => 'uid',
+    'relationship' => 'none',
+  ),
+  'uid_1' => array(
+    'label' => 'Organizer Id',
+    'alter' => array(
+      'alter_text' => 0,
+      'text' => '',
+      'make_link' => 0,
+      'path' => '',
+      'alt' => '',
+      'prefix' => '',
+      'suffix' => '',
+      'help' => '',
+      'trim' => 0,
+      'max_length' => '',
+      'word_boundary' => 1,
+      'ellipsis' => 1,
+      'html' => 0,
+    ),
+    'link_to_user' => 1,
+    'overwrite_anonymous' => 0,
+    'anonymous_text' => '',
+    'exclude' => 0,
+    'id' => 'uid_1',
+    'table' => 'rsvp',
+    'field' => 'uid',
+    'relationship' => 'none',
+  ),
+  'rid_1' => array(
+    'label' => 'rid',
+    'alter' => array(
+      'alter_text' => 0,
+      'text' => '',
+      'make_link' => 0,
+      'path' => '',
+      'alt' => '',
+      'prefix' => '',
+      'suffix' => '',
+      'help' => '',
+      'trim' => 0,
+      'max_length' => '',
+      'word_boundary' => 1,
+      'ellipsis' => 1,
+      'html' => 0,
+    ),
+    'link_to_invitation' => 1,
+    'exclude' => 0,
+    'id' => 'rid_1',
+    'table' => 'rsvp',
+    'field' => 'rid',
+    'relationship' => 'none',
+  ),
+  'rid' => array(
+    'label' => 'Invitee rid',
+    'alter' => array(
+      'alter_text' => 0,
+      'text' => '',
+      'make_link' => 0,
+      'path' => '',
+      'alt' => '',
+      'prefix' => '',
+      'suffix' => '',
+      'help' => '',
+      'trim' => 0,
+      'max_length' => '',
+      'word_boundary' => 1,
+      'ellipsis' => 1,
+      'html' => 0,
+    ),
+    'link_to_invitation' => 0,
+    'exclude' => 0,
+    'id' => 'rid',
+    'table' => 'rsvp_invite',
+    'field' => 'rid',
+    'relationship' => 'none',
+  ),
+  'name' => array(
+    'label' => 'Title',
+    'alter' => array(
+      'alter_text' => 0,
+      'text' => '',
+      'make_link' => 1,
+      'path' => '',
+      'alt' => '',
+      'prefix' => '',
+      'suffix' => '',
+      'help' => '',
+      'trim' => 0,
+      'max_length' => '',
+      'word_boundary' => 1,
+      'ellipsis' => 1,
+      'html' => 0,
+    ),
+    'exclude' => 0,
+    'id' => 'name',
+    'table' => 'rsvp',
+    'field' => 'name',
+    'relationship' => 'none',
+  ),
+  'hash' => array(
+    'label' => 'Invitee hash',
+    'alter' => array(
+      'alter_text' => 0,
+      'text' => '',
+      'make_link' => 0,
+      'path' => '',
+      'alt' => '',
+      'prefix' => '',
+      'suffix' => '',
+      'help' => '',
+      'trim' => 0,
+      'max_length' => '',
+      'word_boundary' => 1,
+      'ellipsis' => 1,
+      'html' => 0,
+    ),
+    'text' => '',
+    'exclude' => 0,
+    'id' => 'hash',
+    'table' => 'rsvp_invite',
+    'field' => 'hash',
+    'relationship' => 'none',
+  ),
+  'nid' => array(
+    'label' => 'Node Id',
+    'alter' => array(
+      'alter_text' => 0,
+      'text' => '',
+      'make_link' => 0,
+      'path' => '',
+      'alt' => '',
+      'prefix' => '',
+      'suffix' => '',
+      'help' => '',
+      'trim' => 0,
+      'max_length' => '',
+      'word_boundary' => 1,
+      'ellipsis' => 1,
+      'html' => 0,
+    ),
+    'link_to_node' => 1,
+    'exclude' => 0,
+    'id' => 'nid',
+    'table' => 'rsvp',
+    'field' => 'nid',
+    'relationship' => 'none',
+  ),
+  'comment' => array(
+    'label' => 'Invitee comment',
+    'alter' => array(
+      'alter_text' => 0,
+      'text' => '',
+      'make_link' => 0,
+      'path' => '',
+      'alt' => '',
+      'prefix' => '',
+      'suffix' => '',
+      'help' => '',
+      'trim' => 0,
+      'max_length' => '',
+      'word_boundary' => 1,
+      'ellipsis' => 1,
+      'html' => 0,
+    ),
+    'exclude' => 0,
+    'id' => 'comment',
+    'table' => 'rsvp_invite',
+    'field' => 'comment',
+    'relationship' => 'none',
+  ),
+));
+$handler->override_option('arguments', array(
+  'rid' => array(
+    'default_action' => 'ignore',
+    'style_plugin' => 'default_summary',
+    'style_options' => array(),
+    'wildcard' => 'all',
+    'wildcard_substitution' => 'All',
+    'title' => '',
+    'default_argument_type' => 'fixed',
+    'default_argument' => '',
+    'validate_type' => 'numeric',
+    'validate_fail' => 'not found',
+    'break_phrase' => 0,
+    'not' => 0,
+    'id' => 'rid',
+    'table' => 'rsvp_invite',
+    'field' => 'rid',
+    'relationship' => 'none',
+    'default_options_div_prefix' => '',
+    'default_argument_fixed' => '',
+    'default_argument_php' => '',
+    'validate_argument_node_type' => array(
+      'simplenews' => 0,
+      'book' => 0,
+      'calheatevent' => 0,
+      'calheateventdateonly' => 0,
+      'event' => 0,
+      'og_group_node' => 0,
+      'og_group_post' => 0,
+      'page' => 0,
+      'story' => 0,
+    ),
+    'validate_argument_node_access' => 0,
+    'validate_argument_nid_type' => 'nid',
+    'validate_argument_vocabulary' => array(
+      '1' => 0,
+    ),
+    'validate_argument_type' => 'tid',
+    'user_argument_type' => 'uid',
+    'restrict_user_roles' => 0,
+    'user_roles' => array(),
+    'validate_argument_is_member' => 0,
+    'validate_argument_signup_status' => 'any',
+    'validate_argument_signup_node_access' => 0,
+    'validate_argument_php' => '',
+  ),
+));
+$handler->override_option('access', array(
+  'type' => 'none',
+));
+$handler->override_option('items_per_page', 0);
+$handler->override_option('style_plugin', 'table');
+$handler->override_option('style_options', array(
+  'grouping' => '',
+  'override' => 1,
+  'sticky' => 0,
+  'order' => 'asc',
+  'columns' => array(
+    'email_1' => 'email_1',
+    'hash_1' => 'hash_1',
+    'uid' => 'uid',
+    'rsvp_user_response_1' => 'rsvp_user_response_1',
+    'rid' => 'rid',
+  ),
+  'info' => array(
+    'email_1' => array(
+      'separator' => '',
+    ),
+    'hash_1' => array(
+      'separator' => '',
+    ),
+    'uid' => array(
+      'separator' => '',
+    ),
+    'rsvp_user_response_1' => array(
+      'separator' => '',
+    ),
+    'rid' => array(
+      'sortable' => 0,
+      'separator' => '',
+    ),
+  ),
+  'default' => '-1',
+));
+
+
+
 
 $views[$view->name] = $view;
+
 
 return $views;
 

@@ -1,9 +1,10 @@
 <?php
-// $Id: rsvp-invitation.tpl.php,v 1.2 2009/02/05 23:28:36 ulf1 Exp $
+// $Id: rsvp-invitation.tpl.php,v 1.2.2.1 2009/05/26 18:37:09 ulf1 Exp $
 
 /**
  * @file rsvp-invitation.tpl.php
  * Displays the rsvp invitation.
+ * All variables are sanitized to display directly
  *
  * Available variables:
  *
@@ -42,7 +43,7 @@
       <?php endif; ?>
     </div>
     <div class="rsvp_invitation_introduction">
-      <?php print $organizer_link . t(' has invited you to %event', array('%event' => $event_subject)). '<br />' ?>
+      <?php print $organizer_link . t(' has invited you to \'!event\'', array('!event' => $event_subject)). '<br />' ?>
     </div>
     <div class="rsvp_invitation_header">
       <?php if ($is_openinvitation): ?>

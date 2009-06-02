@@ -1,6 +1,6 @@
 <?php
 
-// $Id: rsvp.functions.inc,v 1.3.2.10 2009/03/16 18:17:31 ulf1 Exp $
+// $Id: rsvp.functions.inc,v 1.3.2.12 2009/06/01 18:28:02 ulf1 Exp $
 
 /**
  * @module rsvp_functions
@@ -146,6 +146,11 @@ define('RSVP_VAR_CONTENT_TYPES', 'rsvp_content_types');
 define('RSVP_VAR_CONNECTOR', 'rsvp_connector');
 
 
+/**
+ * RSVP SELECT Query statements that we use for all types of queries
+ */
+define('RSVP_QUERY_FROM_rsvp_invite', '{rsvp} r LEFT JOIN {rsvp_invite} u ON r.rid = u.rid LEFT JOIN {users} us ON u.uid = us.uid LEFT JOIN {rsvp_realname} n ON u.email = n.email '); 
+define('RSVP_QUERY_FIELDS_rsvp_invite', 'r.nid,u.*,n.realname,us.name as username'); 
 
 /**
 * Creates a new invitation(rsvp).
@@ -330,9 +335,9 @@ function rsvp_function_load_invitation_rid($rid, $uid = NULL, $print = true) {
 	if (is_null($uid)) {
     return false;
 	}
-	
-  $invite_target = db_fetch_object(db_query('SELECT * FROM {rsvp_invite} u LEFT JOIN {rsvp_realname} n ON u.email = n.email WHERE u.uid = %d AND u.rid = %d', $uid, $rid));
-
+  //US orig $invite_target = db_fetch_object(db_query('SELECT * FROM {rsvp_invite} u LEFT JOIN {rsvp_realname} n ON u.email = n.email WHERE u.uid = %d AND u.rid = %d', $uid, $rid));
+  $invite_target = db_fetch_object(db_query('SELECT ' . RSVP_QUERY_FIELDS_rsvp_invite . ' FROM  ' . RSVP_QUERY_FROM_rsvp_invite . ' WHERE u.uid = %d AND u.rid = %d', $uid, $rid));
+  
   if (($invite_target == false) && ($print == true)) {
     drupal_set_message(t('The invitation (rid=%rid) that you (uid=%uid) requested is invalid or has been deleted.', array('%rid' => $rid, '%uid' => $uid)));
   }  
@@ -371,9 +376,9 @@ function _rsvp_function_check_uid($uid) {
 */
 function rsvp_function_load_invitation_hash($hash) {
 
-	
-	$invite_target = db_fetch_object(db_query('SELECT u.*,n.realname FROM {rsvp} r LEFT JOIN {rsvp_invite} u ON r.rid = u.rid LEFT JOIN {rsvp_realname} n ON u.email = n.email WHERE u.hash = \'%s\'', $hash)); 
-  if ($invite_target == false) {
+//US orig	$invite_target = db_fetch_object(db_query('SELECT u.*,n.realname,us.name as username FROM {rsvp} r LEFT JOIN {rsvp_invite} u ON r.rid = u.rid LEFT JOIN {users} us ON u.uid = us.uid LEFT JOIN {rsvp_realname} n ON u.email = n.email WHERE u.hash = \'%s\'', $hash)); 
+  $invite_target = db_fetch_object(db_query('SELECT ' . RSVP_QUERY_FIELDS_rsvp_invite . ' FROM  ' . RSVP_QUERY_FROM_rsvp_invite . ' WHERE u.hash = \'%s\'', $hash)); 
+	if ($invite_target == false) {
     drupal_set_message(t('The invitation (hash=%hash) that you requested is invalid or has been deleted.', array('%hash' => $hash)));
   }  
 
@@ -394,9 +399,11 @@ function rsvp_function_load_invitation_hash($hash) {
 function rsvp_function_load_guests($rid, $status = RSVP_ATT_ALL, $count = FALSE, $tablesort = ' ORDER BY u.email') {
 
 	if ($status == RSVP_ATT_ALL || !isset($status))
-    $result = db_query('SELECT '. ($count ? 'SUM(totalguests)' : 'u.*,n.realname') .' FROM {rsvp_invite} u LEFT JOIN {rsvp_realname} n ON u.email = n.email WHERE rid = %d ' . $tablesort, $rid);
+    //US orig $result = db_query('SELECT '. ($count ? 'SUM(totalguests)' : 'u.*,n.realname,us.name as username') .' FROM {rsvp_invite} u LEFT JOIN {users} us ON u.uid = us.uid LEFT JOIN {rsvp_realname} n ON u.email = n.email WHERE u.rid = %d ' . $tablesort, $rid);
+    $result = db_query('SELECT '. ($count ? 'SUM(totalguests)' : RSVP_QUERY_FIELDS_rsvp_invite) .' FROM ' . RSVP_QUERY_FROM_rsvp_invite . ' WHERE u.rid = %d ' . $tablesort, $rid);
   else
-    $result = db_query('SELECT '. ($count ? 'SUM(totalguests)' : 'u.*,n.realname') .' FROM {rsvp_invite} u LEFT JOIN {rsvp_realname} n ON u.email = n.email WHERE rid = %d AND response=\'%s\'' . $tablesort, $rid, $status);
+    //US orig $result = db_query('SELECT '. ($count ? 'SUM(totalguests)' : 'u.*,n.realname,us.name as username') .' FROM {rsvp_invite} u LEFT JOIN {users} us ON u.uid = us.uid LEFT JOIN {rsvp_realname} n ON u.email = n.email WHERE u.rid = %d AND response=\'%s\'' . $tablesort, $rid, $status);
+    $result = db_query('SELECT '. ($count ? 'SUM(totalguests)' : RSVP_QUERY_FIELDS_rsvp_invite) .' FROM ' . RSVP_QUERY_FROM_rsvp_invite . ' WHERE u.rid = %d AND u.response=\'%s\'' . $tablesort, $rid, $status);
     
   if ($result == false) {
     drupal_set_message(t('The invitation you requested (rid=%rid) is invalid or has been deleted.', array('%rid' => $rid)));
@@ -446,7 +453,8 @@ function rsvp_function_remove_guest($hash) {
 * @return boolean false if the email don't exist for the rsvp, or the $invitation object.
 */
 function rsvp_function_exists_guest_email($rid, $email) {
-	return db_fetch_object(db_query('SELECT u.*,n.realname FROM {rsvp_invite} u LEFT JOIN {rsvp_realname} n ON u.email = n.email WHERE u.rid = %d AND u.email = \'%s\'', $rid, $email));
+	//US orig return db_fetch_object(db_query('SELECT u.*,n.realname,us.name as username FROM {rsvp_invite} u LEFT JOIN {users} us ON u.uid = us.uid LEFT JOIN {rsvp_realname} n ON u.email = n.email WHERE u.rid = %d AND u.email = \'%s\'', $rid, $email));
+  return db_fetch_object(db_query('SELECT ' . RSVP_QUERY_FIELDS_rsvp_invite . ' FROM  ' . RSVP_QUERY_FROM_rsvp_invite . ' WHERE u.rid = %d AND u.email = \'%s\'', $rid, $email));
 }
 
 /**
@@ -464,7 +472,8 @@ function rsvp_function_exists_guest_uid($rid, $uid) {
     return false;
   }
   
-	return db_fetch_object(db_query('SELECT u.*,n.realname FROM {rsvp_invite} u LEFT JOIN {rsvp_realname} n ON u.email = n.email WHERE u.rid = %d AND u.uid = %d', $rid, $uid));
+	//US orig return db_fetch_object(db_query('SELECT u.*,n.realname FROM {rsvp_invite} u LEFT JOIN {rsvp_realname} n ON u.email = n.email WHERE u.rid = %d AND u.uid = %d', $rid, $uid));
+  return db_fetch_object(db_query('SELECT ' . RSVP_QUERY_FIELDS_rsvp_invite . ' FROM  ' . RSVP_QUERY_FROM_rsvp_invite . ' WHERE u.rid = %d AND u.uid = %d', $rid, $uid));
 }
 
 /**
@@ -1228,7 +1237,9 @@ function rsvp_function_load_invitations_user($uid = NULL, $nid = NULL, $count = 
       return array();
   }
   
-  $query = 'SELECT '. ($count ? 'COUNT(*)' : 'u.*,r.nid,n.realname') .' FROM {rsvp} r LEFT JOIN {rsvp_invite} u ON r.rid = u.rid LEFT JOIN {rsvp_realname} n ON u.email = n.email WHERE u.uid = %d';
+  //US orig $query = 'SELECT '. ($count ? 'COUNT(*)' : 'u.*,r.nid,n.realname') .' FROM {rsvp} r LEFT JOIN {rsvp_invite} u ON r.rid = u.rid LEFT JOIN {rsvp_realname} n ON u.email = n.email WHERE u.uid = %d';
+  $query = 'SELECT '. ($count ? 'COUNT(*)' : RSVP_QUERY_FIELDS_rsvp_invite) .' FROM ' . RSVP_QUERY_FROM_rsvp_invite . ' WHERE u.uid = %d';
+  
   if (!is_null($nid)) {
     $query .= ' AND r.nid = %d';
   }
@@ -1250,7 +1261,9 @@ function rsvp_function_load_invitations_user($uid = NULL, $nid = NULL, $count = 
 function rsvp_function_load_invitations_node2($nid, $uid = NULL, $count = false) {
 	
   
-  $query = 'SELECT '. ($count ? 'COUNT(*)' : 'u.*,n.realname') .' FROM {rsvp} r LEFT JOIN {rsvp_invite} u ON r.rid = u.rid LEFT JOIN {rsvp_realname} n ON u.email = n.email WHERE r.nid = %d';
+  //US orig $query = 'SELECT '. ($count ? 'COUNT(*)' : 'u.*,n.realname') .' FROM {rsvp} r LEFT JOIN {rsvp_invite} u ON r.rid = u.rid LEFT JOIN {rsvp_realname} n ON u.email = n.email WHERE r.nid = %d';
+  $query = 'SELECT '. ($count ? 'COUNT(*)' : RSVP_QUERY_FIELDS_rsvp_invite) .' FROM ' . RSVP_QUERY_FROM_rsvp_invite . ' WHERE r.nid = %d';
+  
   if (!is_null($uid)) {
     if ($uid != 0)
       $query .= ' AND u.uid = %d';
@@ -1512,16 +1525,21 @@ function rsvp_function_check_rsvp($rsvp, $die = true) {
  * 
  * @param $invite_target The invitation object.
  * @param $stripEmailAddress Boolean show onlypart of the emailaddress.
+ * @param $honorRealname Boolean show realname if available.
  * @return email 
  */
-function rsvp_function_getGuestEmail($invite_target, $stripEmailAddress = true) {
+function rsvp_function_getGuestEmail($invite_target, $stripEmailAddress = true, $honorRealname = true) {
 	
-	if (isset($invite_target->realname) && strlen($invite_target->realname) > 0)
+	if (($honorRealname == true) && isset($invite_target->realname) && strlen($invite_target->realname) > 0)
 	 return $invite_target->realname;
 	
   if ($invite_target->uid) {
-    $u = db_fetch_object(db_query("SELECT uid, name FROM {users} WHERE uid = %d", $invite_target->uid));
-    return $u->name;
+    if ($invite_target->username)
+      return $invite_target->username;
+    else
+      die("NO USERNAME");
+    //US orig $u = db_fetch_object(db_query("SELECT uid, name FROM {users} WHERE uid = %d", $invite_target->uid));
+    //US orig return $u->name;
   }
   else {
     return (!$stripEmailAddress ? $invite_target->email : substr($invite_target->email, 0, strpos($invite_target->email, '@')));

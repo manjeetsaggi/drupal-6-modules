@@ -1,6 +1,6 @@
 <?php
 
-// $Id: rsvp.admin.inc,v 1.3.2.4 2009/03/09 22:24:26 ulf1 Exp $
+// $Id: rsvp.admin.inc,v 1.3.2.6 2009/05/28 18:23:42 ulf1 Exp $
 
 /**
  * @module rsvp_admin
@@ -61,7 +61,7 @@ function rsvp_admin_settings_general(&$form_state) {
   
   $form['rsvp']['fields'] = array(
     '#type' => 'item',
-    '#title' => t('Current Associations'),
+    '#title' => t('Current associations'),
     '#value' => $fieldarray,
   );
   
@@ -133,6 +133,20 @@ function rsvp_admin_settings_general(&$form_state) {
     );
   }
   
+  $form['donate'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'DONATE',
+    '#collapsible' => FALSE
+  );
+  
+  $donate_text .= '<div style="border-style:solid; padding:5px"><b>If you like to support my work on RSVP for Drupal 6, please consider donating. A paypal link can be found at the <a href="http://drupal.org/project/rsvp#drupal6" target="_blank">rsvp project</a> page at http://drupal.org/project/rsvp#drupal6</b></div>';   
+  
+  $form['donate']['info'] = array(
+    '#type' => 'markup',
+    '#value' => $donate_text,
+    '#weight' => -1,
+  );
+
   
   $form['submit'] = array(
     '#type' => 'submit',

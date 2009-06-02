@@ -1,5 +1,5 @@
 <?php
-// $Id: rsvp_plaxo.module,v 1.1.2.1 2009/03/04 20:09:36 ulf1 Exp $
+// $Id: rsvp_plaxo.module,v 1.1.2.2 2009/05/26 18:37:09 ulf1 Exp $
 
 /**
  * @module rsvp_plaxo
@@ -48,31 +48,33 @@ function rsvp_plaxo_menu() {
 }
 
 function rsvp_plaxo_footer ($main = 0) {
-  $script ='
-    <script type="text/javascript" src="http://www.plaxo.com/css/m/js/util.js"></script>  
-    <script type="text/javascript" src="http://www.plaxo.com/css/m/js/basic.js"></script>
-    <script type="text/javascript" src="http://www.plaxo.com/css/m/js/abc_launcher.js"></script>
-
-    <script type="text/javascript"><!--
-      function onABCommComplete(data) {
-        // data is an array of selected name/email arrays, i.e. [[name1, email1], [name2, email2], ...]
-
-        // collect just the emails
-        var emails = [];
-        for (var i = 0; i < data.length; i++) {
-          emails.push(data[i][1]);
-        }
-
-        // write the list of emails into the textarea
-        var textAreaId = "edit-recipients"; 
-        // TODO: change this to whatever your textareas ID is 
-        document.getElementById(textAreaId).value = emails.join("\r\n");
+  
+  //add javascript to footer only if we are on the right page where you can add guests (rsvp/RID/attendees).
+  if ( arg(0) =='rsvp') {
+    if ( arg(2) =='attendees') {
+  
+      $script ='
+        <script type="text/javascript" src="http://www.plaxo.com/css/m/js/util.js"></script>  
+        <script type="text/javascript" src="http://www.plaxo.com/css/m/js/basic.js"></script>
+        <script type="text/javascript" src="http://www.plaxo.com/css/m/js/abc_launcher.js"></script>
+    
+        <script type="text/javascript"><!--
+          function onABCommComplete(data) {
+            // data is an array of selected name/email arrays, i.e. [[name1, email1], [name2, email2], ...]
+    
+            // collect just the emails
+            var emails = [];
+            for (var i = 0; i < data.length; i++) {
+              emails.push(data[i][1]);
+            }
+    
+            // write the list of emails into the following textarea
+            var textAreaId = "edit-recipients"; 
+            document.getElementById(textAreaId).value = emails.join("\r\n");
+          }
+          //--></script>';    
       }
-      //--></script>    
-    
-    
-    
-    ';
+    }
   
   return $script;
 }

@@ -1,5 +1,5 @@
 <?php
-// $Id: rsvp.module,v 1.22.2.27 2009/04/21 21:17:05 ulf1 Exp $
+// $Id: rsvp.module,v 1.22.2.31 2009/06/01 18:28:02 ulf1 Exp $
 
 /**
  * @module rsvp
@@ -1520,7 +1520,7 @@ function rsvp_invite_view_page($rsvp, $invite_target) {
   else {
     drupal_set_breadcrumb(array(l(t('Home'), NULL), l($node->title, 'node/'. $node->nid)));
   }
-  drupal_set_title(t('Invitation: !name', array( '!name' => $rsvp->name)));
+  drupal_set_title(t('Invitation: %invitation', array('%invitation' => $rsvp->name)));
       
   // This isn't here by mistake: I think we need to log the user action
   // even if the event has expired.
@@ -1625,7 +1625,7 @@ function rsvp_invite_viewonly_form(&$form_state, $rsvp) {
   else {
     drupal_set_breadcrumb(array(l(t('Home'), NULL), l($node->title, 'node/'. $node->nid)));
   }
-  drupal_set_title(t('Invitation: !name', array( '!name' => $rsvp->name)));
+  drupal_set_title(t('Invitation: %invitation', array('%invitation' => $rsvp->name)));
 
   rsvp_function_session_parent('rsvp/' . $rsvp->rid . '/view');
   
@@ -1983,7 +1983,7 @@ function rsvp_guest_status_form(&$form_state, $rsvp, $hash_target) {
   
   // Set the breadcrumb trail.
   drupal_set_breadcrumb(array(l(t('Home'), NULL), l($rsvp->name, 'rsvp/'. $rsvp->rid . '/attendees')));
-  drupal_set_title(check_plain('Invitation: ' . $rsvp->name));
+  drupal_set_title(t('Invitation: %invitation', array('%invitation' => $rsvp->name)));
   
   $output = rsvp_function_guest_status($rsvp, $invite_target);
 
@@ -2080,7 +2080,7 @@ function rsvp_attendee_page($rsvp, $invite_target, $node) {
   
   // Set the breadcrumb trail.
   drupal_set_breadcrumb(array(l(t('Home'), NULL), l($node->title, 'node/'. $node->nid . '/rsvp')));
-  drupal_set_title(check_plain('Invitation: ' . $rsvp->name));
+  drupal_set_title(t('Invitation: %invitation', array('%invitation' => $rsvp->name)));
   
   if ($invite_target == NULL)
     rsvp_function_session_parent('rsvp/' . $rsvp->rid . '/attendees');
@@ -2327,7 +2327,7 @@ function rsvp_remove_guest_form(&$form_state, $rsvp, $hash_target) {
  	if ($invite_target != false) {
     // Set the breadcrumb trail.
     drupal_set_breadcrumb(array(l(t('Home'), NULL), l($rsvp->name, 'rsvp/'. $rsvp->rid . '/attendees')));
-    drupal_set_title(check_plain('Invitation: ' . $rsvp->name));
+    drupal_set_title(t('Invitation: %invitation', array('%invitation' => $rsvp->name)));
 
     $form['invite_target'] = array('#type' => 'value', '#value' => $invite_target);
   
@@ -3021,12 +3021,12 @@ function rsvp_addedit_form(&$form_state, $node = NULL, $rsvp = NULL) {
         $node = NULL; 
     }
     
-  	$title = t('Invitation: %invitation',array('%invitation' => $rsvp->name));
+  	$title = t('Invitation: %invitation', array('%invitation' => $rsvp->name));
   	if ($extended == false) {
-  	  $extended_content = t('[Basic options|!extended]', array('!extended'=> l(t('Extended options'), 'rsvp/'. $rsvp->rid . '/edit', array('html' => true, 'query' => 'disp=extended'))));
+  	  $extended_content = t('[Basic options|!extended]', array('!extended'=> l(t('Extended options'), 'rsvp/'. $rsvp->rid . '/edit', array('query' => 'disp=extended'))));
   	}
   	else {
-      $extended_content = t('[!basic|Extended options]', array('!basic'=> l(t('Basic options'), 'rsvp/'. $rsvp->rid . '/edit', array('html' => true, 'query' => 'disp=basic'))));
+      $extended_content = t('[!basic|Extended options]', array('!basic'=> l(t('Basic options'), 'rsvp/'. $rsvp->rid . '/edit', array('query' => 'disp=basic'))));
   	}
   }
   
@@ -3323,7 +3323,8 @@ function rsvp_addedit_form_submit($form, &$form_state) {
     }
     
     $rsvp->invite_filterformat = $form_state['values']['format']; 
-    $rsvp->invite_text = check_markup($form_state['values']['invite_text'], $rsvp->invite_filterformat, true);
+    //$rsvp->invite_text = check_markup($form_state['values']['invite_text'], $rsvp->invite_filterformat, true);
+    $rsvp->invite_text = $form_state['values']['invite_text'];
     
     
     foreach (array('name', 'nid', 'startdate', 'theme', 'stylesheet', 'iconset', 'backgroundimage', 'image', 'response_blind', 'response_blind_node', 'reply_blind_node', 'attendees_visible', 'list_email', 'allow_invite', 'text_whoiscoming', 'text_yes', 'text_no', 'text_maybe', 'max_guests', 'open_invitation', 'disable_maybe', 'send_privatemsg', 'send_conf_guest', 'send_conf_owner') as $key) {
@@ -3540,13 +3541,13 @@ function rsvp_changerealname_form(&$form_state, $invite_target) {
 
   $rsvp = rsvp_function_load_rsvp($invite_target->rid);
   
-  $old_name = rsvp_function_getGuestEmail($invite_target);
+  $orig_name = rsvp_function_getGuestEmail($invite_target, true, false);
   
   //first set the stylesheet based on the setting.
   $stylesheet_file = rsvp_function_getStylesheet($rsvp->theme, $rsvp->stylesheet);
   drupal_add_css($stylesheet_file, 'module', 'all', TRUE);
   
-  $title = t('Change display name for a guest: %guest', array('%guest' => $old_name));
+  $title = t('Change display name for a guest: %guest', array('%guest' => $orig_name));
 
   drupal_set_title($title);
   //drupal_set_breadcrumb(array(l(t('Home'), NULL), l($node->title, 'node/'. $node->nid . '/rsvp')));
@@ -3565,18 +3566,18 @@ function rsvp_changerealname_form(&$form_state, $invite_target) {
   $form['rsvp_changerealname_form']['old_name'] = array(
     '#type' => 'textfield',
     '#title' => t('Your default name'),
-    '#default_value' => $old_name,
+    '#default_value' => $orig_name,
     '#size' => 80,
     '#maxlength' => 128,
     '#disabled' => TRUE,
-    '#description' => t('This is the default setting how your name is being displayed in the guest list'),
+    '#description' => t('This is the default setting how your name would be displayed in the guest list'),
     '#prefix' => '<div class="rsvp_form_content rsvp_color_inner">',
     '#suffix' => '</div>',
   );
 
   $form['rsvp_changerealname_form']['new_name'] = array(
     '#type' => 'textfield',
-    '#title' => t('Your new name'),
+    '#title' => t('Your displayed name'),
     '#default_value' => $invite_target->realname,
     '#size' => 80,
     '#maxlength' => 128,
@@ -3854,8 +3855,10 @@ function rsvp_mail($key, &$message, $replacements) {
   $defaults_function = "rsvp_mailer_{$key}_default";
   $defaults = $defaults_function();
 
-  $message['subject'] = t(variable_get("rsvp_default_mailer_{$key}_subject", $defaults['subject']), $replacements);
-  $message['body']    = t(variable_get("rsvp_default_mailer_{$key}_message", $defaults['message']), $replacements);
+  //all replacements are already sanitized. Use strtr instead of t() because the @ character in the replacemanets keys
+  //would transform the values.
+  $message['subject'] = strtr(variable_get("rsvp_default_mailer_{$key}_subject", $defaults['subject']), $replacements);
+  $message['body']    = strtr(variable_get("rsvp_default_mailer_{$key}_message", $defaults['message']), $replacements);
 	
 }
 
@@ -4162,7 +4165,7 @@ function template_preprocess_rsvp_invitation(&$variables) {
   $donate_text = '';
   $perm_moderator = rsvp_function_invitation_by_invite_access($connector, $rsvp, $invite_target, NULL, RSVP_ACCESS_MAINTAIN);
   if ($perm_moderator == true) {
-    $donate_text .= '<br /><div style="width:80%; border-style:solid; padding:5px"><b>Visible to maintainer only:<br />If you like to support my work on RSVP for Drupal 6, please consider donating to the <a href="http://drupal.org/project/rsvp">rsvp project</a> at http://drupal.org/project/rsvp</b></div><br />';   
+    $donate_text .= '<br /><div style="width:80%; border-style:solid; padding:5px"><b>Visible to maintainer only:<br />If you like to support my work on RSVP for Drupal 6, please consider donating. A paypal link can be found at the <a href="http://drupal.org/project/rsvp#drupal6" target="_blank">rsvp project</a> page at http://drupal.org/project/rsvp#drupal6</b></div><br />';   
   }
   
   $variables['totalsarray'][RSVP_ATT_ALL]   = array(check_plain($params['totalsarray'][RSVP_ATT_ALL]),    'not.gif',  t('All'));
@@ -4175,7 +4178,7 @@ function template_preprocess_rsvp_invitation(&$variables) {
   $variables['is_openinvitation'] = ($rsvp->open_invitation == RSVP_OPTION_YES);
   $variables['event_subject'] = check_plain($node->title);
   $variables['event_startdate'] = check_plain($startdate);
-  $variables['event_link'] = l(check_plain($node->title), 'node/'. $node->nid);
+  $variables['event_link'] = l($node->title, 'node/'. $node->nid);
   $variables['event_nid'] = $node->nid;
   $variables['invitation_subject'] = $rsvptitle;
   $variables['invitation_message'] = check_markup($rsvp->invite_text, $rsvp->invite_filterformat, false) . $donate_text;
@@ -4188,7 +4191,7 @@ function template_preprocess_rsvp_invitation(&$variables) {
   $variables['show_salutation'] = !empty($invite_target);
   $variables['organizer_name'] = check_plain($organizer->name);
   $variables['organizer_uid'] = $organizer->uid;
-  $variables['organizer_link'] = l(check_plain($organizer->name), 'user/'. $organizer->uid,  array('html' => true, 'attributes' => array('title' => t('Organizer'))));
+  $variables['organizer_link'] = l($organizer->name, 'user/'. $organizer->uid,  array('attributes' => array('title' => t('Organizer'))));
   $variables['event_nid'] = $node->nid;
   
   $variables['icon_path']       = rsvp_function_getIconset($rsvp->iconset) .'/';
@@ -4286,17 +4289,17 @@ function template_preprocess_rsvp_guestlist(&$variables) {
   
   
   if (rsvp_function_guestlist_sortorder($rsvp) == RSVP_GUESTLIST_SORT_ALPHA) {
-    $variables['sort_date_link'] = l(t('Date'), $current_path, array('html' => true, 'query' => 'sort=date', 'attributes' => array('title' => t('Show guest list in date order.'))));
+    $variables['sort_date_link'] = l(t('Date'), $current_path, array('query' => 'sort=date', 'attributes' => array('title' => t('Show guest list in date order.'))));
   } 
 
   if (rsvp_function_guestlist_sortorder($rsvp) == RSVP_GUESTLIST_SORT_DATE) {
-  	$variables['sort_alpha_link'] = l(t('Alphabetically'), $current_path, array('html' => true, 'query' => 'sort=alpha', 'attributes' => array('title' => t('Show guest list in alphabetically order.'))));
+  	$variables['sort_alpha_link'] = l(t('Alphabetically'), $current_path, array('query' => 'sort=alpha', 'attributes' => array('title' => t('Show guest list in alphabetically order.'))));
   } 
 
   if ($params['show_all_link'] == true)
-    $variables['show_all_link'] = l(t('View all'), $current_path, array('html' => true, 'query' => 'show=all', 'attributes' => array('title' => t('Show complete guest list.'))));   
+    $variables['show_all_link'] = l(t('View all'), $current_path, array('query' => 'show=all', 'attributes' => array('title' => t('Show complete guest list.'))));   
   if ($params['show_part_link'] == true)
-    $variables['show_part_link'] = l(t('View some'), $current_path, array('html' => true, 'query' => 'show=part', 'attributes' => array('title' => t('Show condensed form of guest list.'))));
+    $variables['show_part_link'] = l(t('View some'), $current_path, array('query' => 'show=part', 'attributes' => array('title' => t('Show condensed form of guest list.'))));
   
   $variables['totalsarray'][RSVP_ATT_ALL]   = array(check_plain($params['totalsarray'][RSVP_ATT_ALL]),    'not.gif',  t('All'));
   $variables['totalsarray'][RSVP_ATT_YES]   = array(check_plain($params['totalsarray'][RSVP_ATT_YES]),    'yes.gif',  t('Yes'));

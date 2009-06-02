@@ -219,4 +219,15 @@ TODO/Features for following releases:
 - http://drupal.org/node/397888 : Configure, which options are listed on the basic screen and which are extended.
 
 
+- Send automatic notification email before the event starts (cron or manual).
+- Send automatic invitation email (cron)
+
+- http://drupal.org/node/461720 : Implement uebercart integration instead of reply box .
+
+- optimization of RSVP queries (links, permission queries)
+
+
+
+
+
 

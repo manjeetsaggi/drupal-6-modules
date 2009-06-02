@@ -1,3 +1,7 @@
+05/26/09: fixed by ulf1- plaxo js is always been loaded. Load only when we want to use it while adding guests to invitation.
+                       - [464270] cleaned up wrong output mappings for title, invitation body, emails and some links
+
+
 04/21/09: fixed by ulf1- guestlist and replybox have always be shown below the node. 
                          The settings 'Display guest list inside event/node' and
                          'Display reply box inside event/node' have not been considered when displaying the data. 
