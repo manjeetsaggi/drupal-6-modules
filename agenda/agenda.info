@@ -1,0 +1,10 @@
+; $Id: agenda.info,v 1.1 2009/05/14 14:02:09 aidan Exp $
+name = Agenda
+description = Show an agenda of events from a remote source
+core = 6.x
+; Information added by drupal.org packaging script on 2009-05-14
+version = "6.x-1.0"
+core = "6.x"
+project = "agenda"
+datestamp = "1242311418"
+
