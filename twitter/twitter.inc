@@ -128,7 +128,8 @@ function twitter_fetch_timeline($screen_name, $filter_since = TRUE, $cache = TRU
  *   The full results of the Drupal HTTP request, including the HTTP response
  *   code returned by Twitter.com.
  */
-function twitter_set_status($screen_name, $password, $text, $source = variable_get('twitter_source', 'drupal')) {
+function twitter_set_status($screen_name, $password, $text, $source = FALSE) {
+  if (FALSE === $source) $source = variable_get('twitter_source', 'drupal');
   $url = "http://" . variable_get('twitter_api_url', 'twitter.com') . "/statuses/update.xml";
 
   $headers = array('Authorization' => 'Basic '. base64_encode($screen_name .':'. $password),
