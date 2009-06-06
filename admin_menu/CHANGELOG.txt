@@ -1,4 +1,4 @@
-// $Id: CHANGELOG.txt,v 1.33.2.48.2.17 2009/05/30 18:57:45 sun Exp $
+// $Id: CHANGELOG.txt,v 1.33.2.48.2.20 2009/06/05 20:51:38 sun Exp $
 
 Admin Menu x.x-x.x, xxxx-xx-xx
 ------------------------------
@@ -6,6 +6,9 @@ Admin Menu x.x-x.x, xxxx-xx-xx
 
 Admin Menu 6.x-3.x, xxxx-xx-xx
 ------------------------------
+#483152 by sun: Fixed admin_menu caches not flushed when clean URLs are toggled.
+#479922 by danep: Fixed fieldsets not collapsed on admin/build/modules/list.
+#469716 by sun: Fixed wrong AJAX callback URL under various conditions.
 #471504 by wulff: Updated Danish translation.
 by sun: Fixed admin_menu_suppress() does not suppress margin-top.
 #451270 by sun: Added visual indication when working as uid 1.

@@ -1,4 +1,4 @@
-/* $Id: admin_menu.js,v 1.7.2.7.2.9 2009/05/07 01:28:38 sun Exp $ */
+/* $Id: admin_menu.js,v 1.7.2.7.2.10 2009/06/05 02:34:42 sun Exp $ */
 
 Drupal.admin = Drupal.admin || { behaviors: {}, hashes: {} };
 
@@ -86,7 +86,7 @@ Drupal.admin.getCache = function (hash, onSuccess) {
     type: 'GET',
     dataType: 'text', // Prevent auto-evaluation of response.
     global: false, // Do not trigger global AJAX events.
-    url: Drupal.settings.admin_menu.basePath + 'js/admin_menu/cache/' + hash,
+    url: Drupal.settings.admin_menu.basePath.replace(/admin_menu/, 'js/admin_menu/cache/' + hash),
     success: onSuccess,
     complete: function (XMLHttpRequest, status) {
       Drupal.admin.hashes.hash = status;
