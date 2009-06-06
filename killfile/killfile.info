@@ -1,0 +1,12 @@
+; $Id: killfile.info,v 1.1 2008/10/28 09:57:55 arto Exp $
+name = Killfile
+description = Provides soft-deletion/trash bin functionality where content is "killfiled" instead of deleted outright, and can be retained for a configurable span of time before being permanently purged.
+core = 6.x
+php = 5.2
+
+; Information added by drupal.org packaging script on 2008-10-28
+version = "6.x-1.0-beta1"
+core = "6.x"
+project = "killfile"
+datestamp = "1225199721"
+

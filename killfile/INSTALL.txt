@@ -1,0 +1,32 @@
+// $Id: INSTALL.txt,v 1.1 2008/10/28 09:57:55 arto Exp $
+
+REQUIREMENTS
+------------
+This module requires Drupal 6.x and PHP 5.2.x (or newer). Some specific
+functionality also depends on the following modules; none of them are
+required per se, but it is recommended that you install them if you wish to
+make full use of the features provided by this module:
+
+  * RDF
+    <http://drupal.org/project/rdf>
+
+  * FeedAPI
+    <http://drupal.org/project/feedapi>
+
+  * Views
+    <http://drupal.org/project/views>
+
+
+INSTALLATION
+------------
+
+  1. Copy all the module files into a subdirectory called
+     sites/all/modules/killfile/ under your Drupal installation directory.
+
+  2. Go to [Administer >> Site building >> Modules] and enable the Killfile
+     module. You will find it in the section labelled "Other".
+
+  3. Go to [Administer >> Site configuration >> Killfile] to review and
+     change the configuration options to your liking.
+
+  4. (See README.txt for information on submitting bug reports.)

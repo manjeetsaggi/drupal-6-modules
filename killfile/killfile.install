@@ -1,0 +1,150 @@
+<?php
+// $Id: killfile.install,v 1.1 2008/10/28 09:57:55 arto Exp $
+
+//////////////////////////////////////////////////////////////////////////////
+// Core API hooks
+
+/**
+ * Implementation of hook_enable().
+ */
+function killfile_enable() {
+  drupal_set_message(t('Killfile successfully installed. Please review the available <a href="@settings">configuration settings</a>.', array('@settings' => url('admin/settings/killfile'))));
+}
+
+/**
+ * Implementation of hook_install().
+ */
+function killfile_install() {
+  drupal_install_schema('killfile');
+
+  // Ensure that the module is loaded early in the bootstrap:
+  //db_query("UPDATE {system} SET weight = %d WHERE name = '%s'", -50, 'killfile'); // FIXME: not sure we need this?
+
+  // If FeedAPI is available, create a 'killfile' feed content type:
+  if (module_exists('feedapi')) {
+    killfile_install_node_type();
+  }
+}
+
+function killfile_install_node_type() {
+  // Insert a default user-defined feed node type into the database:
+  node_type_save((object)_node_type_set_defaults(array(
+    'type'           => 'killfile',
+    'name'           => t('Killfile'),
+    'module'         => 'node',
+    'description'    => t('A <em>killfile</em> is an RSS feed that propagates content deletions from upstream sites aggregated using FeedAPI.'),
+    'custom'         => TRUE,
+    'modified'       => TRUE,
+    'locked'         => FALSE,
+    'has_title'      => TRUE,
+    'title_label'    => t('Title'),
+    'has_body'       => FALSE,
+    'body_label'     => '',
+    'help'           => '',
+    'min_word_count' => 0,
+  )));
+
+  // Killfile nodes are not to be promoted and will have comments disabled:
+  variable_set('node_options_killfile', array('status'));
+  variable_set('comment_killfile', '0' /*COMMENT_NODE_DISABLED*/);
+
+  // Don't display date and author information for killfile nodes by default:
+  $theme_settings = variable_get('theme_settings', array());
+  $theme_settings['toggle_node_info_killfile'] = FALSE;
+  variable_set('theme_settings', $theme_settings);
+
+  // Set some sensible default FeedAPI settings for this content type:
+  variable_set('feedapi_killfile', array('enabled', 'update_existing', 'parsers', 'processors'));
+  variable_set('feedapi_settings_killfile', array(
+    'enabled'           => 1,
+    'refresh_on_create' => 0,
+    'update_existing'   => 1,
+    'skip'              => 0,
+    'items_delete'      => 0,
+    'parsers'           => array(
+      'parser_common_syndication' => array('enabled' => 1, 'weight' => 0),
+    ),
+    'processors'        => array(
+      'killfile'        => array('enabled' => 1, 'weight' => -15, 'killfile_action' => 'killfile'),
+      'feedapi_node'    => array('enabled' => 0, 'weight' => 0),
+    ),
+  ));
+
+  // TODO: hide the node/add/killfile menu item?
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function killfile_uninstall() {
+  drupal_uninstall_schema('killfile');
+
+  db_query("DELETE FROM {variable} WHERE name LIKE '%s_%%'", 'killfile');
+  cache_clear_all('variables', 'cache');
+}
+
+/**
+ * Implementation of hook_requirements().
+ */
+function killfile_requirements($phase) {
+  $status = array();
+
+  if ($phase == 'runtime') {
+    $lifetime = variable_get('killfile_lifetime', 0);
+    if ($lifetime != 0 && ($expired_count = killfile_node_count($lifetime)) > 0) {
+      $status['killfile'] = array(
+        'title' => t('Killfile'),
+        'value' => format_plural($expired_count, 'There is 1 expired node in the <a href="@settings">killfile</a>.', 'There are @count expired nodes in the <a href="@settings">killfile</a>.', array('@settings' => url('admin/settings/killfile'))),
+        'description' => '',
+        'severity' => REQUIREMENT_WARNING,
+      );
+    }
+  }
+
+  return $status;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Schema API hooks
+
+/**
+ * Implementation of hook_schema().
+ */
+function killfile_schema() {
+  return array(
+    'killfile_nodes' => array(
+      'description' => t("Killfile for nodes."),
+      'fields' => array(
+        'nid' => array(
+          'description' => t("The node's ID from {node}.nid, serving as the primary key."),
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+        ),
+        'vid' => array(
+          'description' => t("The node's version ID from {node}.vid. For information only."),
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+        ),
+        'uid' => array(
+          'description' => t("The user ID from {users}.uid, of the user who killfiled the node."),
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+        ),
+        'timestamp' => array(
+          'description' => t("The Unix timestamp indicating when the node was killfiled."),
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0
+        ),
+      ),
+      'primary key' => array('nid'),
+    ),
+  );
+}

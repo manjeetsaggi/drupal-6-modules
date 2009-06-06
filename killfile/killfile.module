@@ -1,0 +1,427 @@
+<?php
+// $Id: killfile.module,v 1.1.2.1 2008/10/28 13:05:09 arto Exp $
+
+//////////////////////////////////////////////////////////////////////////////
+// Module settings
+
+define('KILLFILE_NAMESPACE', 'http://drupal.org/project/killfile/rdf#');
+
+//////////////////////////////////////////////////////////////////////////////
+// Core API hooks
+
+/**
+ * Implementation of hook_help().
+ */
+function killfile_help($path, $arg = NULL) {
+  switch ($path) {
+    case 'admin/settings/killfile':
+      return t('The killfile is an index of deleted content hidden from users and pending a permanent purge.');
+    case 'feedapi/full_name':
+      return t('Killfile - propagate content deletions');
+  }
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function killfile_perm() {
+  return array(
+    'administer killfile',
+    'access killfiled content',
+    'access killfile feed',
+  );
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function killfile_menu() {
+  return array(
+    // Export killfile RSS feed
+    'killfile.rdf' => array(
+      'type' => MENU_CALLBACK,
+      'access callback' => 'user_access',
+      'access arguments' => array('access killfile feed'),
+      'page callback' => 'killfile_pages_feed',
+      'file' => 'killfile.pages.inc',
+    ),
+    // Administer >> Site configuration >> Killfile
+    'admin/settings/killfile' => array(
+      'title' => 'Killfile',
+      'description' => 'Settings for pervasively hiding killfiled content.',
+      'access arguments' => array('administer killfile'),
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('killfile_admin_settings'),
+      'file' => 'killfile.admin.inc',
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_menu_alter().
+ */
+function killfile_menu_alter(&$callbacks) {
+  foreach ($callbacks as $path => &$callback) {
+    if (strpos($path, 'node/%node') === 0) { // path begins with 'node/%node'
+      if (isset($callback['access callback']) || isset($callback['access arguments'])) {
+        // Extend the menu item's access handler with a version that also
+        // checks for whether the node is killfiled, and if it is, whether
+        // the user has the 'access killfiled content' privilege
+        // @see killfile_menu_access_node()
+        $callback['access arguments'] = array_merge(
+          isset($callback['access callback']) ? array($callback['access callback']) : array('user_access'),
+          isset($callback['access arguments']) ? $callback['access arguments'] : array()
+        );
+        $callback['access callback']  = 'killfile_menu_access_node';
+      }
+    }
+  }
+}
+
+function killfile_menu_access_node($callback) {
+  $arguments = array_slice(func_get_args(), 1);
+  return call_user_func_array($callback, $arguments) &&
+    (killfile_node_is_killed(arg(1)) ? user_access('access killfiled content') : TRUE);
+}
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function killfile_form_alter(&$form, $form_state, $form_id) {
+  switch ($form_id) {
+    case 'node_delete_confirm':
+      // Override node_delete_confirm_submit() submit handler
+      $form['#submit'][0] = 'killfile_node_delete_confirm_submit';
+      $form['actions']['#weight'] = 99; // move buttons out of the way
+
+      // Request a rationale for deletion from the user; this will be
+      // recorded as the killfile/revision log message.
+      if (variable_get('killfile_log', 'optional') != 'hidden') {
+        $form['log'] = array(
+          '#type'          => 'textarea',
+          '#title'         => t('Log message'),
+          '#rows'          => 2,
+          '#description'   => t('An explanation of the rationale behind the deletion to help administrators understand your motivations.'),
+          '#required'      => variable_get('killfile_log', 'optional') == 'required',
+        );
+      }
+
+      // Allow administrators to permanently purge content right here:
+      if (user_access('administer killfile')) {
+        $form['purge'] = array(
+          '#type'          => 'checkbox',
+          '#title'         => t('Don\'t killfile this node, rather permanently delete and purge it'),
+          '#default_value' => killfile_node_is_killed($form['nid']['#value']) ? '1' : '',
+        );
+      }
+      break;
+
+    case 'killfile_node_form':
+      // Clean up the killfile edit form by hiding all unnecessary fieldsets:
+      foreach (array('menu', 'book', 'revision_information', 'comment_settings', 'options') as $fieldset) {
+        if (isset($form[$fieldset])) {
+          $form[$fieldset]['#attributes'] = array('style' => 'display: none;');
+        }
+      }
+      break;
+  }
+}
+
+/**
+ * @see hook_form_alter()
+ */
+function killfile_node_delete_confirm_submit($form, &$form_state) {
+  if (!empty($form_state['values']['confirm'])) {
+    if (user_access('administer killfile') && !empty($form_state['values']['purge'])) {
+      killfile_node_purge($form_state['values']['nid']);
+    }
+    else {
+      killfile_node_delete($form_state['values']['nid'], !empty($form_state['values']['log']) ? array('log' => trim($form_state['values']['log'])) : array());
+    }
+  }
+  $form_state['redirect'] = '<front>';
+}
+
+/**
+ * Implementation of hook_cron().
+ */
+function killfile_cron() {
+  if (($lifetime = (int)variable_get('killfile_lifetime', 0)) > 0) {
+    killfile_node_purge_all($lifetime);
+  }
+}
+
+/**
+ * Implementation of hook_nodeapi().
+ */
+function killfile_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+  switch ($op) {
+    case 'load':
+      if ($killfile = killfile_node_load($node->nid)) {
+        $node->killfile = (array)$killfile;
+      }
+      break;
+
+    case 'delete':
+      // TODO?
+      break;
+
+    case 'view':
+      // Add a warning notice about the killfile status when an
+      // administrator is viewing the node by itself as a page:
+      if (isset($node->killfile) && !empty($a4)) {
+        drupal_set_message(t('@type killfiled on @date by !user.', array('@type' => node_get_types('name', $node), '@date' => format_date($node->killfile['timestamp'], 'short'), '!user' => theme('username', user_load($node->killfile['uid'])))), 'warning');
+      }
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_node_operations().
+ */
+function killfile_node_operations() {
+  // Administer >> Content management >> Content >> (Update options)
+  return array(
+    'killfile' => array(
+      'label'    => t('Killfile'),
+      'callback' => 'killfile_node_delete_all',
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_db_rewrite_sql().
+ */
+function killfile_db_rewrite_sql($query, $primary_table, $primary_field, $args) {
+  switch ($primary_field) {
+    case 'nid': // a node query
+      // Add a JOIN and a WHERE clause to all node listing queries in order
+      // to filter out any killfiled nodes. One exception, however: we don't
+      // do this for views, as we do want to support e.g. the possibility of
+      // creating a "trash bin" view, which would else be prevented by this.
+      if (!isset($args['view']) || (bool)variable_get('killfile_views_filter', '1') == TRUE) {
+        return array(
+          'join'  => 'LEFT JOIN {killfile_nodes} kfn ON kfn.nid = ' . $primary_table . '.nid',
+          'where' => 'kfn.timestamp IS NULL OR kfn.timestamp > ' . time(),
+        );
+      }
+      break;
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Views API hooks
+
+/**
+ * Implementation of hook_views_api().
+ */
+function killfile_views_api() {
+  return array(
+    'api'  => 2,
+    'path' => drupal_get_path('module', 'killfile'),
+  );
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// RDF API hooks
+
+/**
+ * Implementation of hook_rdf_views_feed_channel().
+ */
+function killfile_rdf_views_feed_channel($plugin, $channel) {
+  // Make sure our namespace is available in hook_rdf_views_feed_item():
+  rdf_register_namespace('killfile', KILLFILE_NAMESPACE);
+}
+
+/**
+ * Implementation of hook_rdf_views_feed_item().
+ */
+function killfile_rdf_views_feed_item($plugin, $item, &$data) {
+  if (isset($item->nid) && ($killfile = killfile_node_load($item->nid))) {
+    $data[] = array($item->url, 'killfile:date', rdf_datetime($killfile->timestamp));
+    $data[] = array($item->url, 'killfile:log', !empty($item->log) ? $item->log : '');
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Feed API hooks
+
+/**
+ * Implementation of hook_feedapi_settings_form().
+ */
+function killfile_feedapi_settings_form($type) {
+  $form = array();
+  switch ($type) {
+    case 'processors':
+      $form['killfile_action'] = array(
+        '#type'          => 'radios',
+        '#title'         => t('Action for killfiled feed items'),
+        '#options'       => array('killfile' => t('Killfile local copy'), 'purge' => t('Permanently delete local copy')),
+        '#default_value' => 'killfile',
+      );
+      break;
+  }
+  return $form;
+}
+
+/**
+ * Implementation of hook_feedapi_item().
+ */
+function killfile_feedapi_item($op) {
+  switch ($op) {
+    case 'type':
+      return array('XML feed'); // FIXME?
+    case 'save':
+      return FALSE; // we never save new items
+    case 'expire':
+    case 'unique':
+    case 'update':
+    case 'fetch':
+    default:
+      if (is_callable($function = 'killfile_feedapi_item_' . $op)) {
+        $args = array_slice(func_get_args(), 1);
+        return call_user_func_array($function, $args);
+      }
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_feedapi_item('expire').
+ */
+function killfile_feedapi_item_expire($feed, $settings = array()) {
+  // TODO: replicate the _feedapi_node_expire() implementation?
+}
+
+/**
+ * Implementation of hook_feedapi_item('unique').
+ */
+function killfile_feedapi_item_unique($feed_item, $feed_nid, $settings = array()) {
+  return !empty($feed_item->options->guid) ?
+    !(bool)db_result(db_query("SELECT nid FROM {feedapi_node_item} WHERE guid = '%s'", $feed_item->options->guid)) :
+    !(bool)db_result(db_query("SELECT nid FROM {feedapi_node_item} WHERE url = '%s'", $feed_item->options->original_url));
+}
+
+/**
+ * Implementation of hook_feedapi_item('update').
+ */
+function killfile_feedapi_item_update($feed_item, $feed_nid, $settings = array()) {
+  if (isset($feed_item->rdf->killfile_date)) {
+    $feed_item->nid = !empty($feed_item->options->guid) ?
+      db_result(db_query("SELECT nid FROM {feedapi_node_item} WHERE guid = '%s'", $feed_item->options->guid)) :
+      db_result(db_query("SELECT nid FROM {feedapi_node_item} WHERE url = '%s'", $feed_item->options->original_url));
+
+    //feedapi_expire_item($feed, $feed_item);
+    $action = !empty($settings['killfile_action']) ? $settings['killfile_action'] : 'killfile';
+    return $action == 'killfile' ?
+      killfile_node_delete($feed_item->nid, array('timestamp' => $feed_item->rdf->killfile_date, 'log' => t('Killfiled at origin.'))) :
+      killfile_node_purge($feed_item->nid);
+  }
+}
+
+/**
+ * Implementation of hook_feedapi_item('fetch').
+ */
+function killfile_feedapi_item_fetch($feed) {
+  return array(); // TODO: should we handle purge? The feed items were created by other feeds, not us.
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Killfile API implementation
+
+/**
+ * Stores a killfile record for a given item.
+ */
+function killfile_write_record($table, $record, $update = array()) {
+  global $user;
+  $record = (object)array_merge(array('timestamp' => time(), 'uid' => $user->uid), (array)$record);
+  return drupal_write_record($table, $record, $update);
+}
+
+/**
+ * Checks whether a given node has been killfiled.
+ */
+function killfile_node_is_killed($nid) {
+  return (bool)killfile_node_load($nid);
+}
+
+/**
+ * Loads and returns the killfile record, if any, for a given node.
+ */
+function killfile_node_load($nid) {
+  return db_fetch_object(db_query('SELECT * FROM {killfile_nodes} WHERE nid = %d', $nid));
+}
+
+/**
+ * Performs a 'soft-delete' on a set of nodes, adding them to the killfile.
+ */
+function killfile_node_delete_all(array $nids, array $options = array()) {
+  foreach ($nids as $nid) {
+    killfile_node_delete($nid, $options);
+  }
+}
+
+/**
+ * Performs a 'soft-delete' on a node, adding it to the killfile.
+ */
+function killfile_node_delete($nid, array $options = array()) {
+  if (!killfile_node_is_killed($nid) && ($node = node_load($nid)) && node_access('delete', $node)) {
+    // Create a new revision and unpublish the node:
+    $node->revision = TRUE;
+    $node->log = empty($options['log']) ? t('Killfiled.') : t('Killfiled: @log.', array('@log' => $options['log']));
+    $node->status = 0;
+    //$node->killfile = killfile_node_load($nid);
+    node_save($node); // TODO: perform this manually?
+
+    // Add the node to the killfile and unpublish it:
+    killfile_write_record('killfile_nodes', array('nid' => $nid, 'vid' => $node->vid, 'timestamp' => !empty($options['timestamp']) ? (int)$options['timestamp'] : time()));
+
+    // Call the node-specific callback (if any):
+    //node_invoke($node, 'delete');
+    //node_invoke_nodeapi($node, 'delete');
+
+    // Clear the page and block caches:
+    cache_clear_all();
+
+    // Remove this node from the search index, if needed:
+    if (function_exists('search_wipe')) {
+      search_wipe($node->nid, 'node');
+    }
+
+    watchdog('killfile', '@type: killfiled %title.', array('@type' => $node->type, '%title' => $node->title), WATCHDOG_NOTICE, l(t('view'), 'node/' . $nid));
+    drupal_set_message(t('@type %title has been deleted.', array('@type' => node_get_types('name', $node), '%title' => $node->title)));
+    return TRUE;
+  }
+}
+
+/**
+ * Returns the number of nodes in the killfile.
+ */
+function killfile_node_count($lifetime = 0) {
+  return db_result(db_query('SELECT COUNT(nid) FROM {killfile_nodes} WHERE timestamp < %d', time() - $lifetime));
+}
+
+/**
+ * Permanently purges from the killfile all expired nodes that have been in
+ * the killfile longer than the administrator-set lifetime.
+ */
+function killfile_node_purge_all($lifetime = 0) {
+  $result = db_query('SELECT * FROM {killfile_nodes} WHERE timestamp < %d', time() - $lifetime);
+
+  while (($row = db_fetch_object($result)) && @++$count) {
+    killfile_node_purge($row->nid);
+  }
+
+  if (!empty($count)) { // don't spam the watchdog
+    watchdog('killfile', format_plural($count, 'Purged 1 expired node from the killfile.', 'Purged @count expired nodes from the killfile.'));
+  }
+  return empty($count) ? 0 : $count;
+}
+
+/**
+ * Permanently purges a given node from the killfile.
+ */
+function killfile_node_purge($nid) {
+  node_delete($nid);
+  db_query('DELETE FROM {killfile_nodes} WHERE nid = %d', $nid);
+}
