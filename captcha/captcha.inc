@@ -1,18 +1,17 @@
 <?php
-// $Id: captcha.inc,v 1.4 2009/05/03 21:20:46 soxofaan Exp $
+// $Id: captcha.inc,v 1.8 2009/05/26 21:55:25 soxofaan Exp $
 
 /**
  * Helper function for adding/updating a CAPTCHA point.
  *
  * @param $form_id the form ID to configure.
- * @param captcha_type the setting for the given form_id,
- *   can be 'none' to disable CAPTCHA, 'default' to use the default challenge type
- *   or something of form 'image_captcha/Image'. If capcha_type is NULL, the entry for the
- *   CAPTCHA type will be removed.
+ * @param captcha_type the setting for the given form_id, can be:
+ *   - 'none' to disable CAPTCHA,
+ *   - 'default' to use the default challenge type
+ *   - NULL to remove the entry for the CAPTCHA type
+ *   - something of the form 'image_captcha/Image'
+ *   - an object with attributes $captcha_type->module and $captcha_type->type
  * @return nothing
- *
- * @todo captcha_get_form_id_setting and captcha_set_form_id_setting use a different way to
- * communicate the CAPTCHA type (object with fields and string respectively). Make this more symmetric?
  */
 function captcha_set_form_id_setting($form_id, $captcha_type) {
   if ($captcha_type == 'none') {
@@ -26,14 +25,18 @@ function captcha_set_form_id_setting($form_id, $captcha_type) {
   elseif ($captcha_type == NULL) {
     db_query("DELETE FROM {captcha_points} WHERE form_id = '%s'", $form_id);
   }
-  elseif (substr_count($captcha_type, '/') == 1) {
+  elseif (is_object($captcha_type) && isset($captcha_type->module) && isset($captcha_type->type)) {
+    db_query("DELETE FROM {captcha_points} WHERE form_id = '%s'", $form_id);
+    db_query("INSERT INTO {captcha_points} (form_id, module, type) VALUES ('%s', '%s', '%s')", $form_id, $captcha_type->module, $captcha_type->type);
+  }
+  elseif (is_string($captcha_type) && substr_count($captcha_type, '/') == 1) {
     list($module, $type) = explode('/', $captcha_type);
     db_query("DELETE FROM {captcha_points} WHERE form_id = '%s'", $form_id);
     db_query("INSERT INTO {captcha_points} (form_id, module, type) VALUES ('%s', '%s', '%s')", $form_id, $module, $type);
   }
   else {
     drupal_set_message(t('Failed to set a CAPTCHA type for form %form_id: could not interpret value "@captcha_type"',
-      array('%form_id' => $form_id, '@captcha_type' => $captcha_type)), 'warning');
+      array('%form_id' => $form_id, '@captcha_type' => (string)$captcha_type)), 'warning');
   }
 }
 
@@ -180,8 +183,16 @@ function _captcha_get_captcha_placement($form_id, $form) {
     if ($placement_map === NULL) {
       // If second level cache missed: start from a fresh placement map.
       $placement_map = array();
-      // TODO: prefill with some hard coded default entries as follows?
-      // $placement_map['comment_form'] = array('path' => array(), 'key' => NULL, 'weight' => 18.9);
+      // Prefill with some hard coded default entries.
+
+      // The comment form can have a 'Preview' button, or both a 'Submit' and 'Preview' button,
+      // which is tricky for automatic placement detection. Luckily, Drupal core sets their
+      // weight (19 and 20), so we just have to specify a slightly smaller weight.
+      $placement_map['comment_form'] = array('path' => array(), 'key' => NULL, 'weight' => 18.9);
+      // Additional note: the node forms also have the posibility to only show a 'Preview' button.
+      // However, the 'Submit' button is always present, but is just not rendered ('#access' = FALSE)
+      // in those cases. The the automatic button detection should be sufficient for node forms.
+
       // $placement_map['user_login'] = array('path' => array(), 'key' => NULL, 'weight' => 1.9);
       // TODO: also make the placement 'overridable' from the admin UI?
     }
@@ -195,9 +206,16 @@ function _captcha_get_captcha_placement($form_id, $form) {
   // search the form for buttons and guess placement from it.
   else {
     $buttons = _captcha_search_buttons($form);
-    // TODO: make this more sofisticated? Use cases needed.
-    // Use case: the CAPTCHA examples page (has no buttons).
-    $placement = $buttons[0];
+    if (count($buttons)) {
+      // Pick first button.
+      // TODO: make this more sofisticated? Use cases needed.
+      $placement = $buttons[0];
+    }
+    else {
+      // Use NULL when no buttons were found.
+      $placement = NULL;
+    }
+
     // Store calculated placement in caches.
     $placement_map[$form_id] = $placement;
     variable_set('captcha_placement_map_cache', $placement_map);
@@ -241,8 +259,9 @@ function _captcha_search_buttons($form) {
  * Helper function to insert a CAPTCHA element in a form before a given form element.
  * @param $form the form to add the CAPTCHA element to.
  * @param $placement information where the CAPTCHA element should be inserted.
- *   $target should be an associative array with fields:
- *     - 'path': path of the container in the form where the CAPTCHA element should be inserted.
+ *   $placement should be an associative array with fields:
+ *     - 'path': path (array of path items) of the container in the form where the
+ *       CAPTCHA element should be inserted.
  *     - 'key': the key of the element before which the CAPTCHA element
  *       should be inserted. If the field 'key' is undefined or NULL, the CAPTCHA will
  *       just be appended to the container.
@@ -252,10 +271,10 @@ function _captcha_search_buttons($form) {
  * @param $captcha_element the CAPTCHA element to insert.
  */
 function _captcha_insert_captcha_element(&$form, $placement, $captcha_element) {
-  // Get common path, target and target weight.
-  $target_key = $placement['key'];
-  $target_weight = $placement['weight'];
-  $path = $placement['path'];
+  // Get path, target and target weight or use defaults if not available.
+  $target_key = isset($placement['key']) ? $placement['key'] : NULL;
+  $target_weight = isset($placement['weight']) ? $placement['weight'] : NULL;
+  $path = isset($placement['path']) ? $placement['path'] : array();
 
   // Walk through the form along the path.
   $form_stepper = &$form;

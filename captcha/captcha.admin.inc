@@ -1,5 +1,5 @@
 <?php
-// $Id: captcha.admin.inc,v 1.24 2009/05/14 22:47:37 soxofaan Exp $
+// $Id: captcha.admin.inc,v 1.25 2009/05/26 22:06:22 soxofaan Exp $
 
 /**
  * Return an array with the available CAPTCHA types, for use as options array
@@ -225,8 +225,10 @@ function captcha_admin_settings_submit($form, &$form_state) {
   variable_set('captcha_default_challenge', $form_state['values']['captcha_default_challenge']);
 
   // Process CAPTCHA points
-  foreach ($form_state['values']['captcha_form_id_overview']['captcha_captcha_points'] as $captcha_point_form_id => $data) {
-    captcha_set_form_id_setting($captcha_point_form_id, $data['captcha_type']);
+  if (isset($form_state['values']['captcha_form_id_overview']['captcha_captcha_points'])) {
+    foreach ($form_state['values']['captcha_form_id_overview']['captcha_captcha_points'] as $captcha_point_form_id => $data) {
+      captcha_set_form_id_setting($captcha_point_form_id, $data['captcha_type']);
+    }
   }
 
   // Add new CAPTCHA point?

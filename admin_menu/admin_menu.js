@@ -1,6 +1,8 @@
-/* $Id: admin_menu.js,v 1.7.2.7.2.10 2009/06/05 02:34:42 sun Exp $ */
+/* $Id: admin_menu.js,v 1.7.2.7.2.11 2009/06/08 01:05:38 sun Exp $ */
 
-Drupal.admin = Drupal.admin || { behaviors: {}, hashes: {} };
+Drupal.admin = Drupal.admin || {};
+Drupal.admin.behaviors = Drupal.admin.behaviors || {};
+Drupal.admin.hashes = Drupal.admin.hashes || {};
 
 /**
  * Core behavior for Administration menu.

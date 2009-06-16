@@ -1,5 +1,5 @@
 <?php
-// $Id: admin_menu.inc,v 1.11.2.20.2.9 2009/06/05 20:51:38 sun Exp $
+// $Id: admin_menu.inc,v 1.11.2.20.2.11 2009/06/09 18:21:22 sun Exp $
 
 /**
  * @file
@@ -545,8 +545,8 @@ function admin_menu_flush_cache($name = NULL) {
     default:
       // Flush all caches; no need to re-implement this.
       module_load_include('inc', 'system', 'system.admin');
-      $form_state = array();
-      system_clear_cache_submit($form_state, NULL);
+      $form = $form_state = array();
+      system_clear_cache_submit($form, $form_state);
       break;
   }
   drupal_goto();

@@ -5,9 +5,9 @@ package = Development
 dependencies[] = nodequeue
 core = 6.x
 
-; Information added by drupal.org packaging script on 2009-05-01
-version = "6.x-2.1"
+; Information added by drupal.org packaging script on 2009-06-10
+version = "6.x-2.2"
 core = "6.x"
 project = "nodequeue"
-datestamp = "1241138752"
+datestamp = "1244673065"
 

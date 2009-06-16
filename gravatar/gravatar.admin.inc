@@ -1,5 +1,5 @@
 <?php
-// $Id: gravatar.admin.inc,v 1.1.2.29 2009/03/20 16:56:01 davereid Exp $
+// $Id: gravatar.admin.inc,v 1.1.2.32 2009/06/14 03:13:11 davereid Exp $
 
 /**
  * @file
@@ -27,8 +27,6 @@ function gravatar_admin_settings() {
   );
   $form['display']['gravatar_rating'] = array(
     '#type'          => 'select',
-    '#default_value' => gravatar_var('rating'),
-    '#options'       => drupal_map_assoc(array('G', 'PG', 'R', 'X')),
     '#title'         => t('Image maturity filter'),
     '#description' => theme('item_list', array(
       t('G: Suitable for display on all websites with any audience type.'),
@@ -36,6 +34,8 @@ function gravatar_admin_settings() {
       t('R: May contain such things as harsh profanity, intense violence, nudity, or hard drug use.'),
       t('X: May contain hardcore sexual imagery or extremely disturbing violence.'),
     )),
+    '#options'       => drupal_map_assoc(array('G', 'PG', 'R', 'X')),
+    '#default_value' => gravatar_var('rating'),
   );
   $form['display']['gravatar_default'] = array(
     '#type'          => 'radios',
@@ -50,6 +50,7 @@ function gravatar_admin_settings() {
       GRAVATAR_DEFAULT_MONSTERID => t('Gravatar.com monsterid (generated)'),
       GRAVATAR_DEFAULT_LOGO => t('Gravatar.com logo'),
     ),
+    '#default_value' => gravatar_var('default'),
     '#prefix' => '<div class="picture js-show">'. theme('image', '', t('Default picture example'), t('Default picture example'), array('id' => 'gravatar-imagepreview'), FALSE) .'</div>',
     '#process' => array('expand_radios', 'gravatar_process_default_setting'),
   );
@@ -80,17 +81,17 @@ function gravatar_process_default_setting($element) {
   // If the global user picture is empty, disable the respective option.
   if (!variable_get('user_picture_default', '')) {
     $element[GRAVATAR_DEFAULT_GLOBAL]['#disabled'] = TRUE;
-    $element[GRAVATAR_DEFAULT_GLOBAL]['#description'] = t('There currently is not a global default user picture specified.') .' '. $option_element['#description'];
+    $element[GRAVATAR_DEFAULT_GLOBAL]['#description'] = t('There currently is not a global default user picture specified.') .' '. $element[GRAVATAR_DEFAULT_GLOBAL]['#description'];
   }
 
   foreach ($element['#options'] as $key => $choice) {
     // Add an image to preview this default image option.
     $attributes = array(
-      'id' => 'gravatar-imagepreview-'. $option_index,
+      'id' => 'gravatar-imagepreview-'. $key,
       // Hide the image if the respective option is disabled.
-      'class' => $option_element['#disabled'] ? 'hide' : 'js-hide',
+      'class' => $choice['#disabled'] ? 'hide' : 'js-hide',
     );
-    $element[$key]['#suffix'] = theme('image', _gravatar_get_gravatar(array('default' => _gravatar_get_default_image($option_index))), $option_title, $option_title, $attributes, FALSE);
+    $element[$key]['#suffix'] = theme('image', _gravatar_get_gravatar(array('default' => _gravatar_get_default_image($key))), $choice, $choice, $attributes, FALSE);
   }
 
   return $element;

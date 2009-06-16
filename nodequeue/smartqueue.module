@@ -1,5 +1,5 @@
 <?php
-// $Id: smartqueue.module,v 1.5 2009/04/30 02:35:33 ezrag Exp $
+// $Id: smartqueue.module,v 1.6 2009/06/10 22:19:30 ezrag Exp $
 
 /**
  * Implementation of hook_nodequeue_info()
@@ -16,7 +16,7 @@ function smartqueue_nodequeue_info() {
  */
 function smartqueue_taxonomy_nodequeue_form($queue, &$form) {
   foreach (taxonomy_get_vocabularies() as $vid => $vocabulary) {
-    $options[$vid] = $vocabulary->name;
+    $options[$vid] = check_plain($vocabulary->name);
   }
   $form['placeholder']['vocabularies'] = array(
     '#type' => 'checkboxes',

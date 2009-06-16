@@ -1,5 +1,5 @@
 <?php
-// $Id: gravatar.module,v 1.6.2.44 2009/03/20 16:56:01 davereid Exp $
+// $Id: gravatar.module,v 1.6.2.45 2009/06/14 03:13:11 davereid Exp $
 
 /**
  * @file
@@ -107,7 +107,7 @@ function gravatar_preprocess_user_picture(&$variables) {
     $picture = NULL;
 
     // If this is a node or comment object, load the user object.
-    if (!empty($account->nid) || !empty($account->cid)) {
+    if (!empty($account->nid) || !empty($account->cid) || empty($account->roles)) {
 
       // If a comment is being edited and previewed, the $account->uid is NULL.
       // @todo Remove when http://drupal.org/node/334826 is fixed in 6.x.

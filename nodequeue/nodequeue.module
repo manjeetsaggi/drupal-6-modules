@@ -1,5 +1,5 @@
 <?php
-// $Id: nodequeue.module,v 1.78 2009/05/01 00:26:37 ezrag Exp $
+// $Id: nodequeue.module,v 1.84 2009/06/10 22:19:30 ezrag Exp $
 
 // --------------------------------------------------------------------------
 // Drupal Hooks
@@ -421,7 +421,7 @@ function nodequeue_admin_add_node($queue, $subqueue, $node) {
     if (isset($_GET['tab'])) {
       nodequeue_js_output(t('Remove from queue'),
         url("admin/content/nodequeue/$queue->qid/remove-node/$subqueue->sqid/$node->nid", array('query' => nodequeue_get_query_string($node->nid, TRUE, array('tab')))),
-        nodequeue_subqueue_size_text($queue->size, $queue->size ? min($subqueue->count + 1, $queue->size) : $subqueue->count + 1, FALSE),
+        nodequeue_subqueue_size_text($queue->size, $queue->size ? min($subqueue->count, $queue->size) : $subqueue->count, FALSE),
         $subqueue->sqid);
     }
     else {
@@ -972,7 +972,7 @@ function nodequeue_admin_view($queue, $subqueue = NULL) {
   return nodequeue_arrange_subqueue($queue, $subqueue);
 }
 
-function nodequeue_arrange_subqueue_entry($queue, $subqueue, $node) {
+function nodequeue_arrange_subqueue_entry($queue, $subqueue, $node, $nids_visible = array()) {
   $qid = $queue->qid;
   $sqid = $subqueue->sqid;
   $query_string = nodequeue_get_query_string($node->position, TRUE);
@@ -1014,7 +1014,12 @@ function nodequeue_arrange_subqueue_entry($queue, $subqueue, $node) {
     ), 'query' => $query_string, 'html' => TRUE));
 
   $output = '<tr id="nodequeue-row-'. $node->position .'" class="nodequeue-row '. ($node->position % 2 ? 'odd' : 'even') .'">';
-  $output .= '<td>'. l($node->title, "node/$node->nid") .'</td>';
+  if (in_array($node->nid, $nids_visible)) {
+    $output .= '<td>'. l($node->title, "node/$node->nid") .'</td>';
+  }
+  else {
+    $output .= '<td>' . t('Restricted Node - NID: @nid', array('@nid' => $node->nid)) .'</td>';
+  }
   $output .= '<td>'. theme('username', $node) .'</td>';
   $output .= '<td>'. format_date($node->created) .'</td>';
   $output .= '<td>'. $buttons .'</td>';
@@ -1029,16 +1034,27 @@ function nodequeue_arrange_subqueue($queue, $subqueue) {
   $qid = $queue->qid;
   $sqid = $subqueue->sqid;
   $output = '';
-
-  $order = $queue->reverse ? 'DESC' : 'ASC';
-  $result = db_query("SELECT DISTINCT(n.nid), n.title, n.uid, u.name, n.created, nq.position FROM {node} n LEFT JOIN {users} u on n.uid = u.uid LEFT JOIN {nodequeue_nodes} nq ON nq.nid = n.nid WHERE nq.sqid = %d ORDER BY nq.position $order", $sqid);
-
   $body = '';
+  $order = $queue->reverse ? 'DESC' : 'ASC';
+  $nids_visible = array();
+  
+  //Get the list of nodes in the subqueue.
+  //First, get a list of nodes taking into account node access restrictions
+  if (!user_access('administer nodes')) {
+    $node_status_sql = ' AND n.status = 1';
+  }
+  $query_restricted = db_query(db_rewrite_sql("SELECT DISTINCT(n.nid) FROM {node} n LEFT JOIN {nodequeue_nodes} nq ON nq.nid = n.nid WHERE nq.sqid = %d$node_status_sql ORDER BY nq.position $order"), $sqid); 
+  while ($result_restricted = db_fetch_object($query_restricted)) {
+    $nids_visible[$result_restricted->nid] = $result_restricted->nid;
+  }
 
+  //Then, get an unrestricted list of nodes in the subqueue.
+  //Titles are not displayed for nodes that are not present in the result set of both queries.
+  $result = db_query("SELECT DISTINCT(n.nid), n.title, n.uid, u.name, n.created, nq.position FROM {node} n LEFT JOIN {users} u on n.uid = u.uid LEFT JOIN {nodequeue_nodes} nq ON nq.nid = n.nid WHERE nq.sqid = %d ORDER BY nq.position $order", $sqid);
   $nids = array();
   while ($node = db_fetch_object($result)) {
     $nids[$node->position] = $node->nid;
-    $body .= nodequeue_arrange_subqueue_entry($queue, $subqueue, $node);
+    $body .= nodequeue_arrange_subqueue_entry($queue, $subqueue, $node, $nids_visible);
   }
 
   $output = '<p>'. t('Max nodes in queue: @size', array('@size' => $queue->size ? $queue->size : t("Infinite"))) .'</p>';
@@ -1627,12 +1643,12 @@ function nodequeue_queue_access($queue, $subqueue = NULL, $account = NULL) {
   }
 
   // Automatically true if all queues.
-  if (user_access('manipulate all queues')) {
+  if (user_access('manipulate all queues', $account)) {
     return TRUE;
   }
 
   // Automatically false if they can't manipulate queues at all.
-  if (!user_access('manipulate queues') || empty($queue->roles)) {
+  if (!user_access('manipulate queues', $account) || empty($queue->roles)) {
     return FALSE;
   }
 
@@ -1834,7 +1850,7 @@ function nodequeue_get_all_qids($page_size = 25, $pager_element = 0, $bypass_cac
  */
 function nodequeue_load_queues($qids = array(), $bypass_cache = FALSE) {
   static $cache = array();
-  $to_load = $queues = array();
+  $to_load = $loaded = array();
 
   foreach ($qids as $qid) {
     if ($bypass_cache || !isset($cache[$qid])) {
@@ -1846,30 +1862,39 @@ function nodequeue_load_queues($qids = array(), $bypass_cache = FALSE) {
     $placeholders = db_placeholders($to_load, 'int');
     $result = db_query("SELECT q.*, COUNT(s.sqid) AS subqueues FROM {nodequeue_queue} q LEFT JOIN {nodequeue_subqueue} s ON q.qid = s.qid WHERE q.qid IN ($placeholders) GROUP BY q.qid", $to_load);
     while ($queue = db_fetch_object($result)) {
-      $cache[$queue->qid] = $queue;
+      $loaded[$queue->qid] = $queue;
       // ensure valid defaults:
-      $cache[$queue->qid]->types = array();
-      $cache[$queue->qid]->roles = array();
-      $cache[$queue->qid]->count = 0;
+      $loaded[$queue->qid]->types = array();
+      $loaded[$queue->qid]->roles = array();
+      $loaded[$queue->qid]->count = 0;
     }
 
     $result = db_query("SELECT qid, rid FROM {nodequeue_roles} WHERE qid IN ($placeholders)", $to_load);
     while ($obj = db_fetch_object($result)) {
-      $cache[$obj->qid]->roles[] = $obj->rid;
+      $loaded[$obj->qid]->roles[] = $obj->rid;
     }
 
     $result = db_query("SELECT qid, type FROM {nodequeue_types} WHERE qid IN ($placeholders)", $to_load);
     while ($obj = db_fetch_object($result)) {
-      $cache[$obj->qid]->types[] = $obj->type;
+      $loaded[$obj->qid]->types[] = $obj->type;
     }
   }
 
-  foreach ($qids as $qid) {
-    if (isset($cache[$qid])) {
-      $queues[$qid] = $cache[$qid];
-    }
+  if ($bypass_cache) {
+    return $loaded;
   }
-  return $queues;
+  else {
+    if (!empty($loaded)) {
+      $cache += $loaded;
+    }
+    $queues = array();
+    foreach ($qids as $qid) {
+      if (isset($cache[$qid])) {
+        $queues[$qid] = $cache[$qid];
+      }
+    }
+    return $queues;
+  }
 }
 
 /**
@@ -2497,9 +2522,12 @@ function nodequeue_nodequeue_form_submit(&$queue, $form_state) {
 /**
  * in general it's preferable to use Views for this functionality.
  */
-function nodequeue_node_titles($sqid, $title = '', $backward = true, $from = 0, $count = 0) {
+function nodequeue_node_titles($sqid, $title = '', $backward = true, $from = 0, $count = 0, $published_only = FALSE) {
   $orderby = ($backward ? "DESC" : "ASC");
-  $sql = db_rewrite_sql("SELECT n.nid, n.title FROM {node} n LEFT JOIN {nodequeue_nodes} nn ON n.nid = nn.nid WHERE nn.sqid = %d AND n.status = 1 ORDER BY nn.position $orderby");
+  if ($published_only) {
+    $published_sql = 'AND n.status = 1';
+  }
+  $sql = db_rewrite_sql("SELECT n.nid, n.title FROM {node} n LEFT JOIN {nodequeue_nodes} nn ON n.nid = nn.nid WHERE nn.sqid = %d $published_sql ORDER BY nn.position $orderby");
   if ($count) {
     $result = db_query_range($sql, $sqid, $from, $count);
   }
@@ -2523,9 +2551,12 @@ function nodequeue_view_nodes($sqid, $backward = TRUE, $teaser = TRUE, $links = 
 /**
  * Load an array of node objects belonging to a particular nodequeue.
  */
-function nodequeue_load_nodes($sqid, $backward = FALSE, $from = 0, $count = 5) {
+function nodequeue_load_nodes($sqid, $backward = FALSE, $from = 0, $count = 5, $published_only = FALSE) {
   $orderby = ($backward ? "DESC" : "ASC");
-  $sql = db_rewrite_sql("SELECT n.nid FROM {node} n INNER JOIN {nodequeue_nodes} nn ON n.nid = nn.nid WHERE nn.sqid = %d AND n.status = 1 ORDER BY nn.position $orderby");
+  if ($published_only) {
+    $published_sql = 'AND n.status = 1';
+  }
+  $sql = db_rewrite_sql("SELECT n.nid FROM {node} n INNER JOIN {nodequeue_nodes} nn ON n.nid = nn.nid WHERE nn.sqid = %d $published_sql ORDER BY nn.position $orderby");
   if ($count) {
     $result = db_query_range($sql, $sqid, $from, $count);
   }
@@ -2544,15 +2575,14 @@ function nodequeue_load_nodes($sqid, $backward = FALSE, $from = 0, $count = 5) {
  * Load the first node of a queue
  */
 function nodequeue_load_front($sqid) {
-  $nodes = nodequeue_load_nodes($sqid, FALSE, 0, 1);
-  return $nodes;
+  return array_shift(nodequeue_load_nodes($sqid, FALSE, 0, 1));
 }
 
 /**
  * Load the last node of a queue
  */
 function nodequeue_load_back($sqid, $teaser = TRUE, $links = TRUE) {
-  return nodequeue_load_nodes($sqid, TRUE, 0, 1);
+  return array_shift(nodequeue_load_nodes($sqid, TRUE, 0, 1));
 }
 
 /**
@@ -2560,7 +2590,7 @@ function nodequeue_load_back($sqid, $teaser = TRUE, $links = TRUE) {
  */
 function nodequeue_view_random_node($sqid, $teaser = TRUE, $links = TRUE) {
   $count = db_result(db_query(db_rewrite_sql("SELECT COUNT(n.nid) FROM {node} n INNER JOIN {nodequeue_nodes} nn ON n.nid = nn.nid WHERE nn.sqid = %d AND n.status = 1"), $sqid));
-  return nodequeue_view_nodes($sqid, FALSE, $teaser, $links, rand(0, $count - 1), 1);
+  return array_shift(nodequeue_view_nodes($sqid, FALSE, $teaser, $links, rand(0, $count - 1), 1));
 }
 
 /**

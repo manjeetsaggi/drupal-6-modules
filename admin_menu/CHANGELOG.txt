@@ -1,4 +1,4 @@
-// $Id: CHANGELOG.txt,v 1.33.2.48.2.20 2009/06/05 20:51:38 sun Exp $
+// $Id: CHANGELOG.txt,v 1.33.2.48.2.23 2009/06/11 00:25:40 sun Exp $
 
 Admin Menu x.x-x.x, xxxx-xx-xx
 ------------------------------
@@ -6,6 +6,12 @@ Admin Menu x.x-x.x, xxxx-xx-xx
 
 Admin Menu 6.x-3.x, xxxx-xx-xx
 ------------------------------
+
+
+Admin Menu 6.x-3.0-ALPHA1, 2009-06-10
+-------------------------------------
+#236657 by sun: Updated for corrected arguments of system_clear_cache_submit().
+#483870 by sun: Fixed compatibility with new Admin module.
 #483152 by sun: Fixed admin_menu caches not flushed when clean URLs are toggled.
 #479922 by danep: Fixed fieldsets not collapsed on admin/build/modules/list.
 #469716 by sun: Fixed wrong AJAX callback URL under various conditions.
