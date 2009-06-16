@@ -1,5 +1,5 @@
 <?php
-// $Id: facebook_stream.module,v 1.1 2009/06/06 05:22:59 prajwala Exp $
+// $Id: facebook_stream.module,v 1.2 2009/06/10 14:29:36 prajwala Exp $
 
 /**
  *@file
@@ -25,28 +25,28 @@ function facebook_stream_menu() {
     'access callback' => 'user_edit_access',
     'access arguments' => array(1),
     'type' => MENU_LOCAL_TASK,
-					       );
+  );
   
   $items['fbstream/get/post/comments'] = array(
     'title' => t('Facebook Stream post comments'),
     "page callback" => "fb_stream_get_post_comments",
     'access arguments' => array('access content'),
     'type' => MENU_CALLBACK,
-						 );
+  );
   
   $items['fbstream/get/post/likes'] = array(
     'title' => t('Facebook Stream post likes'),
     "page callback" => "fb_stream_get_post_likes",
     'access arguments' => array('access content'),
     'type' => MENU_CALLBACK,
-					      );
+  );
   
   $items['fbstream/get'] = array(
     'title' => t('Facebook Stream post likes'),
     "page callback" => "fb_stream_get",
     'access arguments' => array('access content'),
     'type' => MENU_CALLBACK,
-				   );
+  );
   
   return $items; 
 }
@@ -58,15 +58,18 @@ function facebook_stream_menu() {
 function facebook_stream_theme() {
   return array(
     'posts_display' => array(
-      'arguments' => array('stream' => NULL)
-			     ),
-    'comments_display'=> array(
-      'arguments' => array('comments' => NULL)
-			       ),
+      'arguments' => array('stream' => NULL),
+      'template' => 'posts_display', 
+      ),
+    'comments_display' => array(
+      'arguments' => array('comments' => NULL),
+      'template' => 'comments_display',
+      ),
     'likes_display' => array(
-      'arguments' => array('friends' => NULL)
-			     ),
-	       );
+      'arguments' => array('friends' => NULL),
+      'template' => 'likes_display',      
+      ),
+    );
 }
 
 
@@ -79,14 +82,14 @@ function facebook_stream_theme() {
  */
 function fb_stream_config_form() {
   global $user;
-  $variable = 'fb_stream_user_'. $user->uid;
+  $data = unserialize($user->data);
   $form['count'] = array(
     '#type' => 'textfield',
     '#title' => t('No of Items to display'),
-    '#default_value' => variable_get($variable, 5),
+    '#default_value' => $data['fbstream_user'] ? $data['fbstream_user'] : 5 ,
     '#description' => t('NO of Feeds to display on the block.'),
     '#required' => TRUE,
-			 );
+    );
   $form['submit'] = array('#type' => 'submit', '#value' => t('Save'));
   return $form;
 }
@@ -107,7 +110,7 @@ function fb_stream_config_form() {
 function fb_stream_config_form_validate($form, &$form_state) {
   if (!is_numeric($_POST['count'])) {
     form_set_error('', t('Value must me numeric'));
-  }		
+  }
 }
 
 
@@ -127,8 +130,12 @@ function fb_stream_config_form_validate($form, &$form_state) {
  */
 function fb_stream_config_form_submit($form, &$form_state) {
   global $user;
-  $variable = 'fb_stream_user_'.$user->uid;
-  variable_set($variable, $form_state['values']['count']); 	
+  if ($user) {
+    $array = array('fbstream_user' => $form_state['values']['count']);
+    $data = unserialize($user->data);
+    $result_array = array_merge($data, $array);
+    db_query("update {users} set data = '%s' where uid=%d", serialize($result_array), $user->uid);
+ }
 }
 
 /**
@@ -145,8 +152,8 @@ function facebook_stream_block($op = 'list', $delta = 0, $edit = array()) {
     case 0:
       // check whether user logged into facebook through our application
       if (!$fbuid = fbconnect_get_fbuid()) {
-	drupal_set_message(t('Your Facebook session has expired, try to reconnect'));
-	break;
+        drupal_set_message(t('Your Facebook session has expired, try to reconnect'));
+        break;
       }
       $block['subject'] = t('Facebook Stream');
       $block['content'] = _get_facebbok_stream();
@@ -158,18 +165,18 @@ function facebook_stream_block($op = 'list', $delta = 0, $edit = array()) {
     $form = array();
     if ($delta == 0) {
       $form['fbstream_block_post_display_more'] = array(
-	'#type' => 'checkbox',
-	'#title' => t('Display full post information'),
-	'#description' => t('Display the full information of the facebook stream post'),
-	'#default_value' => variable_get('fbstream_block_post_display_more', 1),
-							);
+        '#type' => 'checkbox',
+        '#title' => t('Display full post information'),
+        '#description' => t('Display the full information of the facebook stream post'),
+        '#default_value' => variable_get('fbstream_block_post_display_more', 1),
+        );
       
       $form['fbstream_block_posts_update_time'] = array(
-	'#type' => 'textfield',
-	'#title' => t('Facebook stream posts update time in minutes'),
-	'#description' => t('Facebook stream posts will updation time'),
-	'#default_value' => variable_get('fbstream_block_posts_update_time', 2),
-							);
+        '#type' => 'textfield',
+        '#title' => t('Facebook stream posts update time in minutes'),
+        '#description' => t('Facebook stream posts will updation time'),
+        '#default_value' => variable_get('fbstream_block_posts_update_time', 2),
+        );
     }
     return $form;
   case 'save':
@@ -196,7 +203,7 @@ function _get_facebbok_stream() {
   try {
     $perms = $fb->api_client->users_hasAppPermission('read_stream', $fbuid);
   }
-  catch(FacebookRestClientException $e) {
+  catch (FacebookRestClientException $e) {
     drupal_set_message(t('Your Facebook session has expired, try to reconnect'));
     return t('Your Facebook session has expired, try to reconnect');
   }
@@ -205,8 +212,8 @@ function _get_facebbok_stream() {
   if ($fbuid && $perms) {
     
     // get how many feed items to display
-    $variable = 'fb_stream_user_'. $user->uid;
-    $count = variable_get($variable, 2);
+    $data = unserialize($user->data);   
+    $count = $data['fbstream_user'] ? $data['fbstream_user'] : 5 ;
     
     // get the stream
     $stream = $fb->api_client->stream_get('', '', '0', '0', $count, '');
@@ -214,16 +221,15 @@ function _get_facebbok_stream() {
     $confs = array(
       'fbstream_dispaly' => variable_get('fbstream_block_post_display_more', 1),
       'fbstream_update_time' => variable_get('fbstream_block_posts_update_time', 2)
-		   );
+      );
     drupal_add_js($confs, 'setting');
     return theme('posts_display', $stream);
     
   }
   else {
     // ask the user to give permissions for our application to access his stream
-    
     return 'Set the permissions for the Application<input type="submit" value="Get Perm" class="form-submit" onclick="prompt_for_permissions(\'read_stream\');">';
-  }	
+  }
 }
 
 /**
@@ -246,7 +252,7 @@ function fbstream_full_display($stream) {
     $output .= '            <fb:wall>'; 
     $output .= '               <fb:wallpost uid='. $post['source_id'] .'>'; 
     $output .= '                  <div> '. $post['message'] .' </div>';
-    $output .=                    _post_attachments($post);	
+    $output .=  _post_attachments($post);
     $output .= '                  <div>';
     $output .= '                     <fb:date t='. $post['updated_time'] .' format="verbose" />';
     $output .= '                  </div>';
@@ -315,7 +321,7 @@ function _post_attachments($post) {
  * @param $zeros
  *  Count leading zeeros or not
  */
-function time_duration($seconds, $use = null, $zeros = false) {
+function time_duration($seconds, $use = NULL, $zeros = FALSE) {
   // Define time periods
   $periods = array(
     'years'     => 31556926,
@@ -325,12 +331,12 @@ function time_duration($seconds, $use = null, $zeros = false) {
     'hours'     => 3600,
     'minutes'   => 60,
     'seconds'   => 1
-		   );
+  );
   
   // Break into periods
   $seconds = (float) $seconds;
   foreach ($periods as $period => $value) {
-    if ($use && strpos($use, $period[0]) === false) {
+    if ($use && strpos($use, $period[0]) === FALSE) {
       continue;
     }
     $count = floor($seconds / $value);
@@ -345,7 +351,7 @@ function time_duration($seconds, $use = null, $zeros = false) {
   // Build the string
   foreach ($segments as $key => $value) {
     $segment_name = substr($key, 0, -1);
-    $segment = $value . ' ' . $segment_name;
+    $segment = $value .' '. $segment_name;
     if ($value != 1) {
       $segment .= 's';
     }
@@ -383,7 +389,6 @@ function fb_stream_get_post_comments() {
   $post_id = $_POST['post_id'];
   $fb = facebook_client(); 
   $comments = $fb->api_client->stream_getComments($post_id);
-  //echo "<pre>";print_r($comments);echo "</pre>";
   echo theme('comments_display', $comments);
   exit;
 }
@@ -398,7 +403,10 @@ function fb_stream_get_post_likes() {
   $fb = facebook_client(); 
   $query = "SELECT likes FROM stream WHERE post_id='". $post_id ."'";
   $likes = $fb->api_client->fql_query($query);
-  //echo "<pre>";print_r($likes);echo "</pre>";
+  if (!$likes) {
+    echo "There is no likes information for this post "; 
+    exit;
+  } 
   $likes = $likes[0]['likes'];
   $friends = Array();
   if (!empty($likes['sample'])) {
@@ -407,154 +415,6 @@ function fb_stream_get_post_likes() {
   if (!empty($likes['friends'])) {
     $friends = array_merge($friends, $likes['friends']);
   }
-  
   echo theme('likes_display', $friends);
   exit;
-}
-
-/**
- * theme to display the stream posts
- */
-function theme_posts_display($stream) {
-  $output = '';
-  $output .= '<div class="fbstream_short_container">';
-  foreach ($stream['posts'] as $post) {
-    $user_info = _get_user_info($stream['profiles'], $post['source_id']);
-    $output .= '<div class="facebook_stream_msgs">';
-    $output .= '<div class="fb_user_picture"><img src="'.$user_info['pic_square'].'" /></div>';
-    $output .= '<div class="fb_post_message">';
-    
-    $output .= '<a href="'.$user_info['url'].'" >'.$user_info['name'].'</a>';
-    $output .= '<span class="message">'.str_parse_url($post['message']).'</span>';
-    
-    // end of class user_message
-    $output .= '</div>';
-    
-    $output .= '<div style="clear:both;"></div>';
-    
-    if (!empty($post['attachment'])) {
-      if (!variable_get('fbstream_block_post_display_more', 1)) {
-	$output .= '<div class="more_link" ><a href="#" post_id="'.$post['post_id'].'" >more</a></div>';
-	$classname = 'hide';
-      } 
-      else {
-	$classname = '';
-      }
-      
-      // attachments and more info..
-      $output .= '<div class="more_info '.$classname.'" post_id="'.$post['post_id'].'">';
-      
-      // images, videos, links
-      $output .= '<div class="media_wrapper">';
-      
-      if (!empty($post['attachment']['media'])) {
-	
-	foreach ($post['attachment']['media'] as $media) {
-	  $output .= '<a href="'.$media['href'].'"><img src="'.$media['src'].'" /></a>';
-	}
-      }
-      
-      // end of .media_wrapper
-      $output .= '</div>';
-      
-      // information about the attachments
-      $output .= '<div class="attachments_info">';
-      
-      $output .= '<div class="att_name"><a href="'.$post['attachment']['href'].'">'.$post['attachment']['name'].'</a></div>';
-      $output .= '<div class="att_caption">'.$post['attachment']['caption'].'</div>';
-      $output .= '<div class="att_desc">'.$post['attachment']['description'].'</div>';
-      
-      // end of .attachments_info
-      $output .= '</div>';
-      
-      // end of class more_info
-      $output .= '</div>';
-    }
-    
-    // time, comments, likes
-    $output .= '<div class="time_comments_likes">';
-    
-    $time_duration = time_duration(time() - $post['created_time']).' ago';
-    
-    $output .= '<span class="time">' . $time_duration . '</span>';
-    
-    if ($post['comments']['count'] > 0) {
-      $comments_str = ($post['comments']['count'] == 1) ? 'comment':'comments';
-      $output .= '<span class="comments"><a href="#" post_id="'.$post['post_id'].'">'.$post['comments']['count']. ' ' . $comments_str. ' </a></span>';
-    }
-    
-    if ($post['likes']['count'] > 0) {
-      $likes_str = ($post['likes']['count'] == 1) ? 'like':'likes';
-      $output .= '<span class="likes"><a href="#" post_id="'.$post['post_id'].'">'.$post['likes']['count']. ' ' . $likes_str. ' </a></span>';
-    }
-    
-    
-    // end of .time_comments_likes
-    $output .= '</div>';
-    
-    // end of class facebook_stream_msgs
-    $output .= '</div>';
-  }
-  // end of class fbstream_short_container
-  $output .= '</div>';
-  return $output;
-}
-
-/**
- * theme to display the comments
- */
-function theme_comments_display($comments) {
-  $fb = facebook_client(); 
-  $output = '';
-  $output .= '<div class="fb_stream_post_comments">';
-  
-  foreach ($comments as $comment) {
-    $user_info = $fb->api_client->users_getInfo($comment['fromid'], 'name,pic_square,profile_url');
-    $user_info = $user_info[0];
-    $output .= '<div class="fb_post_comment">';
-    
-    $output .= '<div class="fb_comment_user_picture"><img src="'.$user_info['pic_square'].'" /></div>';
-    
-    $output .= '<div class="fb_comment_message">';
-    
-    $output .= '<a href="'.$user_info['profile_url'].'">'.$user_info['name'].'</a>';
-    
-    $output .= '<span class="fb_comment_user_message">'.str_parse_url($comment['text']).'</span>';
-    
-    $time = time_duration(time() - $comment['time']).' ago';
-    
-    $output .= '<div class="fb_comment_created">'.$time.'</div>';
-    
-    // end of .comment_message
-    $output .= '</div>';
-    
-    $output .= '<div style="clear:both;"></div>';
-    
-    // end of .user_comment_message
-    $output .= '</div>';
-  }
-  
-  // end of .fb_stream_post_comments
-  $output .= '</div>';
-  return $output;
-}
-
-/**
- * theme to display friends who likes the post
- */
-function theme_likes_display($friends) {
-  $fb = facebook_client(); 
-  $output .= '<ul class="post_liked_friends">';
-  
-  foreach ($friends as $friend) {
-    $user_info = $fb->api_client->users_getInfo($friend, 'name, pic_square, profile_url');
-    $user_info = $user_info[0];
-    $output .= '<li>';
-    $output .= '<span class="square"><img src="'.$user_info['pic_square'].'" /></span>';
-    $output .= '<strong><a href="'.$user_info['profile_url'].'">'.$user_info['name'].'</a></strong>';
-    $output .= '</li>';
-  }
-  
-  $output .= '</ul>';
-  return $output;
 }

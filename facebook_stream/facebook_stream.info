@@ -1,4 +1,4 @@
-; $Id: facebook_stream.info,v 1.1 2009/06/06 05:22:59 prajwala Exp $
+; $Id: facebook_stream.info,v 1.2 2009/06/10 14:29:36 prajwala Exp $
 name= Facebook Stream
 description = Allows users to import and export information from Facebook.
 dependencies[] = fbconnect
@@ -10,9 +10,9 @@ php = 5.2
 core = 6.x
 
 
-; Information added by drupal.org packaging script on 2009-06-06
-version = "6.x-1.0"
+; Information added by drupal.org packaging script on 2009-06-10
+version = "6.x-1.0-rc1"
 core = "6.x"
 project = "facebook_stream"
-datestamp = "1244266827"
+datestamp = "1244644545"
 
