@@ -178,11 +178,11 @@ function toggleDisplay(id, type) {
   private function execute_server_side_batch() {
     $item_count = count($this->batch_queue);
     $method_feed = array();
-    foreach($this->batch_queue as $batch_item) {
+    foreach ($this->batch_queue as $batch_item) {
       $method = $batch_item['m'];
       $params = $batch_item['p'];
-      $this->finalize_params($method, $params);
-      $method_feed[] = $this->create_post_string($method, $params);
+      list($get, $post) = $this->finalize_params($method, $params);
+      $method_feed[] = $this->create_url_string(array_merge($post, $get));
     }
 
     $method_feed_json = json_encode($method_feed);
@@ -205,7 +205,7 @@ function toggleDisplay(id, type) {
                                             $result['error_code']);
     }
 
-    for($i = 0; $i < $item_count; $i++) {
+    for ($i = 0; $i < $item_count; $i++) {
       $batch_item = $this->batch_queue[$i];
       $batch_item_result_xml = $result[$i];
       $batch_item_result = $this->convert_xml_to_result($batch_item_result_xml,
@@ -1169,6 +1169,44 @@ function toggleDisplay(id, type) {
   }
 
   /**
+   * Payments Order API
+   */
+
+  /**
+   * Set Payments properties for an app.
+   *
+   * @param  properties  a map from property names to  values
+   * @return             true on success
+   */
+  public function payments_setProperties($properties) {
+    return $this->call_method ('facebook.payments.setProperties',
+        array('properties' => json_encode($properties)));
+  }
+
+  public function payments_getOrderDetails($order_id) {
+    return json_decode($this->call_method(
+        'facebook.payments.getOrderDetails',
+        array('order_id' => $order_id)), true);
+  }
+
+  public function payments_updateOrder($order_id, $status,
+                                         $params) {
+    return $this->call_method('facebook.payments.updateOrder',
+        array('order_id' => $order_id,
+              'status' => $status,
+              'params' => json_encode($params)));
+  }
+
+  public function payments_getOrders($status, $start_time,
+                                       $end_time, $test_mode=false) {
+    return json_decode($this->call_method('facebook.payments.getOrders',
+        array('status' => $status,
+              'start_time' => $start_time,
+              'end_time' => $end_time,
+              'test_mode' => $test_mode)), true);
+  }
+
+  /**
    * Creates a note with the specified title and content.
    *
    * @param string $title   Title of the note.
@@ -1233,7 +1271,6 @@ function toggleDisplay(id, type) {
    *               notes.
    */
   public function &notes_get($uid, $note_ids = null) {
-
     return $this->call_method('notes.get',
         array('uid' => $uid,
               'note_ids' => $note_ids));
@@ -1632,6 +1669,63 @@ function toggleDisplay(id, type) {
   }
 
   /**
+   * Gets the comments for a particular xid. This is essentially a wrapper
+   * around the comment FQL table.
+   *
+   * @param string $xid external id associated with the comments
+   *
+   * @return array of comment objects
+   */
+  public function &comments_get($xid) {
+    $args = array('xid' => $xid);
+    return $this->call_method('facebook.comments.get', $args);
+  }
+
+  /**
+   * Add a comment to a particular xid on behalf of a user. If called
+   * without an app_secret (with session secret), this will only work
+   * for the session user.
+   *
+   * @param string $xid   external id associated with the comments
+   * @param string $text  text of the comment
+   * @param int    $uid   user adding the comment (def: session user)
+   * @param string $title optional title for the stream story
+   * @param string $url   optional url for the stream story
+   * @param bool   $publish_to_stream publish a feed story about this comment?
+   *                      a link will be generated to title/url in the story
+   *
+   * @return string comment_id associated with the comment
+   */
+  public function &comments_add($xid, $text, $uid=0, $title='', $url='',
+                                $publish_to_stream=false) {
+    $args = array(
+      'xid'               => $xid,
+      'uid'               => $this->get_uid($uid),
+      'text'              => $text,
+      'title'             => $title,
+      'url'               => $url,
+      'publish_to_stream' => $publish_to_stream);
+
+    return $this->call_method('facebook.comments.add', $args);
+  }
+
+  /**
+   * Remove a particular comment.
+   *
+   * @param string $xid        the external id associated with the comments
+   * @param string $comment_id id of the comment to remove (returned by
+   *                           comments.add and comments.get)
+   *
+   * @return boolean
+   */
+  public function &comments_remove($xid, $comment_id) {
+    $args = array(
+      'xid'        => $xid,
+      'comment_id' => $comment_id);
+    return $this->call_method('facebook.comments.remove', $args);
+  }
+
+  /**
    * Gets the stream on behalf of a user using a set of users. This
    * call will return the latest $limit queries between $start_time
    * and $end_time.
@@ -1642,11 +1736,16 @@ function toggleDisplay(id, type) {
    * @param int    $end_time   end time to look for stories (def: now)
    * @param int    $limit      number of stories to attempt to fetch (def: 30)
    * @param string $filter_key key returned by stream.getFilters to fetch
+   * @param array  $metadata   metadata to include with the return, allows
+   *                           requested metadata to be returned, such as
+   *                           profiles, albums, photo_tags
    *
    * @return array(
-   *           'posts'    => array of posts,
-   *           'profiles' => array of profile metadata of users/pages in posts
-   *           'albums'   => array of album metadata in posts
+   *           'posts'      => array of posts,
+   *           // if requested, the following data may be returned
+   *           'profiles'   => array of profile metadata of users/pages in posts
+   *           'albums'     => array of album metadata in posts
+   *           'photo_tags' => array of photo_tags for photos in posts
    *         )
    */
   public function &stream_get($viewer_id = null,
@@ -2946,11 +3045,13 @@ function toggleDisplay(id, type) {
     return $result;
   }
 
-  private function finalize_params($method, &$params) {
-    $this->add_standard_params($method, $params);
+  private function finalize_params($method, $params) {
+    list($get, $post) = $this->add_standard_params($method, $params);
     // we need to do this before signing the params
-    $this->convert_array_values_to_json($params);
-    $params['sig'] = Facebook::generate_sig($params, $this->secret);
+    $this->convert_array_values_to_json($post);
+    $post['sig'] = Facebook::generate_sig(array_merge($get, $post),
+                                          $this->secret);
+    return array($get, $post);
   }
 
   private function convert_array_values_to_json(&$params) {
@@ -2961,28 +3062,38 @@ function toggleDisplay(id, type) {
     }
   }
 
-  private function add_standard_params($method, &$params) {
+  /**
+   * Add the generally required params to our request.
+   * Params method, api_key, and v should be sent over as get.
+   */
+  private function add_standard_params($method, $params) {
+    $post = $params;
+    $get = array();
     if ($this->call_as_apikey) {
-      $params['call_as_apikey'] = $this->call_as_apikey;
+      $get['call_as_apikey'] = $this->call_as_apikey;
     }
-    $params['method'] = $method;
-    $params['session_key'] = $this->session_key;
-    $params['api_key'] = $this->api_key;
-    $params['call_id'] = microtime(true);
-    if ($params['call_id'] <= $this->last_call_id) {
-      $params['call_id'] = $this->last_call_id + 0.001;
+    $get['method'] = $method;
+    $get['session_key'] = $this->session_key;
+    $get['api_key'] = $this->api_key;
+    $post['call_id'] = microtime(true);
+    if ($post['call_id'] <= $this->last_call_id) {
+      $post['call_id'] = $this->last_call_id + 0.001;
     }
-    $this->last_call_id = $params['call_id'];
-    if (!isset($params['v'])) {
-      $params['v'] = '1.0';
+    $this->last_call_id = $post['call_id'];
+    if (isset($post['v'])) {
+      $get['v'] = $post['v'];
+      unset($post['v']);
+    } else {
+      $get['v'] = '1.0';
     }
     if (isset($this->use_ssl_resources) &&
         $this->use_ssl_resources) {
-      $params['return_ssl_resources'] = true;
+      $post['return_ssl_resources'] = true;
     }
+    return array($get, $post);
   }
 
-  private function create_post_string($method, $params) {
+  private function create_url_string($params) {
     $post_params = array();
     foreach ($params as $key => &$val) {
       $post_params[] = $key.'='.urlencode($val);
@@ -3022,12 +3133,14 @@ function toggleDisplay(id, type) {
   }
 
   public function post_request($method, $params) {
-    $this->finalize_params($method, $params);
-    $post_string = $this->create_post_string($method, $params);
+    list($get, $post) = $this->finalize_params($method, $params);
+    $post_string = $this->create_url_string($post);
+    $get_string = $this->create_url_string($get);
+    $url_with_get = $this->server_addr . '?' . $get_string;
     if ($this->use_curl_if_available && function_exists('curl_init')) {
       $useragent = 'Facebook API PHP5 Client 1.1 (curl) ' . phpversion();
       $ch = curl_init();
-      curl_setopt($ch, CURLOPT_URL, $this->server_addr);
+      curl_setopt($ch, CURLOPT_URL, $url_with_get);
       curl_setopt($ch, CURLOPT_POSTFIELDS, $post_string);
       curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
       curl_setopt($ch, CURLOPT_USERAGENT, $useragent);
@@ -3040,30 +3153,33 @@ function toggleDisplay(id, type) {
       $content = $post_string;
       $result = $this->run_http_post_transaction($content_type,
                                                  $content,
-                                                 $this->server_addr);
+                                                 $url_with_get);
     }
     return $result;
   }
 
   private function post_upload_request($method, $params, $file, $server_addr = null) {
     $server_addr = $server_addr ? $server_addr : $this->server_addr;
-    $this->finalize_params($method, $params);
+    list($get, $post) = $this->finalize_params($method, $params);
+    $get_string = $this->create_url_string($get);
+    $url_with_get = $server_addr . '?' . $get_string;
     if ($this->use_curl_if_available && function_exists('curl_init')) {
       // prepending '@' causes cURL to upload the file; the key is ignored.
-      $params['_file'] = '@' . $file;
+      $post['_file'] = '@' . $file;
       $useragent = 'Facebook API PHP5 Client 1.1 (curl) ' . phpversion();
       $ch = curl_init();
-      curl_setopt($ch, CURLOPT_URL, $server_addr);
+      curl_setopt($ch, CURLOPT_URL, $url_with_get);
       // this has to come before the POSTFIELDS set!
-      curl_setopt($ch, CURLOPT_POST, 1 );
+      curl_setopt($ch, CURLOPT_POST, 1);
       // passing an array gets curl to use the multipart/form-data content type
-      curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
+      curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
       curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
       curl_setopt($ch, CURLOPT_USERAGENT, $useragent);
       $result = curl_exec($ch);
       curl_close($ch);
     } else {
-      $result = $this->run_multipart_http_transaction($method, $params, $file, $server_addr);
+      $result = $this->run_multipart_http_transaction($method, $post,
+                                                      $file, $url_with_get);
     }
     return $result;
   }
@@ -3319,6 +3435,21 @@ class FacebookAPIErrorCodes {
   const API_EC_LIVEMESSAGE_MESSAGE_TOO_LONG = 1102;
 
   /*
+   * PAYMENTS API ERRORS
+   */
+  const API_EC_PAYMENTS_UNKNOWN = 1150;
+  const API_EC_PAYMENTS_APP_INVALID = 1151;
+  const API_EC_PAYMENTS_DATABASE = 1152;
+  const API_EC_PAYMENTS_PERMISSION_DENIED = 1153;
+  const API_EC_PAYMENTS_APP_NO_RESPONSE = 1154;
+  const API_EC_PAYMENTS_APP_ERROR_RESPONSE = 1155;
+  const API_EC_PAYMENTS_INVALID_ORDER = 1156;
+  const API_EC_PAYMENTS_INVALID_PARAM = 1157;
+  const API_EC_PAYMENTS_INVALID_OPERATION = 1158;
+  const API_EC_PAYMENTS_PAYMENT_FAILED = 1159;
+  const API_EC_PAYMENTS_DISABLED = 1160;
+
+  /*
    * CONNECT SESSION ERRORS
    */
   const API_EC_CONNECT_FEED_DISABLED = 1300;
@@ -3347,6 +3478,7 @@ class FacebookAPIErrorCodes {
   const API_EC_COMMENTS_INVALID_XID = 1703;
   const API_EC_COMMENTS_INVALID_UID = 1704;
   const API_EC_COMMENTS_INVALID_POST = 1705;
+  const API_EC_COMMENTS_INVALID_REMOVE = 1706;
 
   /**
    * This array is no longer maintained; to view the description of an error

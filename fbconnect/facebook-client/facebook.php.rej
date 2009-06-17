@@ -1,61 +1,18 @@
 ***************
-*** 31,39 ****
-  // | for help with this library, contact developers-help@facebook.com          |
+*** 31,38 ****
+  // | For help with this library, contact developers-help@facebook.com          |
   // +---------------------------------------------------------------------------+
-  //
--   //
-- // NOTE: if you change this file near this line, you must update changes.patch!
-- include_once $_server['php_root'].'/lib/api/client/php_1_1/facebookapi_php5_restlib.php';
   
-  define('facebook_api_validation_error', 1);
-  class facebook {
---- 31,38 ----
-  // | for help with this library, contact developers-help@facebook.com          |
+- // NOTE: if you change this file near this line, you must update facebook.patch!
+- include_once $_SERVER['PHP_ROOT'].'/lib/api/client/php_1_1/facebookapi_php5_restlib.php';
+  
+  define('FACEBOOK_API_VALIDATION_ERROR', 1);
+  class Facebook {
+--- 31,37 ----
+  // | For help with this library, contact developers-help@facebook.com          |
   // +---------------------------------------------------------------------------+
-  //
-+ 
-+ include_once 'facebookapi_php5_restlib.php'
   
-  define('facebook_api_validation_error', 1);
-  class facebook {
-***************
-*** 245,252 ****
-        // get a frame within a frame.
-        echo "<script type=\"text/javascript\">\ntop.location.href = \"$url\";\n</script>";
-      } else {
--       // NOTE: if you change this file near this line, you must update changes.patch!
--       http_header('location', $url);
-      }
-      exit;
-    }
---- 244,250 ----
-        // get a frame within a frame.
-        echo "<script type=\"text/javascript\">\ntop.location.href = \"$url\";\n</script>";
-      } else {
-+       header('location', $url);
-      }
-      exit;
-    }
-***************
-*** 290,303 ****
-    }
++ include_once 'facebookapi_php5_restlib.php';
   
-    public static function get_facebook_url($subdomain='www') {
--     // NOTE: if you change this file near this line, you must update changes.patch!
--     if (preg_match('/\\.([\d\w\-]+)\\.([\d\w\-]+)\\.facebook\\.com$/i',
--                    isset($_server['http_host']) ? $_server['http_host'] : '',
--                    $matches)) {
--       $correct_map = $matches[1];
--       $host_extra = isset($matches[2]) ? $matches[2] : '';
--       return 'http://' . $subdomain . '.' . $correct_map.'.'. $host_extra . '.facebook.com';
--     }
-      return 'http://' . $subdomain . '.facebook.com';
-    }
-  
---- 288,293 ----
-    }
-  
-    public static function get_facebook_url($subdomain='www') {
-      return 'http://' . $subdomain . '.facebook.com';
-    }
-  
+  define('FACEBOOK_API_VALIDATION_ERROR', 1);
+  class Facebook {
