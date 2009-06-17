@@ -129,6 +129,9 @@ function twitter_fetch_timeline($screen_name, $filter_since = TRUE, $cache = TRU
  *   code returned by Twitter.com.
  */
 function twitter_set_status($screen_name, $password, $text, $source = 'drupal') {
+  if ('drupal' === $source) {
+    $source = variable_get('twitter_source', 'drupal');
+  }
   $url = "http://" . variable_get('twitter_api_url', 'twitter.com') . "/statuses/update.xml";
 
   $headers = array('Authorization' => 'Basic '. base64_encode($screen_name .':'. $password),
