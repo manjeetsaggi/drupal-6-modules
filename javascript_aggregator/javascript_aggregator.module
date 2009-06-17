@@ -85,7 +85,12 @@ function _javascript_aggregator_minify($scripts) {
     $pattern = "!(<script type=\"text\/javascript\" src=\"$path)(.*?)(\"(.*?)><\/script>)!";
     preg_match_all($pattern, $scripts, $matches);
     $aggregated_file = $matches[2][0];
-    $jsmin_file = $aggregated_file .'min.js';
+    if (empty($aggregated_file)) {
+      $jsmin_file = '/min.js';
+    }
+    else {
+      $jsmin_file = $aggregated_file .'min.js';
+    }
 
     // Construct the final JSMin file path.
     $jsmin_file_path = file_directory_path() . $jsmin_file;
