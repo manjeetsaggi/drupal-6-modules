@@ -1,0 +1,14 @@
+; $Id: android.info,v 1.1 2009/03/11 08:10:56 liorkesos Exp $
+name = Android
+description = "Provides android integration"
+core = 6.x
+dependencies[] = services
+dependencies[] = json_server
+
+
+; Information added by drupal.org packaging script on 2009-03-11
+version = "6.x-1.x-dev"
+core = "6.x"
+project = "android"
+datestamp = "1236772911"
+

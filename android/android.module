@@ -1,0 +1,85 @@
+<?php
+// $Id: android.module,v 1.1 2009/03/11 08:10:56 liorkesos Exp $
+
+
+function android_service() {
+  return array(
+    array(
+      '#method'   => 'android.NewComments',
+      '#callback' => 'android_get_new_comments',
+      '#key'              => FALSE,
+      '#return'   => 'struct',
+      '#help'     => t('Retrieves the number of new unpublished comments.')),
+    array(
+      '#method'   => 'android.NewContents',
+      '#callback' => 'android_get_new_content',
+      '#key'              => FALSE,
+      '#return'   => 'struct',
+      '#help'     => t('Retrieves the number of new unpublished nodes.')),
+    array(
+      '#method'   => 'android.NewUsers',
+      '#callback' => 'android_get_new_users',
+      '#key'              => FALSE,
+      '#return'   => 'struct',
+      '#help'     => t('Retrieves the number of new unpublished users')),
+    array(
+      '#method'   => 'android.userStats',
+      '#callback' => 'android_user_stats',
+      '#key'              => FALSE,
+      '#return'   => 'struct',
+      '#help'     => t('Retrieves general information about the users in a site')),
+    array(
+      '#method'   => 'android.mapCallbacks',
+      '#callback' => 'android_map_callbacks',
+      '#key'              => FALSE,
+      '#return'   => 'struct',
+      '#help'     => t('Retrieves the number of new unpublished comments.')),
+  );
+}
+/* android_map_callbacks serves as a resource to supply dynamic behaviour to the android app without code based on behaviour */
+function android_map_callbacks(){
+  $callback_arr = array(
+    "NewComments" => array("callback" => "admin/content/comment"),
+    "NewContent" => array("callback" => "admin/content/node"),
+    "NewUsers" => array("callback" => "admin/user/user"),
+  );
+  return $callback_arr;
+}
+/* Warning! hardcoded values! */
+function android_user_stats(){
+  $userstat_arr = array(
+    "registered" => array("numreg" => "76"),
+    "logged" => array(
+      "numlogged" => "3",
+      "who" => "David,Lior,Dries"
+      ),
+    "new" => array("numnew" => "2"),
+  );
+  return $userstat_arr;
+}
+
+function android_get_new_comments(){
+  $result = db_query('SELECT c.subject, c.nid, c.cid, c.comment, c.timestamp,
+ c.status, c.name, c.homepage, u.name AS registered_name, u.uid, n.title as node_title FROM comments c INNER JOIN users u ON u.uid = c.uid INNER JOIN node n ON n.nid = c.nid WHERE c.status = 1');
+  while ($comm = db_fetch_object($result)){;
+    $num[$comm->cid] = $comm; 
+  }
+    return $num;
+}
+
+function android_get_new_content(){
+  $result = db_query('SELECT n.nid,n.title,n.status  FROM  node n  WHERE n.status = 0');
+  while ($nodes = db_fetch_object($result)){;
+    $num[$nodes->nid] = $nodes; 
+  }
+  // Append timestamp
+    return $num;
+}
+
+function android_get_new_users(){
+  $result = db_query('SELECT u.uid,u.name,u.status from users u where u.status = 0');
+  while ($pending_users = db_fetch_object($result)){;
+    $num[$pending_users->uid] = $pending_users;
+  }
+    return $num;
+}
