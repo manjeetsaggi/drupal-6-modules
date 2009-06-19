@@ -41,7 +41,7 @@ function community_tags_form($form_state, $edit, $title = NULL) {
     $destination = drupal_get_destination();
     $form['login'] = array(
       '#type' => 'markup',
-      '#value' => '<div>'. t('<a href="@login">Login</a> or <a href="@register">register</a> to tag items', array('@login' => url('user/login', $destination), '@register' => url('user/register', $destination))) .'</div>',
+      '#value' => '<div>'. t('<a href="@login">Login</a> or <a href="@register">register</a> to tag items', array('@login' => url('user/login', array('query' => $destination)), '@register' => url('user/register', array('query' => $destination)))) .'</div>',
     );
   }
 
