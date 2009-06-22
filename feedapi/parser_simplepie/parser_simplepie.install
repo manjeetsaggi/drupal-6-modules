@@ -1,5 +1,5 @@
 <?php
-// $Id: parser_simplepie.install,v 1.1.2.6.2.6 2008/09/10 08:27:52 aronnovak Exp $
+// $Id: parser_simplepie.install,v 1.1.2.6.2.7 2009/03/03 07:01:15 aronnovak Exp $
 
 /**
  * Implementation of hook_requirements().
@@ -11,7 +11,7 @@ function parser_simplepie_requirements($phase) {
   switch ($phase) {
     case 'install' :
     case 'runtime' :
-      $path = drupal_get_path('module', 'parser_simplepie') .'/simplepie.inc';
+      $path = dirname(__FILE__) .'/simplepie.inc';
       if (!file_exists($path)) {
         $requirements['parser_simplepie'] = array(
           'title' => $t("FeedAPI SimplePie"),

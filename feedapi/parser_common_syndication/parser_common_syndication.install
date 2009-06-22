@@ -1,5 +1,5 @@
 <?php
-// $Id: parser_common_syndication.install,v 1.1.2.4.2.6 2008/09/10 08:27:51 aronnovak Exp $
+// $Id: parser_common_syndication.install,v 1.1.2.4.2.7 2009/04/21 13:30:03 aronnovak Exp $
 
 /**
  * Implementation of hook_schema().
@@ -8,10 +8,10 @@ function parser_common_syndication_schema() {
   $schema['parser_common_syndication'] = array(
     'fields' => array(
       'url' => array(
-        'description' => t('The URL of the feed'),
+        'description' => t('The MD5 hash of feed URL'),
         'type' => 'varchar',
         'not null' => TRUE,
-        'length' => '255'),
+        'length' => '32'),
       'etag' => array(
         'type' => 'text',
         'not null' => FALSE),
@@ -62,4 +62,21 @@ function parser_common_syndication_uninstall() {
   }
   
   variable_del('parser_common_syndication_cache');
+}
+
+/**
+ * Instead of textual URL, store MD5 in the parser_common_syndication table
+ */
+function parser_common_syndication_update_6101() {
+  $result = db_query("SELECT url FROM {parser_common_syndication}");
+  while ($url = db_fetch_array($result)) {
+    db_query("UPDATE {parser_common_syndication} SET url = '%s' WHERE url = '%s'", md5($url['url']), $url['url']);
+  }
+  $ret = array();
+  db_change_field($ret, 'parser_common_syndication', 'url', 'url', array(
+        'description' => t('The MD5 hash of feed URL'),
+        'type' => 'varchar',
+        'not null' => TRUE,
+        'length' => '32'));
+  return $ret;
 }

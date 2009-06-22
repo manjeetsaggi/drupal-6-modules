@@ -1,17 +1,17 @@
-# $Id: parser_common_syndication.pot,v 1.1.2.1 2008/08/23 12:33:44 aronnovak Exp $
+# $Id: parser_common_syndication.pot,v 1.1.2.2 2009/03/06 16:17:17 aronnovak Exp $
 #
 # LANGUAGE translation of Drupal (general)
 # Copyright YEAR NAME <EMAIL@ADDRESS>
 # Generated from files:
-#  parser_common_syndication.module,v 1.6.2.23.2.16 2008/08/22 16:26:55 aronnovak
+#  parser_common_syndication.module,v 1.6.2.23.2.34 2009/02/28 10:41:12 aronnovak
+#  parser_common_syndication.install,v 1.1.2.4.2.6 2008/09/10 08:27:51 aronnovak
 #  parser_common_syndication.info,v 1.1.2.3.2.2 2008/04/11 19:42:51 aronnovak
-#  parser_common_syndication.install,v 1.1.2.4.2.5 2008/08/23 07:48:33 aronnovak
 #
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
-"POT-Creation-Date: 2008-08-23 14:25+0200\n"
+"POT-Creation-Date: 2009-03-06 17:03+0100\n"
 "PO-Revision-Date: YYYY-mm-DD HH:MM+ZZZZ\n"
 "Last-Translator: NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <EMAIL@ADDRESS>\n"
@@ -32,6 +32,10 @@ msgstr ""
 msgid "parser_common_syndication"
 msgstr ""
 
+#: parser_common_syndication.install:11
+msgid "The URL of the feed"
+msgstr ""
+
 #: parser_common_syndication.info:0
 msgid "Common syndication parser"
 msgstr ""
@@ -42,9 +46,5 @@ msgstr ""
 
 #: parser_common_syndication.info:0
 msgid "FeedAPI Add On"
-msgstr ""
-
-#: parser_common_syndication.install:11
-msgid "The URL of the feed"
 msgstr ""
 

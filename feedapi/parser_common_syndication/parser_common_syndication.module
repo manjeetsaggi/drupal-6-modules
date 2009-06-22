@@ -1,5 +1,5 @@
 <?php
-// $Id: parser_common_syndication.module,v 1.6.2.23.2.32 2009/01/23 10:31:53 aronnovak Exp $
+// $Id: parser_common_syndication.module,v 1.6.2.23.2.42 2009/06/05 13:49:43 aronnovak Exp $
 
 /**
  * @file
@@ -32,7 +32,8 @@ function parser_common_syndication_feedapi_feed($op) {
         return FALSE;
       }
       $url = $args[1]->url;
-      $downloaded_string = _parser_common_syndication_download($url);
+      $settings = isset($args[2]) ? $args[2] : array();
+      $downloaded_string = _parser_common_syndication_download($url, $settings);
       if (is_object($downloaded_string)) {
         return array_shift(parser_common_syndication_feedapi_feed('type'));
       }
@@ -46,7 +47,7 @@ function parser_common_syndication_feedapi_feed($op) {
         // The parser is compatible. Then has to parse the feed and cache it. Because in the download
         // part, the feed etag data be already saved perhaps (depends on the webserver).
         $parsed_feed = _parser_common_syndication_feedapi_parse($xml);
-        if (is_object($parsed_feed) && !empty($parsed_feed->from_cache)) {
+        if (is_object($parsed_feed) && empty($parsed_feed->from_cache)) {
           _parser_common_syndication_cache_set($url, $parsed_feed);
         }
         // We don't have to choose between the types, because this module is only able to parse one.
@@ -56,10 +57,30 @@ function parser_common_syndication_feedapi_feed($op) {
     case 'parse':
       $feed = is_object($args[1]) ? $args[1] : FALSE;
       $parsed_feed = _parser_common_syndication_feedapi_parse($feed);
-      if (is_object($parsed_feed) && !empty($parsed_feed->from_cache)) {
+      if (is_object($parsed_feed) && empty($parsed_feed->from_cache)) {
         _parser_common_syndication_cache_set($feed->url, $parsed_feed);
       }
       return $parsed_feed;
+  }
+}
+
+/**
+ * Implementation of hook_feedapi_settings_form().
+ */
+function parser_common_syndication_feedapi_settings_form($type) {
+  if (_parser_common_syndication_use_curl()) {
+    $form = array();
+    switch ($type) {
+      case 'parsers':
+        $form['accept_invalid_cert'] = array(
+          '#type' => 'checkbox',
+          '#title' => t('Do not verify SSL peer'),
+          '#description' => t('When the parser connects to an SSL protected resource it tries to validate the resource\'s SSL certificate. If this can\'t be done the feed download fails. Check this box to skip validation and accept any SSL certificate. Note that skipping validation can pose a security risk. See !curlopt.', array('!curlopt' => l('CURLOPT_SSL_VERIFYPEER', 'http://php.net/manual/en/function.curl-setopt.php'))),
+          '#default_value' => FALSE,
+        );
+        break;
+    }
+    return $form;
   }
 }
 
@@ -140,14 +161,19 @@ function _parser_common_syndication_cache_set($url, $parsed_feed) {
  * @return
  *  The data pulled from the URL or FALSE if the feed does not need refresh.
  */
-function _parser_common_syndication_feedapi_get($url, $username = NULL, $password = NULL) {
+function _parser_common_syndication_feedapi_get($url, $username = NULL, $password = NULL, $accept_invalid_cert = FALSE) {
+  // Intra-pagedownload cache, avoid to download the same content twice within one page download (it's possible, compatible and parse calls).
+  static $download_cache = array();
+  if (isset($download_cache[$url])) {
+    return $download_cache[$url];
+  }
   $has_etag = FALSE;
-  $curl = function_exists('curl_init') && !ini_get('safe_mode');
+  $curl = _parser_common_syndication_use_curl();
   
   // Only download and parse data if really needs refresh. 
   // Based on "Last-Modified" and "If-Modified-Since".
   $headers = array();
-  $db_result = db_query("SELECT etag, last_modified FROM {parser_common_syndication} WHERE url = '%s'", $url);
+  $db_result = db_query("SELECT etag, last_modified FROM {parser_common_syndication} WHERE url = '%s'", md5($url));
   while ($validate = db_fetch_array($db_result)) {
     $has_etag = TRUE;
     if (!empty($validate['etag'])) {
@@ -181,6 +207,9 @@ function _parser_common_syndication_feedapi_get($url, $username = NULL, $passwor
     curl_setopt($download, CURLOPT_HTTPHEADER, $headers);
     curl_setopt($download, CURLOPT_HEADER, TRUE);
     curl_setopt($download, CURLOPT_RETURNTRANSFER, TRUE);
+    if ($accept_invalid_cert) {
+      curl_setopt($download, CURLOPT_SSL_VERIFYPEER, 0);
+    }
     $header = '';
     $data = curl_exec($download);
     $header_size = curl_getinfo($download, CURLINFO_HEADER_SIZE);
@@ -220,22 +249,23 @@ function _parser_common_syndication_feedapi_get($url, $username = NULL, $passwor
     else {
       // It's a tragedy, this file has to be exist and contain good data. 
       // In this case, repeat the stuff without cache.
-      db_query("DELETE FROM {parser_common_syndication} WHERE url = '%s'", $url);
+      db_query("DELETE FROM {parser_common_syndication} WHERE url = '%s'", md5($url));
       return _parser_common_syndication_feedapi_get($url, $username, $password);
     }
   }
 
+  if (!isset($result->headers) || !isset($result->headers['ETag']) || !isset($result->headers['Last-Modified'])) {
+    $result->headers = isset($result->headers) ? $result->headers : array();
+    $result->headers['ETag'] = isset($result->headers['ETag']) ? $result->headers['ETag'] : '';
+    $result->headers['Last-Modified'] = isset($result->headers['Last-Modified']) ? $result->headers['Last-Modified'] : '';
+  }
   if ($has_etag == TRUE) {
-    if (!isset($result->headers) || !isset($result->headers['ETag']) || !isset($result->headers['Last-Modified'])) {
-      $result->headers = isset($result->headers) ? $result->headers : array();
-      $result->headers['ETag'] = isset($result->headers['ETag']) ? $result->headers['ETag'] : '';
-      $result->headers['Last-Modified'] = isset($result->headers['Last-Modified']) ? $result->headers['Last-Modified'] : '';
-    }
-    db_query("UPDATE {parser_common_syndication} SET etag = '%s', last_modified = '%s' WHERE url = '%s'", $result->headers['ETag'], $result->headers['Last-Modified'], $url);
+    db_query("UPDATE {parser_common_syndication} SET etag = '%s', last_modified = '%s' WHERE url = '%s'", $result->headers['ETag'], $result->headers['Last-Modified'], md5($url));
   }
   else {
-    db_query("INSERT INTO {parser_common_syndication} (etag, last_modified, url) VALUES ('%s', '%s', '%s')", $result->headers['ETag'], $result->headers['Last-Modified'], $url);
+    db_query("INSERT INTO {parser_common_syndication} (etag, last_modified, url) VALUES ('%s', '%s', '%s')", $result->headers['ETag'], $result->headers['Last-Modified'], md5($url));
   }
+  $download_cache[$url] = $result->data;
   return empty($result->data) ? FALSE : $result->data;
 }
 
@@ -295,7 +325,7 @@ function _parser_common_syndication_feed_format_detect($xml) {
  * @return
  *  string - the downloaded data, FALSE - if the URL is not reachable
  */
-function _parser_common_syndication_download($url) {
+function _parser_common_syndication_download($url, $settings = NULL) {
   if (valid_url($url, TRUE)) {
     // Handle password protected feeds.
     $url_parts = parse_url($url);
@@ -306,7 +336,8 @@ function _parser_common_syndication_download($url) {
     }
   }
   
-  $downloaded_string = _parser_common_syndication_feedapi_get($url, $username, $password);
+  $accept_invalid_cert = isset($settings['accept_invalid_cert']) ? $settings['accept_invalid_cert'] : FALSE;
+  $downloaded_string = _parser_common_syndication_feedapi_get($url, $username, $password, $accept_invalid_cert);
 
   // Cannot get the feed, pass the problem to one level up.
   if ($downloaded_string == FALSE) {
@@ -422,15 +453,14 @@ function _parser_common_syndication_atom10_parse($feed_XML) {
     }
     $title = "{$news->title}";
 
+    $body = '';
     if (!empty($news->content)) {
-      $body = '';
       foreach ($news->content->children() as $child)  {
         $body .= $child->asXML();
       }
       $body .= "{$news->content}";
     }
     else if (!empty($news->summary)) {
-      $body = '';
       foreach ($news->summary->children() as $child)  {
         $body .= $child->asXML();
       }
@@ -467,13 +497,13 @@ function _parser_common_syndication_atom10_parse($feed_XML) {
     $item->options = new stdClass();
     $item->options->original_author = $original_author;
     $item->options->timestamp = _parser_common_syndication_parse_date(isset($news->published) ? "{$news->published}" : "{$news->issued}");
-    $item->options->original_url = $original_url;
+    $item->options->original_url = trim($original_url);
     if (valid_url($item->options->original_url) && !valid_url($item->options->original_url, TRUE) && !empty($base)) {
       $item->options->original_url = $base . $item->options->original_url;
     }
     $item->options->guid = $guid;
-    $item->options->tags = $additional_taxonomies['ATOM Categories'];
-    $item->options->domains = $additional_taxonomies['ATOM Domains'];
+    $item->options->tags = isset($additional_taxonomies['ATOM Categories']) ? $additional_taxonomies['ATOM Categories'] : array();
+    $item->options->domains = isset($additional_taxonomies['ATOM Domains']) ? $additional_taxonomies['ATOM Domains'] : array();
     $parsed_source->items[] = $item;
   }
   return $parsed_source;
@@ -686,8 +716,13 @@ function _parser_common_syndication_RSS20_parse($feed_XML) {
     $item->description = $body;
     $item->options = new stdClass();
     $item->options->original_author = $original_author;
-    $item->options->timestamp = _parser_common_syndication_parse_date($news['pubDate']);
-    $item->options->original_url = $original_url;
+    if (isset($news['pubDate'])) {
+      $item->options->timestamp = _parser_common_syndication_parse_date($news['pubDate']);
+    }
+    else {
+      $item->options->timestamp = time();
+    }
+    $item->options->original_url = trim($original_url);
     $item->options->guid = $guid;
     $item->options->domains = $additional_taxonomies['RSS Domains'];
     $item->options->tags = $additional_taxonomies['RSS Categories'];
@@ -801,4 +836,15 @@ function _parser_common_syndication_title($title, $body = FALSE) {
     $title = $words[0] .' '. $words[1] .' '. $words[2];
   }
   return $title;
+}
+
+/**
+ * Decides if it's possible to use cURL or not
+ * 
+ * @return
+ *   TRUE or FALSE
+ */
+function _parser_common_syndication_use_curl() {
+  $basedir = ini_get("open_basedir");
+  return function_exists('curl_init') && !ini_get('safe_mode') && empty($basedir);
 }
