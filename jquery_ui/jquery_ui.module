@@ -34,10 +34,14 @@ else {
  *   An array of what additional files (other than UI core) should be loaded
  *   on the page, or a string with a single file name.
  */
-function jquery_ui_add($files = array()) {
+function jquery_ui_add($files = array(), $theme = NULL) {
   static $loaded_files, $ui_core, $effects_core;
   $jquery_ui_path = JQUERY_UI_PATH . '/ui';
   $compression = variable_get('jquery_update_compression_type', 'mini');
+
+  // Set the theme.
+  $theme_name = $theme ? $theme : variable_get('jquery_ui_theme', 'base');
+  $theme_path = JQUERY_UI_PATH . '/themes/' . $theme_name;
 
   // Convert file to an array if it's not one already, to compensate for
   // lazy developers. ;)
@@ -48,7 +52,9 @@ function jquery_ui_add($files = array()) {
   // If core hasn't been added yet, add it.
   if (!isset($ui_core)) {
     $ui_core = TRUE;
-    jquery_ui_add(array('ui.core'));
+    jquery_ui_add(array('ui.core'), $theme);
+    drupal_add_css($theme_path . '/ui.core.css');
+    drupal_add_css($theme_path . '/ui.theme.css');
   }
 
   // Loop through list of files to include and add them to the page.
@@ -56,7 +62,7 @@ function jquery_ui_add($files = array()) {
     // Any effects files require the effects core file.
     if (!isset($effects_core) && strpos($file, 'effects.') === 0) {
       $effects_core = TRUE;
-      jquery_ui_add(array('effects.core'));
+      jquery_ui_add(array('effects.core'), $theme);
     }
 
     // Load other files.
