@@ -1,17 +1,23 @@
 <?php
-// $Id: schema.module,v 1.33 2008/05/08 00:43:15 bjaspan Exp $
+// $Id: schema.module,v 1.41 2009/06/06 15:32:02 mikeryan Exp $
 
+/**
+ * @file The Schema module provides functionality built on the Schema API.
+ */
 global $schema_engines;
 
 //////////////////////////////////////////////////////////////////////
-// schema_phpprint: Return a pretty ASCII-formatted version of a
-// $schema array.  This is nothing more than a specialized variation
-// of var_dump and similar functions and is used only as a convenience
-// to generate the PHP for existing database tables (to bootstrap
-// support for modules that previously used CREATE TABLE explicitly)
-// and for debugging.
+// Schema print functions
 //////////////////////////////////////////////////////////////////////
 
+/**
+ * Builds a pretty ASCII-formatted version of a $schema array.
+ *
+ * This is nothing more than a specialized variation of var_dump and
+ * similar functions and is used only as a convenience to generate the
+ * PHP for existing database tables (to bootstrap support for modules
+ * that previously used CREATE TABLE explicitly) and for debugging.
+ */
 function schema_phpprint($schema) {
   $out = '';
   foreach ($schema as $name => $table) {
@@ -24,7 +30,7 @@ function schema_phpprint_table($name, $table) {
     $cols = array();
     if (isset($table['fields'])) {
       foreach ($table['fields'] as $colname => $col) {
-        $cols[] = "'$colname' => ".schema_phpprint_column($col);
+        $cols[] = "'$colname' => ".schema_phpprint_column($col, TRUE);
       }
     }
     $unique = $index = array();
@@ -39,28 +45,31 @@ function schema_phpprint_table($name, $table) {
       }
     }
     $out = '';
-    $out .= "\$schema['".$name."'] = array(\n    'fields' => array(\n         ";
-    $out .= implode(",\n         ", $cols);
-    $out .= "),\n";
+    $out .= "\$schema['".$name."'] = array(\n";
+    $out .= "  'description' => t('TODO: please describe this table!'),\n";
+    $out .= "  'fields' => array(\n    ";
+    $out .= implode(",\n    ", $cols);
+    $out .= ",\n  ),\n";
     if (isset($table['primary key'])) {
-      $out .= "    'primary key' => array('".implode("', '", $table['primary key'])."'),\n";
+      $out .= "  'primary key' => array('".implode("', '", $table['primary key'])."'),\n";
     }
     if (count($unique) > 0) {
-      $out .= "    'unique keys' => array(\n         ";
-      $out .= implode(",\n         ", $unique);
-      $out .= "),\n";
+      $out .= "  'unique keys' => array(\n    ";
+      $out .= implode(",\n    ", $unique);
+      $out .= "\n  ),\n";
     }
     if (count($index) > 0) {
-      $out .= "    'indexes' => array(\n         ";
-      $out .= implode(",\n         ", $index);
-      $out .= "),\n";
+      $out .= "  'indexes' => array(\n    ";
+      $out .= implode(",\n    ", $index);
+      $out .= ",\n  ),\n";
     }
     $out .= ");\n";
     return $out;
 }
 
-function schema_phpprint_column($col) {
+function schema_phpprint_column($col, $multiline=FALSE) {
   $attrs = array();
+  $attrs[] = "'description' => t('TODO: please describe this field!')";
   if ($col['type'] == 'varchar' || $col['size'] == 'normal') {
     unset($col['size']);
   }
@@ -84,6 +93,9 @@ function schema_phpprint_column($col) {
     } else {
       $attrs[] = "'$attr' => $col[$attr]";
     }
+  }
+  if ($multiline) {
+    return "array(\n      ".implode(",\n      ", $attrs).",\n    )";
   }
   return "array(".implode(', ', $attrs).")";
 }
@@ -154,7 +166,9 @@ function schema_engine_invoke($engine, $op) {
   return call_user_func_array($function, $args);
 }
 
-// Convert a column's Schema type into an engine-specific data type.
+/**
+ * Converts a column's Schema type into an engine-specific data type.
+ */
 function schema_engine_type($col, $table, $field, $engine = NULL) {
   $map = schema_engine_invoke($engine, 'engine_type_map');
   $size = (isset($col['size']) ? $col['size'] : 'normal');
@@ -169,7 +183,9 @@ function schema_engine_type($col, $table, $field, $engine = NULL) {
   }
 }
 
-// Convert an engine-specific data type into a Schema type.
+/**
+ * Convert an engine-specific data type into a Schema type.
+ */
 function schema_schema_type($type, $table, $field, $engine = NULL, $warn = TRUE) {
   $map = schema_engine_invoke($engine, 'schema_type_map');
   $type = strtolower($type);
@@ -177,16 +193,18 @@ function schema_schema_type($type, $table, $field, $engine = NULL, $warn = TRUE)
     return explode(':', $map[$type]);
   } else {
     if ($warn) {
-      drupal_set_message(t('Field %table.%field: no Schema type for %engine type %type.', array('%engine' => $engine, '%type' => $type, '%table' => $table, '%field' => $field)), 'error');
+      drupal_set_message(t('Field @table.@field: no Schema type for @engine type @type.', array('@engine' => $engine, '@type' => $type, '@table' => $table, '@field' => $field)), 'error');
     }
     return array($type, 'normal');
   }
 }
 
-// schema_compare_schemas: Compare two complete schemas.  $ref is
-// considered the reference copy and $inspect is compared against
-// it.  If $inspect is NULL, a schema for the currently database is
-// generated and used.
+/**
+ * Compares two complete schemas.  
+ * @param $ref is considered the reference copy
+ * @param $inspect is compared against it.  If $inspect is NULL, a
+ *         schema for the active database is generated and used.
+ */
 function schema_compare_schemas($ref, $inspect = NULL) {
   if (! isset($inspect)) {
     $inspect = schema_invoke('inspect');
@@ -272,10 +290,12 @@ function schema_compare_schemas($ref, $inspect = NULL) {
   return $info;
 }
 
-// schema_compare_table: Compare a reference specification (such as
-// one returned by a module's hook_schema) to an inspected specification from
-// the database.  If $inspect is not provided, the database is inspected.
-//
+/**
+ * Compares a reference specification (such as one returned by a
+ * module's hook_schema) to an inspected specification from the
+ * database.
+ * @param $inspect if not provided, the database is inspected.
+ */
 function schema_compare_table($ref, $inspect = NULL) {
   global $db_type;
   $_db_type = $db_type;
@@ -284,8 +304,9 @@ function schema_compare_table($ref, $inspect = NULL) {
   }
 
   if (! isset($inspect)) {
-    $inspect = schema_invoke('inspect', $ref['name']);
-    $inspect = $inspect[$ref['name']];
+    $ref_name = db_prefix_tables('{'. $ref['name'] .'}');
+    $inspect = schema_invoke('inspect', $ref_name);
+    $inspect = $inspect[$ref_name];
   }
   if (! isset($inspect)) {
     return array('status' => 'missing');
@@ -323,31 +344,30 @@ function schema_compare_table($ref, $inspect = NULL) {
       $reasons[] = "$colname: not in database";
       continue;
     }
-    // XXX These should be unified so one reason contains all
-    // mismatches between the columns.
-    $colcmp1 = array_diff_assoc($col, $inspect['fields'][$colname]);
-    if (count($colcmp1) != 0) {
-      foreach ($colcmp1 as $key => $val) {
-        $reasons[] = ("column $colname:<br/>declared: ".
-          schema_phpprint_column($col).'<br/>actual: '.
-          schema_phpprint_column($inspect['fields'][$colname]));
+    $kdiffs = array();
+    foreach ($col_keys as $key => $val) {
+
+      if ( !(
+
+          // First part tests that item exists for both and has same value in both places
+           ( isset($col[$key]) && !is_null($col[$key]) && $col[$key] !== FALSE
+          && isset($inspect['fields'][$colname][$key]) && $inspect['fields'][$colname][$key] !== FALSE
+          && $col[$key] == $inspect['fields'][$colname][$key] )
+
+          // Second test is that it does not exist or exists but is null in both places
+       || ( ( !isset($col[$key]) || is_null($col[$key]) || $col[$key] === FALSE)
+             && ( !isset($inspect['fields'][$colname][$key]) || $inspect['fields'][$colname][$key] === FALSE) ) ) ) {
+
+        // One way or another, difference between the two so note it to explicitly identify it later.
+        $kdiffs[] = $key;
       }
     }
-    $colcmp2 = array_diff_assoc($inspect['fields'][$colname], $col);
-    if (count($colcmp2) != 0) {
-      foreach ($colcmp2 as $key => $val) {
-        if (isset($col_keys[$key]) && !isset($colcmp1[$key])) {
-          if (!isset($col['key']) && isset($inspect['fields'][$colname]) &&
-              $inspect['fields'][$colname][$key] === FALSE) {
-            $notes[] = "column $colname: key '$key' not set, ignoring inspected default value";
-          } 
-          else {
-            $reasons[] = ("column $colname:<br/>declared: ".
-              schema_phpprint_column($col).'<br/>actual: '.
-              schema_phpprint_column($inspect['fields'][$colname]));
-          }
-        }
-      }
+    if (count($kdiffs) != 0) {
+      $reasons[] = "column $colname - difference".
+          ( count($kdiffs) > 1 ? 's' : '') ." on: ".
+          implode(', ', $kdiffs) ."<br/>declared: ".
+          schema_phpprint_column($col) .'<br/>actual: '.
+          schema_phpprint_column($inspect['fields'][$colname]);
     }
     unset($inspect['fields'][$colname]);
   }
@@ -402,6 +422,10 @@ function schema_compare_table($ref, $inspect = NULL) {
 // Schema administration and UI
 //////////////////////////////////////////////////////////////////////
 
+/**
+ * Implementation of hook_init().
+ * Perform setup tasks.
+ */
 function schema_init() {
   schema_require();
 }
@@ -453,10 +477,23 @@ function schema_require() {
   }
 }
 
+/**
+ * Implementation of hook_perm().
+ */
 function schema_perm() {
   return array('administer schema');
 }
 
+/**
+ * Implementation of hook_menu().
+ * Define menu items and page callbacks.
+ * admin/build/schema           calls local task(default): schema_report()
+ * admin/build/schema/report    calls local task: schema_report()
+ * admin/build/schema/describe  calls local task: schema_describe()
+ * admin/build/schema/inspect   calls local task: schema_inspect()
+ * admin/build/schema/sql       calls local task: schema_sql()
+ * admin/build/schema/show      calls local task: schema_show()
+ */
 function schema_menu() {
   $items['admin/build/schema'] = array(
     'title' => 'Schema',
@@ -525,6 +562,9 @@ function _schema_process_description($desc) {
   return preg_replace('@{([a-z_]+)}@i', '<a href="#" onclick="Drupal.toggleFieldset($(\'#table-$1\')[0]); return false;">$1</a>', $desc);
 }
 
+/**
+ * "Describe" menu callback.
+ */
 function schema_describe() {
   $schema = drupal_get_schema(NULL, TRUE);
   ksort($schema);
@@ -536,6 +576,8 @@ to see that table's description and fields.  Table names within a table or
 field description are hyperlinks to that table's description.</p>
 EOT;
 
+  $default_table_description = t('TODO: please describe this table!');
+  $default_field_description = t('TODO: please describe this field!');
   foreach ($schema as $t_name => $t_spec) {
     $rows = array();
     foreach ($t_spec['fields'] as $c_name => $c_spec) {
@@ -558,7 +600,7 @@ EOT;
       $row[] = !empty($c_spec['not null']) ? 'NO' : 'YES';
       $row[] = isset($c_spec['default']) ? (is_string($c_spec['default']) ? '\''. $c_spec['default']. '\'' : $c_spec['default']) : '';
       $rows[] = $row;
-      if (!empty($c_spec['description'])) {
+      if (!empty($c_spec['description']) && $c_spec['description'] != $default_field_description) {
         $desc = _schema_process_description($c_spec['description']);
         $rows[] = array(array('colspan' => count($row_hdrs), 'data' => $desc));
       } else {
@@ -566,7 +608,7 @@ EOT;
       }
     }
 
-    if (empty($t_spec['description'])) {
+    if (empty($t_spec['description']) || $t_spec['description'] == $default_table_description) {
       drupal_set_message(_schema_process_description(t('Table {!table} has no description.', array('!table' => $t_name))), 'error');
     }
 
@@ -585,8 +627,12 @@ EOT;
   return $output;
 }
 
-// This function just massages the data returned by
-// schema_compare_schemas() into HTML.
+
+/**
+ * "Report" menu callback.
+ * This function just massages the data returned by
+ * schema_compare_schemas() into HTML.
+ */
 function schema_report() {
   $states = array(
     'same' => t('Match'),
@@ -683,6 +729,10 @@ EOT;
   return $output;
 }
 
+
+/**
+ * "Inspect" menu callback.
+ */
 function schema_inspect() {
   $mods = module_list();
   sort($mods);
@@ -721,6 +771,10 @@ EOT;
   return $output;
 }
 
+
+/**
+ *  "SQL" menu callback.
+ */
 function schema_sql($engine = NULL) {
   $schema = drupal_get_schema(NULL, TRUE);
   $sql = '';
@@ -747,9 +801,14 @@ EOT;
   return $output;
 }
 
+/**
+ * "Show" menu callback.
+ * Displays drupal schema as php code, so you can reuse it
+ * as you need.
+ */
 function schema_show() {
   $schema = drupal_get_schema(NULL, TRUE);
-  $show = print_r($schema,1);
+  $show = var_export($schema,1);
     
   $output = <<<EOT
 <p>This page displays the Drupal database schema data structure.  It is for
@@ -760,5 +819,3 @@ EOT;
 
   return $output;
 }
-  
-?>

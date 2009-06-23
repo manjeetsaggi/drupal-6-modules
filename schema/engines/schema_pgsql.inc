@@ -1,10 +1,8 @@
 <?php
-// $Id: schema_pgsql.inc,v 1.17 2008/05/08 03:16:58 bjaspan Exp $
+// $Id: schema_pgsql.inc,v 1.22 2009/06/06 15:38:31 mikeryan Exp $
 
 function schema_pgsql_engine_type_map() {
   $map = db_type_map(); // sigh
-  // work around a bug in pgsql's type map; see http://drupal.org/node/198234
-  $map['char:normal'] = 'character';
   return $map;
 }
 
@@ -21,8 +19,17 @@ function schema_pgsql_schema_type_map() {
 function schema_pgsql_inspect($tbl_name = NULL) {
   global $db_url;
 
+  // Switch to the active database connection.
+  // The only way to get the active connection's name is as a return value from
+  // db_set_active(). However, calling this function will automatically switch
+  // the active connection to 'default', which might not be what we want.
+  // Therefore, we must immediately call db_set_active() again with the desired
+  // connection name in order to proceed.
+  $active_db_connection = db_set_active();
+  db_set_active($active_db_connection);
+
   $tables = array();
-  $url = parse_url(is_array($db_url) ? $db_url['default'] : $db_url);
+  $url = parse_url(is_array($db_url) ? $db_url[$active_db_connection] : $db_url);
   $database = substr($url['path'], 1);
 
   //
@@ -52,8 +59,8 @@ function schema_pgsql_inspect($tbl_name = NULL) {
     $r['table_name'] = schema_unprefix_table($r['table_name']);
 
     // We treat numeric columns slightly differently and identify them
-    // because they have a 'numeric_scale' property.
-    $numeric = !is_null($r['numeric_scale']);
+    // because they have a 'numeric_precision_radix' property.
+    $numeric = !is_null($r['numeric_precision_radix']);
 
     // Determine the Schema type and size from the database data_type.
     list($col['type'], $col['size']) = schema_schema_type($r['data_type'], $r['table_name'], $r['column_name'], 'pgsql');
@@ -91,6 +98,9 @@ function schema_pgsql_inspect($tbl_name = NULL) {
         // $col['default'] is currently a string.  If the column is
         // numeric, use intval() or floatval() to extract the value as a
         // numeric type.
+
+        // The value is actually an expression, and may be stored with parentheses
+        $col['default'] = preg_replace('/^\((.*)\)$/', '\1', $col['default']);
 
         // more pgsql-specific stuff
         if (strpos($col['default'], 'nextval(\'') !== FALSE &&
@@ -199,5 +209,3 @@ function schema_pgsql_inspect($tbl_name = NULL) {
   // it is correct.
   return $tables;
 }
-
-?>

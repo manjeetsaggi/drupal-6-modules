@@ -1,10 +1,8 @@
 <?php
-// $Id: schema_mysql.inc,v 1.17 2008/05/08 03:16:58 bjaspan Exp $
+// $Id: schema_mysql.inc,v 1.20 2009/06/06 15:38:31 mikeryan Exp $
 
 function schema_mysql_engine_type_map() {
   $map = db_type_map();
-  // work around a bug in mysql's type map; see http://drupal.org/node/198234
-  $map['numeric:normal'] = 'DECIMAL';
   return $map;
 }
 
@@ -86,8 +84,17 @@ function schema_mysql_create_table_sql($table) {
 function schema_mysql_inspect($name = NULL) {
   global $db_url;
 
+  // Switch to the active database connection.
+  // The only way to get the active connection's name is as a return value from
+  // db_set_active(). However, calling this function will automatically switch
+  // the active connection to 'default', which might not be what we want.
+  // Therefore, we must immediately call db_set_active() again with the desired
+  // connection name in order to proceed.
+  $active_db_connection = db_set_active();
+  db_set_active($active_db_connection);
+
   $tables = array();
-  $url = parse_url(is_array($db_url) ? $db_url['default'] : $db_url);
+  $url = parse_url(is_array($db_url) ? $db_url[$active_db_connection] : $db_url);
   $database = substr($url['path'], 1);
 
   $sql = ('SELECT * FROM information_schema.COLUMNS '.
@@ -165,5 +172,3 @@ function schema_mysql_inspect($name = NULL) {
 
   return $tables;
 }
-
-?>
