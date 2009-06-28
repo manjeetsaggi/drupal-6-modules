@@ -1,6 +1,16 @@
-$Id: CHANGELOG.txt,v 1.1.2.2 2009/03/26 22:15:29 mfu Exp $
+$Id: CHANGELOG.txt,v 1.1.2.4 2009/06/27 12:41:12 mfu Exp $
 
-v1.1-Dev bug fix release
+v1.2 bug fix release
+Fixed #503718 by m.fu : htpassword corruption when enabling/disabling user
+Fixed #437904 by fasdalf@fasdalf.ru : group file not generated properly, now happen on 
+                            after_update
+Fixed #437844 by fasdalf@fasdalf.ru : error when deleting one user
+Fixed #503726 by m.fu: group file no longer contain disabled users
+Added #503720 by m.fu : option to overwrite htpasswd
+Fixed #503724 by m.fu : validation of username, must be htpasswd compatible
+Fixed #437852 by fasdalf@fasdalf.ru : name change is detected and handled properly
+
+v1.1 bug fix release
 Fixed #409406 by fasdalf@fasdalf.ru : remove comma in htgroup file
 Added #408798 by fasdalf@fasdalf.ru : request for windows support
   windows does not support crypt password hash

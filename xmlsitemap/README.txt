@@ -1,35 +1,58 @@
-$Id: README.txt,v 1.3.2.6 2009/05/05 11:57:08 earnie Exp $
-XML Sitemap Module
-Author: Matthew Loar <matthew at loar dot name>
-This module was originally written as part of Google Summer of Code 2005.
+$Id: README.txt,v 1.3.2.9 2009/06/23 11:59:09 earnie Exp $
 
-DESCRIPTION
------------
-The XML sitemap module creates a sitemap report conforming to the sitemaps.org
-specification. It provides many options for customizing the data reported in the
-sitemap.
+CONTENTS OF THIS FILE
+---------------------
 
-INSTALLATION AND UPGRADING
---------------------------
-See INSTALL.txt in this directory.
+ * Introduction
+ * Installation
+ * Known Issues
+ * More Information
+
+
+INTRODUCTION
+------------
+
+Current Maintainers: Earnie <http://drupal.org/user/86710>
+                     Kiam <http://drupal.org/user/55077>
+                     Dave Reid <http://drupal.org/user/53892>
+Co-maintainer: Darren Oh <http://drupal.org/user/30772>
+Original Author: Matthew Loar <http://drupal.org/user/24879>
+
+XML sitemap automatically creates a sitemap that conforms to the sitemaps.org
+specification. This helps search engines keep their search results up to date.
+
+
+INSTALLATION
+------------
+
+See http://drupal.org/getting-started/5/install-contrib for instructions on
+how to install or upgrade Drupal modules. See INSTALL.txt in this directory
+for specific detailed instructions to upgrading this module.
+
+Once XML Sitemap is installed and enabled, you can adjust the settings for your
+site's sitemap at admin/settings/xmlsitemap. Your can view your site's sitemap
+at http://yoursite.com/sitemap.xml.
+
+It is highly recommended that you have clean URLs enabled for this module.
+
 
 KNOWN ISSUES
 ------------
-Users who have not enabled clean URLs have reported receiving an
-"Unsupported file format" error from Google. The solution is to replace
-"?q=sitemap.xml" at the end of the submission URL with
-"index.php?q=sitemap.xml", or to enable the clean URLs.
-Submission URLs for each search engine can be
-configured at http://www.example.com/?q=admin/settings/xmlsitemap/engines.
+
+See http://drupal.org/node/482550 for a list of the current known issues.
+
 
 MORE INFORMATION
 ----------------
-The sitemap protocol: http://sitemaps.org.
 
-SEARCH ENGINES
---------------
-Ask - http://submissions.ask.com/ping
-Google - http://www.google.com/webmasters/sitemap
-Moreover - http://w.moreover.com/public/products/search_engine_toolkit.html
-Windows Live - http://webmaster.live.com/
-Yahoo! - http://developer.yahoo.com/search/siteexplorer/V1/ping.html
+- To issue any bug reports, feature or support requests, see the module issue
+  queue at http://drupal.org/project/issues/xmlsitemap.
+
+- For additional documentation, see the online module handbook at
+  http://drupal.org/handbook/modules/gsitemap.
+
+- You can view the sitemap.org specification at http://sitemaps.org.
+
+- You can view the module's API documentation at
+  http://project.davereid.net/api/xmlsitemap
+

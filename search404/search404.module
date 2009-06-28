@@ -1,5 +1,5 @@
 <?php
-/* $Id: search404.module,v 1.15.2.3 2008/12/19 08:57:16 zyxware Exp $ */
+/* $Id: search404.module,v 1.15.2.8 2009/06/12 11:02:46 zyxware Exp $ */
 /**
  * Implementation of hook_menu().
  */
@@ -39,10 +39,10 @@ function search404_get_keys() {
     return false;
   }
   $keys = $_REQUEST['destination'];
-  $misc_var = variable_get('search404_regex', '');
-  if (!empty($misc_var)) {
-	$keys = preg_grep($misc_var, $keys);
-  	$keys = $keys[0]; 
+  $regex_filter = variable_get('search404_regex', '');
+  $keys_array[] = $keys;
+  if (!empty($regex_filter)) {
+	  $keys = preg_replace("/".$regex_filter."/", '', $keys);
  }
   // Ingore certain extensions from query
   $extensions = preg_split('/\s+/', variable_get('search404_ignore_extensions', 'htm html php'));
@@ -65,16 +65,15 @@ function search404_get_keys() {
 }
 
 /**
- * Detect search from search engine (BETA)
+ * Detect search from search engine
  */
 function search404_search_engine_query() {
   $engines = array(
     'altavista' => 'q',
     'aol' => 'query',
     'google' => 'q',
-    'live' => 'q',
+    'bing' => 'q',
     'lycos' => 'query',
-    'msn' => 'q',
     'yahoo' => 'p',
   );
   $parsed_url = parse_url($_SERVER['HTTP_REFERER']);
@@ -100,7 +99,7 @@ function search404_search_engine_query() {
  * Beware of messy code
  */
 function search404_page() {
-  $output = '<p>'. t('The page you requested was not found.') .'</p>';
+  drupal_set_title(t('Page not found'));
   if (module_exists('search') && user_access('search content')) {
     $keys = "";
     if (variable_get('search404_use_search_engine', false)) {
@@ -146,13 +145,12 @@ function search404_page() {
       }
     }
     // Construct the search form.
-    $output .= drupal_get_form('search_form', NULL, $keys, 'node');
-    $output .= $results;
+    $output = drupal_get_form('search_form', NULL, $keys, 'node') . $results;
   }
   
   /*
    * Start EVIL HAXX 2
-   * This was done to display blocks left and right of page, if the option is set from Search404 
+   * This was done to display sidebars left and right of page, if the option is set from Search404 
    * Settings Page.
    */
   if (variable_get('search404_block_show', false)) {
@@ -185,7 +183,7 @@ function search404_settings() {
   //Added for displaying blocks for 404 searches
   $form['search404_block_show'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Show Left and Right blocks in Page when a 404 Search occurs'),
+    '#title' => t('Show Left and Right sidebars in Page when a 404 Search occurs'),
     '#default_value' => variable_get('search404_block_show', false),
   );
   $form['advanced'] = array(
@@ -203,7 +201,8 @@ function search404_settings() {
   );
   $form['advanced']['search404_use_search_engine'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Use auto-detection of keywords from search engine referer. BETA! Not for production sites, use at your own risk.'),
+    '#title' => t('Use auto-detection of keywords from search engine referer.'),
+    '#description' => t('This feature will conduct a search based on the query string got from a search engine if the URL of the search result points to a 404 Page in the current website. Currently supported search engines: Google, Yahoo, Altavista, Lycos, Bing and AOL'),
     '#default_value' => variable_get('search404_use_search_engine', false),
   );
   $form['advanced']['search404_ignore'] = array(
@@ -215,7 +214,7 @@ function search404_settings() {
   $form['advanced']['search404_ignore_extensions'] = array(
     '#type' => 'textfield',
     '#title' => t('Extensions to ignore'),
-    '#description' => t('These extensions will be ignored from query. Separate extensions with a space, e.g.: "htm html php". Do not include leading dot.'),
+    '#description' => t('These extensions will be ignored from query. Separate extensions with a space, e.g.: "htm html php". Do not include leading dot. Eg: http://www.example.com/invalid/page.php will only search for "invalid page"'),
     '#default_value' => variable_get('search404_ignore_extensions', 'htm html php'),
   );
   $form['advanced']['search404_ignore_query'] = array(
@@ -226,8 +225,8 @@ function search404_settings() {
   );
   $form['advanced']['search404_regex'] = array(
     '#type' => 'textfield',
-    '#title' => t('PCRE REGEX'),
-    '#description' => t('This regex will applied to all queries. It uses the code:<p>%code</p>Look directly at the source code to understand underlying syntax. See also <a href="http://php.net/pcre">PCRE pages in the PHP Manual</a>.', array('%code' => "\$keys = preg_grep(variable_get('search404_regex'), \$keys);\n\$keys = \$keys[0];", '%function' => 'search404_get_keys()')),
+    '#title' => t('PCRE Filter'),
+    '#description' => t('This regular expression will applied to filter all queries. The queries that match the given expression will EXCLUDED from a search.<br /> Note: Do not use a /string/ when defining the PCRE, instead just define the string without the "//"<br/> On how to use a PCRE Regex please refer <a href="http://php.net/pcre">PCRE pages in the PHP Manual</a>.'),
     '#default_value' => variable_get('search404_regex',''),
   );
   return system_settings_form($form);

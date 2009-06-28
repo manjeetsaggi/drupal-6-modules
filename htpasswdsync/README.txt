@@ -1,4 +1,4 @@
-/* $Id: README.txt,v 1.1.2.2 2009/03/26 22:28:39 mfu Exp $ */
+/* $Id: README.txt,v 1.1.2.3 2009/06/27 12:41:12 mfu Exp $ */
 
 -- SUMMARY --
 
@@ -11,14 +11,13 @@ For a full description of the module, visit the project page:
 To submit bug reports and feature suggestions, or to track changes:
   http://drupal.org/project/issues/htpasswdsync
 
-The way password are encrypted it only compatible with *nix version of Apache.
-
-
 -- REQUIREMENTS --
 
 The syncrhonization only happen on password change. Hence, this module shall be 
 installed before any user creation.
 
+You need to run the cron.php job on a regular basis to ensure old users are 
+properly cleaned up.
 
 -- INSTALLATION --
 
@@ -47,15 +46,20 @@ installed before any user creation.
     Crypt works only on Un*x platforms. SHA-1 shall work on bother Windows 
     based systems and Un*xes.
     
-    WARNING: changing this value only change the way new or updated password.
+    WARNING: changing this value only change the way new or updated password
+             are hashed.
              You will need to request you users to all change their password
-             if you want to migrate from only hash to another.
+             if you want to migrate from one hash to another.
 
   - roles
   
     The roles you want to export in the htgroup file.
 
-
+  - overwrite
+  
+    Activate if you want to overwrite your htpassword file. I left inactive
+    htpasswdsync will try its best to keep old entries, but will only try.
+    
 -- CUSTOMIZATION --
 
 None.

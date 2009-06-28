@@ -1,9 +1,9 @@
-// $Id: block_edit.js,v 1.1.2.6 2009/05/26 21:24:02 psynaptic Exp $
+// $Id: block_edit.js,v 1.1.2.7 2009/05/27 21:59:06 psynaptic Exp $
 
 $(document).ready(function() {
 
   var regexp = new RegExp(/block-(.+?)-(.+?)/mi);
-  var checkp = new RegExp(/block-.*?-.+/mi);
+  var checkp = new RegExp(/block-[^views].*?-.+/mi);
 
   $("div.block").each(function (i) {
     var block_id = $(this).attr('id');

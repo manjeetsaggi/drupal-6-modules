@@ -1,4 +1,4 @@
-# $Id: fr.po,v 1.1.2.1 2009/04/01 09:38:25 slybud Exp $
+# $Id: xmlsitemap_node.fr.po,v 1.1.2.3 2009/06/16 16:16:49 hass Exp $
 #
 # French translation of Drupal (general)
 # Copyright YEAR NAME <EMAIL@ADDRESS>

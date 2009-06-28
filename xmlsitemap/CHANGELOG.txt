@@ -1,4 +1,78 @@
-$Id: CHANGELOG.txt,v 1.1.4.235 2009/05/25 18:32:55 kiam Exp $
+$Id: CHANGELOG.txt,v 1.1.4.273 2009/06/23 11:59:09 earnie Exp $
+
+XML sitemap 6.x-1, 2009-06-23
+-----------------------------------
+#470792 Translatable strings review.
+#496626 Beta6 installation instructions.
+
+XML sitemap 6.x-1, 2009-06-22
+-----------------------------------
+#483840 Directory structure prevents successful translation file import.
+#496626 Beta6 installation instructions.
+
+XML sitemap 6.x-1, 2009-06-19
+-----------------------------------
+#485632 The code to automatically calculate the sitemap chunk size is wrong.
+#490104 Use the language as the generated sitemap file id.
+#442582 Only the default language site map is submitted to the search engines.
+
+XML sitemap 6.x-1, 2009-06-17
+-----------------------------------
+#458398 Users who haven't logged in should be excluded.
+#470792 Translatable strings review.
+
+XML sitemap 6.x-1, 2009-06-16
+-----------------------------------
+#479892 Switch from Live Search to Bing.
+#470792 Translatable strings review.
+#488388 Sitemap is not updated when the user viewing it is not the anonymous
+user.
+
+XML sitemap 6.x-1, 2009-06-12
+-----------------------------------
+#487734 by Dave Reid: Add XSL stylesheet data.
+#485562 Node links are added to sitemap.xml without checking anonymous access.
+
+XML sitemap 6.x-1, 2009-06-11
+-----------------------------------
+#487734 Add XSL stylesheet data.
+#487546 hook_cron() implementations needs to notify xmlsitemap_output() of
+changes.
+#465658 Add more options to "cron limit" on settings page.
+#460046 Use file_check_directory().
+
+XML sitemap 6.x-1, 2009-06-10
+-----------------------------------
+#454190 Remove xmlsitemap_menu.module.
+#458530 Module help page still referrs to XML sitemap term.
+#458132 xmlsitemap_output() references a not initialized variable.
+#485596 Database table is wrongly described as a xmlsitemap_term base table.
+#484488 preg_match() versus is_numeric().
+#484478 node_load($id) versus node_load($id, NULL, TRUE).
+#484456 Remove xmlsitemap_api().
+#466654 Change 'Submit the sitemap when updated' title and description.
+#458710 Change unlink() for file_delete().
+#459366 Remove hook_boot() and hook_exit().
+#486230 Rename the hook_update_N _6000 to _6100 and remove the implementations
+calling the _6000 implementation.
+#487650 Indentation of the code is not correct.
+#487850 Fix coding standard violations.
+
+XML sitemap 6.x-1, 2009-06-09
+-----------------------------------
+#470534 Remove _xmlsitemap_revision().
+#484454 Bug in PHP 5.1.2 with DATE_W3C.
+#486450 Remove the check and call for hook_xmlsitemap_url().
+#470790 Remove empty update functions.
+
+XML sitemap 6.x-1, 2009-06-06
+-----------------------------------
+#483844 Restore code to beta0.
+
+XML sitemap 6.x-1, 2009-05-26
+-----------------------------------
+#473790 by Dave Reid: Fixed missing return value in xmlsitemap_update_6143().
+#472850: Install error on clean installation.
 
 XML sitemap 6.x-1, 2009-05-25
 -----------------------------------

@@ -1,18 +1,18 @@
-# $Id: syntaxhighlighter-module.pot,v 1.4 2009/05/03 04:07:31 mattyoung Exp $
+# $Id: syntaxhighlighter-module.pot,v 1.5 2009/05/09 05:30:51 mattyoung Exp $
 #
 # LANGUAGE translation of Drupal (general)
 # Copyright YEAR NAME <EMAIL@ADDRESS>
 # Generated from files:
 #  syntaxhighlighter.admin.inc,v 1.3 2009/02/17 21:01:15 mattyoung
-#  syntaxhighlighter.module,v 1.5 2009/02/17 21:01:15 mattyoung
+#  syntaxhighlighter.module,v 1.6 2009/05/03 04:07:31 mattyoung
 #  syntaxhighlighter.info,v 1.5 2009/02/11 18:20:30 mattyoung
-#  syntaxhighlighter.install,v 1.3 2009/02/17 20:52:12 mattyoung
+#  syntaxhighlighter.install,v 1.4 2009/05/03 04:07:31 mattyoung
 #
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
-"POT-Creation-Date: 2009-05-02 20:51-0700\n"
+"POT-Creation-Date: 2009-05-08 22:21-0700\n"
 "PO-Revision-Date: YYYY-mm-DD HH:MM+ZZZZ\n"
 "Last-Translator: NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <EMAIL@ADDRESS>\n"
@@ -61,51 +61,59 @@ msgstr ""
 msgid "Enabled"
 msgstr ""
 
-#: syntaxhighlighter.module:53
+#: syntaxhighlighter.module:63
 msgid "+ expand source"
 msgstr ""
 
-#: syntaxhighlighter.module:54
+#: syntaxhighlighter.module:64
 msgid "view source"
 msgstr ""
 
-#: syntaxhighlighter.module:55
+#: syntaxhighlighter.module:65
 msgid "copy to clipboard"
 msgstr ""
 
-#: syntaxhighlighter.module:56
+#: syntaxhighlighter.module:66
 msgid "The code is in your clipboard now"
 msgstr ""
 
-#: syntaxhighlighter.module:57
+#: syntaxhighlighter.module:67
 msgid "print"
 msgstr ""
 
-#: syntaxhighlighter.module:58
+#: syntaxhighlighter.module:68
 msgid "?"
 msgstr ""
 
-#: syntaxhighlighter.module:59
+#: syntaxhighlighter.module:69
 msgid "SyntaxHighlighter\\n\\n"
 msgstr ""
 
-#: syntaxhighlighter.module:60
+#: syntaxhighlighter.module:70
 msgid "Can't find brush for: "
 msgstr ""
 
-#: syntaxhighlighter.module:61
+#: syntaxhighlighter.module:71
 msgid "Brush wasn't made for html-script option: "
 msgstr ""
 
-#: syntaxhighlighter.module:77
-msgid "<p>Syntax highlight code surrounded by the !ex0 tags, where LANG is a language aliase, optionally followed by option strings separated by ';'.</p><p>Example: !ex1 syntax highlights PHP code, initially collapsed, start line number at 50.</p><p>See <a href=\"!url0\">usage</a>, <a href=\"!url1\">language aliases</a> and <a href=\"!url2\">options</a> for additional helps.</p>"
+#: syntaxhighlighter.module:87
+msgid "Syntax highlight code surrounded by the !ex0 tags, where LANG is a language aliase, optionally followed by parameters separated by ';'."
 msgstr ""
 
-#: syntaxhighlighter.module:83
-msgid "Syntax highlight code surrounded by the !ex0 tags. See <a href=\"/filter/tips\">here</a> for details."
+#: syntaxhighlighter.module:89
+msgid "Example: !ex1 syntax highlights PHP code, initially collapsed, start line number at 50."
 msgstr ""
 
 #: syntaxhighlighter.module:91
+msgid "See <a href=\"!url0\">usage</a>, <a href=\"!url1\">language aliases</a> and <a href=\"!url2\">options</a> for additional helps."
+msgstr ""
+
+#: syntaxhighlighter.module:95
+msgid "Syntax highlight code surrounded by the !ex0 tags. See <a href=\"/filter/tips\">here</a> for details."
+msgstr ""
+
+#: syntaxhighlighter.module:103
 msgid "Syntax Highlighter"
 msgstr ""
 

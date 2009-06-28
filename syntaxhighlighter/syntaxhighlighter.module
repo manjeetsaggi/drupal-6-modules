@@ -1,5 +1,5 @@
 <?php
-// $Id: syntaxhighlighter.module,v 1.6 2009/05/03 04:07:31 mattyoung Exp $
+// $Id: syntaxhighlighter.module,v 1.8 2009/06/24 19:39:48 mattyoung Exp $
 
 /**
  * @file
@@ -28,7 +28,32 @@ function syntaxhighlighter_menu() {
 }
 
 
+function syntaxhighlighter_help($path, $arg) {
+  switch ($path) {
+    case 'admin/help#syntaxhighlighter':
+      return syntaxhighlighter_filter_tips(0, 0, TRUE);
+  }
+}
+
+
 function syntaxhighlighter_init() {
+  //
+  // Fix a javascript compability issue with imce reported by gmark
+  // Don't inject syntax highlighter javascript on "off pages"
+  // 
+  // Code lifted from the block module
+  $off_pages = variable_get('syntaxhighlighter_off_pages', "admin\nadmin/*\nuser\nuser/*\nimce\nimce/*\n");
+  $path = drupal_get_path_alias($_GET['q']);
+  // Compare with the internal and path alias (if any).
+  $page_match = drupal_match_path($path, $off_pages);
+  if ($path != $_GET['q']) {
+    $page_match = $page_match || drupal_match_path($_GET['q'], $off_pages);
+  }
+  if ($page_match) {
+    return;
+  }
+  
+  
   $styles_path = drupal_get_path('module', 'syntaxhighlighter') .'/syntaxhighlighter/styles/';
   drupal_add_css($styles_path .'shCore.css', 'module');
   $theme = variable_get('syntaxhighlighter_theme', 'shThemeDefault.css');
@@ -74,12 +99,14 @@ function syntaxhighlighter_init() {
 function syntaxhighlighter_filter_tips($delta, $format, $long = FALSE) {
   $tag_name = variable_get('syntaxhighlighter_tagname', 'pre');
   return $long ?
-    t('<p>Syntax highlight code surrounded by the !ex0 tags, where LANG is a language aliase, optionally followed by option strings separated by \';\'.</p><p>Example: !ex1 syntax highlights PHP code, initially collapsed, start line number at 50.</p><p>See <a href="!url0">usage</a>, <a href="!url1">language aliases</a> and <a href="!url2">options</a> for additional helps.</p>',
-       array('!ex0' => "&lt;$tag_name class=\"brush: LANG\"&gt;...&lt;/$tag_name&gt;",
-             '!ex1' => "&lt;$tag_name class=\"brush: php;collapse: true;first-line:50\"&gt;...&lt;/$tag_name&gt;",
-             '!url0' => 'http://alexgorbatchev.com/wiki/SyntaxHighlighter:Usage#Adding_code_blocks',
-             '!url1' => 'http://alexgorbatchev.com/wiki/SyntaxHighlighter:Brushes#About',
-             '!url2' => 'http://alexgorbatchev.com/wiki/SyntaxHighlighter:Configuration#SyntaxHighlighter.defaults'))
+      '<p>'. t('Syntax highlight code surrounded by the !ex0 tags, where LANG is a language aliase, optionally followed by parameters separated by \';\'.', 
+               array('!ex0' => "&lt;$tag_name class=\"brush: LANG\"&gt;...&lt;/$tag_name&gt;")) .'</p>'.
+      '<p>'. t('Example: !ex1 syntax highlights PHP code, initially collapsed, start line number at 50.',
+               array('!ex1' => "&lt;$tag_name class=\"brush: php;collapse: true;first-line:50\"&gt;...&lt;/$tag_name&gt;")) .'</p>'.
+      '<p>'. t('See <a href="!url0">usage</a>, <a href="!url1">language aliases</a> and <a href="!url2">options</a> for additional helps.',
+               array('!url0' => 'http://alexgorbatchev.com/wiki/SyntaxHighlighter:Usage#Adding_code_blocks',
+                     '!url1' => 'http://alexgorbatchev.com/wiki/SyntaxHighlighter:Brushes#About',
+                     '!url2' => 'http://alexgorbatchev.com/wiki/SyntaxHighlighter:Configuration#SyntaxHighlighter.defaults')) .'</p>'
     : t('Syntax highlight code surrounded by the !ex0 tags. See <a href="/filter/tips">here</a> for details.',
          array('!ex0' => "&lt;$tag_name class=\"brush: LANG\"&gt;...&lt;/$tag_name&gt;"));
 }

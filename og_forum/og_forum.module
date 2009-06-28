@@ -2,7 +2,7 @@
 /**
  * @file
  * Creates a forum per organic group and restricts viewing forum nodes by group membership.
- * @version $Id: og_forum.module,v 1.11.2.11.2.18.2.16 2009/03/03 21:48:19 paulbooker Exp $
+ * @version $Id: og_forum.module,v 1.11.2.11.2.18.2.17.2.6 2009/06/15 10:52:59 paulbooker Exp $
  * @package OG_Forum
  */
 
@@ -386,33 +386,7 @@ function og_forum_get_topics($tid, $sortby, $forum_per_page) {
  */
 function theme_og_forum_display($forums, $topics, $parents, $tid, $sortby, $forum_per_page) { 
   global $user;
-  // forum list, topics list, topic browser and 'add new topic' link
-  $vocabulary = taxonomy_vocabulary_load(variable_get('forum_nav_vocabulary', '')); 
-  $title = $vocabulary->name;
-  // Breadcrumb navigation:
-  $gid = og_forum_gid_from_tid($tid); 
-  $breadcrumb[] = l(t('Home'), NULL);
-  if ($gid != NULL) {
-  	$node = node_load($gid);
-  	$breadcrumb[] = l(t('Groups'), 'og'); 
-    $breadcrumb[] = l(t("@title", array('@title' => $node->title)), 'node/'. $node->nid);
-  }
-  if ($tid) {
-    $breadcrumb[] = l(t("@title", array('@title' => $title)), 'forum');
-  }
-  if ($parents) {
-    $parents = array_reverse($parents);
-    foreach ($parents as $p) {
-      if ($p->tid == $tid) {
-        $title = $p->name;
-      }
-      else {
-        $breadcrumb[] = l(t("@title", array('@title' => $p->name)), 'forum/' .$p->tid);
-      }
-    }
-  }
-  drupal_set_title(check_plain($title));
-  drupal_set_breadcrumb($breadcrumb);  
+  _og_forum_set_breadcrumb($tid,$parents); 
   if (count($forums) || count($parents)) { 
     $output  = '<div id="forum">';
     $output .= '<ul>';
@@ -517,7 +491,7 @@ function theme_og_forum_topic_list($tid, $topics, $sortby, $forum_per_page, $gid
         );
       }
       else {
-        $sql = "SELECT oa.nid, COALESCE(oa.is_public, 1) AS is_public FROM {node} n LEFT JOIN {og_ancestry} oa ON oa.nid = n.nid WHERE n.nid = %d";
+        $sql = "SELECT oap.nid, COALESCE(oap.og_public, 1) AS is_public FROM {og_access_post} oap WHERE oap.nid = %d";
         $public_post = db_fetch_object(db_query($sql, $topic->nid));
         if (isset($public_post) && $public_post->is_public == 1 && !array_key_exists($gid, $user->og_groups)) {
           $rows[] = array(
@@ -696,7 +670,7 @@ function og_forum_settings_submit($form, &$form_state) {
     $auto_public = variable_get('forum_auto_public', 0);
     if ($auto_public) {
       //go through all existing forums and where a node has been made public, set the forum's publicity to PUBLIC_AUTO
-      $sql = "SELECT DISTINCT tn.tid, oa.group_nid FROM {node} n INNER JOIN {og_ancestry} oa ON oa.nid = n.nid INNER JOIN {term_node} tn ON tn.nid = oa.nid WHERE n.type = 'forum' AND oa.is_public = 1";
+      $sql = "SELECT DISTINCT tn.tid, oa.group_nid FROM {node} n INNER JOIN {og_ancestry} oa ON oa.nid = n.nid INNER JOIN {og_access_post} oap ON oap.nid = oa.nid INNER JOIN {term_node} tn ON tn.nid = oa.nid  WHERE n.type = 'forum' AND oap.og_public = 1";
       $results = db_query($sql);
       while ($result = db_fetch_object($results)) {
         $gid = $result->group_nid;
@@ -753,100 +727,20 @@ function og_forum_gid_from_tid($tid=0) {
 /**
  * Implementation of hook_db_rewrite_sql().
  *
- * Restricts forum viewing by organic group.
- * 
- * How this works:
- * First, each small part-
- * The forums in groups OTHER users belong to: SELECT DISTINCT ogt.tid FROM og_term ogt INNER JOIN og_uid ogu ON ogt.nid = ogu.nid AND ogu.uid != $user->uid;
- * The forums in groups USER belongs to: SELECT DISTINCT ogt.tid FROM og_term ogt INNER JOIN og_uid ogu ON ogt.nid = ogu.nid AND ogu.uid = $user->uid;
- * The forums in groups user belongs to, but is INACTIVE: SELECT DISTINCT ogt.tid FROM og_term ogt INNER JOIN og_uid ogu ON ogt.nid = ogu.nid AND ogu.uid = $user->uid WHERE ogu.is_active = 0;
- * 
- * Put the first two together-
- * The forums in groups the user DOES NOT belong to.
- * SELECT x.tid FROM (SELECT DISTINCT ogt.tid FROM og_term ogt INNER JOIN og_uid ogu ON ogt.nid = ogu.nid AND ogu.uid != $user->uid) x 
- * WHERE x.tid NOT IN (SELECT DISTINCT ogt.tid FROM og_term ogt INNER JOIN og_uid ogu ON ogt.nid = ogu.nid AND ogu.uid = $user->uid));
- * 
- * Put it all together and you can read it like this: WHERE t.tid NOT IN (The forums in groups the user DOES NOT belong to) 
- * AND t.tid NOT IN (The forums in groups user belongs to, but is INACTIVE)
- * 
- * This should show all forums for which the user is a group member as well as those forums in the site-wide forums.
- */
+*/
 function og_forum_db_rewrite_sql($query, $primary_table = 'n', $primary_field = 'nid') {
-  global $user;
-  $restrict = FALSE;
-  $restrict2 = FALSE;
-  if (module_exists('og_user_roles')) {
-    $gidx = $_GET['gids'];
-    $typex = $_GET['type'];
-    $tidx = $_GET['tid'];
-  }
-  else {
-    $gidx = NULL;
-    $typex = NULL;
-    $tidx = NULL;
-  }
   if ($primary_field == 'tid') {
-    // Only do this on forum nodes
-    if (((arg(0) == 'forum') || (arg(0) == 'og_forum') || (db_result(db_query('SELECT type FROM {node} WHERE nid = %d', arg(1))) == 'forum')) && ($user->uid != 1) && !(user_access('administer forums'))) {
-      $restrict = TRUE;
-    }
-    elseif ((arg(0) == 'node' && arg(1) == 'add' && arg(2) == 'forum' && arg(3)) && ($user->uid != 1) && !(user_access('administer forums'))) {   
-      $restrict = TRUE;
-      $restrict2 = TRUE;
-    }
-    elseif ((arg(0) == 'node' && arg(1) == 'add' && arg(2) == 'forum') && ($user->uid != 1) && !(user_access('administer forums'))) {
-      $restrict = TRUE;
-    }
-    elseif ((arg(0) == 'node' && arg(1) == 'ognodeadd' && $typex == 'forum' && $tidx != NULL) && ($user->uid != 1) && !(user_access('administer forums'))) {//for og_user_roles compatibility
-      $restrict = TRUE;
-      $restrict2 = TRUE;
-    }
-    elseif ((arg(0) == 'node' && arg(1) == 'ognodeadd' && $typex == 'forum') && ($user->uid != 1) && !(user_access('administer forums'))) {//for og_user_roles compatibility
-      $restrict = TRUE;
-    }
-    // If on a forum node, prevent display of all forums; only the ones for this organic group
-    // The forum vocab should have a lower weight than any other vocabulary assigned to forum nodes.
-    static $og_vocab = FALSE;
-    $all_public = variable_get('forum_all_public', 0);
-    if ($restrict && $user->uid != 0 && !$all_public) {
-      //This query and the one below are what makes regular forums work side by side with og forums.
-      //Esentially, instead of sequentially restricting our selection based on whether the forum is in an organic group,
-      //we find which organic group forums we don't want to show and remove them from the site-wide forum list.
-      //What remains are all regular forums, plus those the user is subscribed to in each group and which is_active is set to 1.  
-      $return['where'] = 't.tid NOT IN (SELECT x.tid FROM (SELECT DISTINCT(ogt.tid) FROM {og_term} ogt INNER JOIN {og_uid} ogu ON ogt.nid = ogu.nid AND ogu.uid != ' .$user->uid. ' AND ogt.public < 2) x
-      WHERE x.tid NOT IN (SELECT DISTINCT(ogt.tid) FROM {og_term} ogt INNER JOIN {og_uid} ogu ON ogt.nid = ogu.nid AND (ogt.public > 1 OR ogu.uid = ' .$user->uid. '))) 
-      AND t.tid NOT IN (SELECT DISTINCT(ogt.tid) FROM {og_term} ogt INNER JOIN {og_uid} ogu ON ogt.nid = ogu.nid AND ogu.uid = ' .$user->uid. ' WHERE ogu.is_active = 0)';
-      if ($restrict2) {
-        $og_nid = og_forum_gid_from_tid(arg(3));
-        if ($og_nid && !$og_vocab) {
-          $og_vocab = TRUE;
-          //Same as above, except without removing is_active == 0 forums since we are looking for a particular node.
-          //Need to put the join in here since we need to match ogt.nid
-          //TODO do I need to add the ogt.public checks here or not?
-          $return['join'] = "LEFT JOIN {og_term} ogt ON " .$primary_table. ".tid = ogt.tid";
-          $return['where'] = "t.tid NOT IN (SELECT x.tid FROM
-            (SELECT DISTINCT(ogt.tid) FROM {og_term} ogt INNER JOIN {og_uid} ogu ON ogt.nid = ogu.nid AND ogu.uid != ' .$user->uid. ') x
-            WHERE x.tid NOT IN (SELECT DISTINCT(ogt.tid) FROM {og_term} ogt INNER JOIN {og_uid} ogu ON ogt.nid = ogu.nid AND ogu.uid = ' .$user->uid. ')) 
-            AND ogt.nid = $og_nid";
-        }
-      }
+    if (arg(0) == 'node' && arg(1) == 'add' && arg(2) == 'forum' && !$_GET['gids']) {
+      $return['join'] = "LEFT JOIN {og_term} ogt ON t.tid = ogt.tid";
+      $return['where'] = "ogt.nid IS NULL";
+      if ($og_forum_container = variable_get('forum_default_container', FALSE)) {
+	    $return['where'] .= " AND t.tid != $og_forum_container";
+	  }
       $return['distinct'] = TRUE;
       return $return;
-    }
-    elseif ($restrict && !$all_public){
-      //anonymous users should be able to at least see the site-wide and other public forums
-      $return['where'] = 't.tid NOT IN (SELECT DISTINCT ogt.tid FROM {og_term} ogt WHERE public < 2)';
-      //we shouldn't need to modify anything further if they request a specific node from a forum that is in
-      //a group forum as the above 'where' should weed it out; i.e. don't need 'join' in a $restrict2 'if'
-      $return['distinct'] = TRUE;
-      return $return;
-    }
-    else {
-      $og_vocab = FALSE;
-      return;
     }
   }
-} // function og_forum_db_rewrite_sql()
+}// function og_forum_db_rewrite_sql()
 
 /**
  * Implementation of hook_nodeapi().
@@ -861,25 +755,9 @@ function og_forum_nodeapi($node, $op, $teaser = NULL, $page = NULL) {
       }
       break;
     case 'prepare':
-      if (module_exists('og_user_roles')) {
-        $gidx = $_GET['gids'];
-        $typex = $_GET['type'];
-        $tidx = $_GET['tid'];
-      }
-      else {
-        $gidx = NULL;
-        $typex = NULL;
-        $tidx = NULL;
-      }
       if (arg(0) == 'node' && arg(1) == 'add' && arg(2) == 'forum' && arg(3)) {
         if (!og_get_group_context()) {
           og_forum_set_og_group_context_from_tid(arg(3));
-          //return FALSE;
-        }
-      }
-      elseif (arg(0) == 'node' && arg(1) == 'ognodeadd' && $typex == 'forum' && $tidx != NULL) {//for og_user_roles compatibility
-        if (!og_get_group_context()) {
-          og_forum_set_og_group_context_from_tid($tidx);
           //return FALSE;
         }
       }
@@ -1025,8 +903,8 @@ function og_forum_nodeapi($node, $op, $teaser = NULL, $page = NULL) {
         elseif ($node->og_public == PRIVATE_DEFAULT) {
           if ($forums[$node->tid] == PUBLIC_AUTO) {//the forum is in an auto settable state
             $should_be_public = FALSE;
-            $sql3 = "SELECT DISTINCT COUNT(oa.nid) FROM {node} n INNER JOIN {og_ancestry} oa ON oa.nid = n.nid INNER JOIN {term_node} tn ON tn.nid = oa.nid
-            WHERE n.type = 'forum' AND oa.is_public = 1 AND tn.tid = %d";
+            $sql3 = "SELECT DISTINCT COUNT(oap.nid) FROM {node} n INNER JOIN {og_access_post} oap ON oap.nid = n.nid INNER JOIN {term_node} tn ON tn.nid = oap.nid
+			WHERE n.type = 'forum' AND oap.og_public = 1 AND tn.tid = %d";
             if (!$count = db_result(db_query($sql3, $node->tid))) {
               db_query($sql2, PRIVATE_DEFAULT, $node->tid);
               foreach ($forums as $tid => $public) {
@@ -1078,8 +956,8 @@ function og_forum_nodeapi($node, $op, $teaser = NULL, $page = NULL) {
         elseif ($node->og_public == 0) {
           if ($forums[$node->tid] == PUBLIC_AUTO) {//the forum is in an auto settable state
             $should_be_public = FALSE;
-            $sql3 = "SELECT DISTINCT COUNT(oa.nid) FROM {node} n INNER JOIN {og_ancestry} oa ON oa.nid = n.nid INNER JOIN {term_node} tn ON tn.nid = oa.nid
-            WHERE n.type = 'forum' AND oa.is_public = 1 AND tn.tid = %d";
+            $sql3 = "SELECT DISTINCT COUNT(oap.nid) FROM {node} n INNER JOIN {og_access_post} oap ON oap.nid = n.nid INNER JOIN {term_node} tn ON tn.nid = oap.nid
+			WHERE n.type = 'forum' AND oap.og_public = 1 AND tn.tid = %d";
             if (!$count = db_result(db_query($sql3, $node->tid))) {
               db_query($sql2, PRIVATE_DEFAULT, $node->tid);
               foreach ($forums as $tid => $public) {
@@ -1121,22 +999,8 @@ function og_forum_nodeapi($node, $op, $teaser = NULL, $page = NULL) {
         $parents = taxonomy_get_parents_all($tid);
         // Breadcrumb navigation:
         global $_menu;
-        if (isset($_menu)) {
-          $breadcrumb = array();
-          $breadcrumb[] = array('path' => "og", 'title' => t('Groups'));
-          $breadcrumb[] = array('path' => "node/". $node->og_groups[0], 'title' => $node->og_groups_names[0]);
-          if ($tid) {
-            $breadcrumb[] = array('path' => 'forum', 'title' => $title);
-          }
-          if ($parents) {
-            $parents = array_reverse($parents);
-            foreach ($parents as $p) {
-              $breadcrumb[] = array('path' => 'forum/' .$p->tid, 'title' => $p->name);          
-            }        
-          }
-          $breadcrumb[] = array('path' => "node/$node->nid", 'title' => $node->title);
-          $breadcrumb[] = array('path' => $_GET['q']);
-          drupal_set_breadcrumb($breadcrumb);
+        if (og_get_group_context()) { 
+	      _og_forum_set_breadcrumb($tid,$parents);  
         }
         drupal_set_title(check_plain($node->title));
         break;
@@ -1151,6 +1015,51 @@ function og_forum_nodeapi($node, $op, $teaser = NULL, $page = NULL) {
      }
   }
 } 
+
+/**
+ * Implementation of hook_comment().
+ *
+ */
+function og_forum_comment(&$a1, $op) { 
+  $nid = $a1->nid;
+  $node = node_load($nid);
+  if (is_numeric($node->tid)) {
+    $tid = $node->tid;
+    $parents = taxonomy_get_parents_all($tid);
+    _og_forum_set_breadcrumb($tid,$parents);
+  }	
+}
+
+function _og_forum_set_breadcrumb($tid,$parents){
+  // forum list, topics list, topic browser and 'add new topic' link
+  $vocabulary = taxonomy_vocabulary_load(variable_get('forum_nav_vocabulary', '')); 
+  $title = $vocabulary->name;
+  // Breadcrumb navigation:
+  $gid = og_forum_gid_from_tid($tid); 
+  $breadcrumb[] = l(t('Home'), NULL);
+  if ($gid != NULL) {
+    $node = node_load($gid);
+	$breadcrumb[] = l(t('Groups'), 'og'); 
+	$breadcrumb[] = l(t("@title", array('@title' => $node->title)), 'node/'. $node->nid);
+  }
+  if ($tid) {
+    $breadcrumb[] = l(t("@title", array('@title' => $title)), 'forum');
+  }
+  if ($parents) {
+    $parents = array_reverse($parents);
+	foreach ($parents as $p) {
+	  if ($p->tid == $tid) {
+	    $title = $p->name;
+	  }
+	  else {
+	    $breadcrumb[] = l(t("@title", array('@title' => $p->name)), 'forum/' .$p->tid);
+	  }
+    }
+  }
+  drupal_set_title(check_plain($title));
+  drupal_set_breadcrumb($breadcrumb);	
+}
+
 
 /**
  * Retrieve container for given group
@@ -1248,53 +1157,52 @@ function og_forum_form_alter(&$form, &$form_state, $form_id) {
       elseif (arg(2) == 'edit') { 
         $term = $form['taxonomy'][$vid]['#default_value'][0];
       }
-      elseif (arg(1) == 'ognodeadd') {//for og_user_roles compatibility
-        $term = $_GET['tid'];
-        $form['taxonomy'][$vid]['#default_value'] = array($term);
-      }
       elseif (arg(1) == 'add' && !arg(3)) { 
         $first = reset($all_results);
         if ($first == 0) {
-          $next = next($all_results);
-          $term = key($all_results);
-          $form['taxonomy'][$vid]['#default_value'] = array($term);
+          next($all_results);
         }
-        else {
-          $term = key($all_results);
-          $form['taxonomy'][$vid]['#default_value'] = array($term);
-        } 
+        $term = key($all_results);
+        $form['taxonomy'][$vid]['#default_value'] = array($term); 
       } 
-        foreach ($form['taxonomy'][$vid]['#options'] as $key => $the_rest) { 
-          if ($key === '') {  
-            continue;
-          }
-          reset($the_rest->option);
-          $option_key = key($the_rest->option);
-          if (is_array($all_results) && !array_key_exists($option_key, $all_results)) {
-            unset($form['taxonomy'][$vid]['#options'][$key]);
-          }
-        } //check to see if the audience is required or optional. if optional, don't do the following two lines
-        if (variable_get('og_audience_required', FALSE) == 1) {    
-          if (count($form['og_nodeapi']['visible']['og_groups']['#default_value'])) {
-            drupal_add_js(drupal_get_path('module', 'og_forum'). '/og_forum.js');
-            $options = $form['og_nodeapi']['visible']['og_groups']['#options'];
-            $groups = $form['og_nodeapi']['visible']['og_groups']['#default_value'];
-            foreach ($groups as $key => $value) {
-              $groups[$key] = (string)$value;
-            }
-            foreach ($groups as $gid) {
-              $titles[] = $options[$gid];
-              $item_value = implode(', ', $titles);
-            }
-            $form['og_nodeapi']['visible']['og_groups_visible'] = array('#type' => 'item', '#title' => t('Audience'), '#value' => $item_value);
-            if ($form['og_nodeapi']['visible']['og_public']['#default_value'] == 1) {
-              $form['og_nodeapi']['visible']['og_public']['#default_value'] = 1;
-            }
-            else {
-              $form['og_nodeapi']['visible']['og_public']['#default_value'] = 0;
-            }
-          }
+      foreach ($form['taxonomy'][$vid]['#options'] as $key => $the_rest) { 
+        if ($key === '') {  
+          continue;
         }
+        reset($the_rest->option);
+        $option_key = key($the_rest->option);
+        if (is_array($all_results) && !array_key_exists($option_key, $all_results)) {
+          unset($form['taxonomy'][$vid]['#options'][$key]);
+        }
+       }  
+       //check to see if the audience is required or optional.
+       if (variable_get('og_audience_required', FALSE) == 1) {   
+         if (count($form['og_nodeapi']['visible']['og_groups']['#default_value'])) {
+           drupal_add_js(drupal_get_path('module', 'og_forum'). '/og_forum.js');
+           $options = $form['og_nodeapi']['visible']['og_groups']['#options'];
+           $groups = $form['og_nodeapi']['visible']['og_groups']['#default_value'];
+           foreach ($groups as $key => $value) {
+             $groups[$key] = (string)$value;
+           } // TODO: Is this foreach of any use ?
+           foreach ($groups as $gid) {
+             $titles[] = $options[$gid];
+             $item_value = implode(', ', $titles);
+           }
+           $form['og_nodeapi']['visible']['og_groups_visible'] = array('#type' => 'item', '#title' => t('Audience'), '#value' => $item_value); 
+           $assoc_groups = drupal_map_assoc($groups);
+           // TODO: Is this if/else of any use ? 
+           if ($form['og_nodeapi']['visible']['og_public']['#default_value'] == 1) {
+             $form['og_nodeapi']['visible']['og_public']['#default_value'] = 1;
+           }
+           else {
+               $form['og_nodeapi']['visible']['og_public']['#default_value'] = 0;
+           }
+         }
+         // When you make a group forum post it can only be made into the group the forum is affiliated with.
+         unset($form['og_nodeapi']['visible']['og_groups']);
+         // this 'value' element persists the audience value during submit process
+	     $form['og_nodeapi']['invisible']['og_groups'] = array('#type' => 'value', '#value' => $assoc_groups);
+       }
     }
     else { 
       $results = db_query('SELECT ot.tid, th.parent FROM {og_term} ot LEFT JOIN {term_hierarchy} th ON ot.tid = th.tid ORDER BY tid ASC');
@@ -1312,11 +1220,6 @@ function og_forum_form_alter(&$form, &$form_state, $form_id) {
         $cut = TRUE;
         $term = $form['taxonomy'][$vid]['#default_value'][0];
       }
-      elseif (arg(1) == 'ognodeadd') {//for og_user_roles compatibility
-        $cut = TRUE;
-        $term = $_GET['tid'];
-        $form['taxonomy'][$vid]['#default_value'] = array($term);
-      }
       if (!user_access('administer forums') && $cut) { 
         foreach ($form['taxonomy'][$vid]['#options'] as $key => $the_rest) {
           if ($key == '') {
@@ -1330,11 +1233,9 @@ function og_forum_form_alter(&$form, &$form_state, $form_id) {
         }
       }
     }
-    //$groups = $form['og_nodeapi']['visible']['og_groups']; 
-    //$form['og_nodeapi']['invisible']['og_groups'] = array('#type' => 'value', '#value' => $groups);
-    //unset($form['og_nodeapi']['visible']['og_groups']);
-    $form['taxonomy']['#collapsible'] = TRUE;
-    $form['taxonomy']['#collapsed'] = TRUE;
+    //TODO: These looks to be redundant
+    //$form['taxonomy']['#collapsible'] = TRUE;
+    //$form['taxonomy']['#collapsed'] = TRUE;
   }
   if ($form_id == 'forum_form_container') {
     $allow_public = variable_get('forum_allow_public', 0);

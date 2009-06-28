@@ -5,9 +5,9 @@ package = XML sitemap
 dependencies[] = xmlsitemap
 core = "6.x"
 
-; Information added by drupal.org packaging script on 2009-05-26
-version = "6.x-1.0-beta5"
+; Information added by drupal.org packaging script on 2009-06-25
+version = "6.x-1.0-beta6"
 core = "6.x"
 project = "xmlsitemap"
-datestamp = "1243301755"
+datestamp = "1245931902"
 

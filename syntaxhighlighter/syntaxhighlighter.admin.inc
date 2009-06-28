@@ -1,5 +1,5 @@
 <?php
-// $Id: syntaxhighlighter.admin.inc,v 1.3 2009/02/17 21:01:15 mattyoung Exp $
+// $Id: syntaxhighlighter.admin.inc,v 1.4 2009/06/24 19:39:48 mattyoung Exp $
 
 /**
  * @file
@@ -53,6 +53,15 @@ function syntaxhighlighter_settings_form() {
     '#description' => t('Enable pre-2.0 style markup support.'),
     '#options' => array(t('Disabled'), t('Enabled')),
     '#default_value' => variable_get('syntaxhighlighter_legacy_mode', 0),
+  );
+  
+    // Fix a javascript compability issue with imce reported by gmark
+    // Don't inject syntax highlighter javascript on "off pages"
+  $form['syntaxhighlighter_off_pages'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Turn off Syntax Highlighter on these pages'),
+    '#default_value' => variable_get('syntaxhighlighter_off_pages', "admin\nadmin/*\nuser\nuser/*\nimce\nimce/*\n"),
+    '#description' => t("Enter one page per line as Drupal paths. The '*' character is a wildcard. Example paths are %blog for the blog page and %blog-wildcard for every personal blog. %front is the front page.", array('%blog' => 'blog', '%blog-wildcard' => 'blog/*', '%front' => '<front>')),
   );
   return system_settings_form($form);
 }
