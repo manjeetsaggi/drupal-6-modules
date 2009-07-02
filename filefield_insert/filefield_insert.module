@@ -1,5 +1,5 @@
 <?php
-// $Id: filefield_insert.module,v 1.4 2009/05/10 19:50:58 quicksketch Exp $
+// $Id: filefield_insert.module,v 1.5 2009/06/30 22:13:22 quicksketch Exp $
 
 /**
  * @file
@@ -312,7 +312,7 @@ function template_preprocess_filefield_insert_widget(&$vars) {
       $width = 0;
       $height = 0;
       foreach ($preset['actions'] as $action) {
-        if (isset($action['data']['width']) || isset($action['data']['width'])) {
+        if (isset($action['data']['width']) || isset($action['data']['height'])) {
           $width = !empty($action['data']['width']) ? $action['data']['width'] : 0;
           $height = !empty($action['data']['height']) ? $action['data']['height'] : 0;
         }
