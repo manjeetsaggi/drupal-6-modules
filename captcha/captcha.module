@@ -1,5 +1,5 @@
 <?php
-// $Id: captcha.module,v 1.92 2009/06/13 22:10:43 soxofaan Exp $
+// $Id: captcha.module,v 1.96 2009/07/02 23:45:05 soxofaan Exp $
 
 /**
  * @file
@@ -18,6 +18,9 @@ define('CAPTCHA_PERSISTENCE_SKIP_ONCE_SUCCESSFUL', 3);
 define('CAPTCHA_STATUS_UNSOLVED', 0);
 define('CAPTCHA_STATUS_SOLVED', 1);
 define('CAPTCHA_STATUS_EXAMPLE', 2);
+
+define('CAPTCHA_DEFAULT_VALIDATION_CASE_SENSITIVE', 0);
+define('CAPTCHA_DEFAULT_VALIDATION_CASE_INSENSITIVE', 1);
 
 /**
  * Implementation of hook_help().
@@ -155,10 +158,7 @@ function captcha_cron() {
  */
 function captcha_elements() {
   // Define the CAPTCHA form element with default properties.
-  // Unfortunately we can't set the '#description' field here because
-  // Drupal's form API processes it in a weird way: '#description'
-  // becomes an array instead of a string (see _element_info() in form.inc).
-  return array('captcha' => array(
+  $captcha_element = array(
     '#input' => TRUE,
     '#process' => array('captcha_process'),
     // The type of challenge: e.g. 'default', 'none', 'captcha/Math', 'image_captcha/Image', ...
@@ -166,7 +166,16 @@ function captcha_elements() {
     '#default_value' => '',
     // CAPTCHA in admin mode: presolve the CAPTCHA and always show it (despite previous successful responses).
     '#captcha_admin_mode' => FALSE,
-  ));
+    // The default CAPTCHA validation function.
+    // TODO: should this be a single string or an array of strings (combined in OR fashion)?
+    '#captcha_validate' => 'captcha_validate_strict_equality',
+  );
+  // Override the default CAPTCHA validation function for case insensitive validation.
+  // TODO: shouldn't this be done somewhere else, e.g. in form_alter?
+  if (CAPTCHA_DEFAULT_VALIDATION_CASE_INSENSITIVE == variable_get('captcha_default_validation', CAPTCHA_DEFAULT_VALIDATION_CASE_INSENSITIVE)) {
+    $captcha_element['#captcha_validate'] = 'captcha_validate_case_insensitive_equality';
+  }
+  return array('captcha' => $captcha_element);
 }
 
 /**
@@ -219,18 +228,14 @@ function captcha_process($element, $edit, &$form_state, $complete_form) {
     // Add form elements from challenge as children to CAPTCHA form element.
     $element['captcha_widgets'] = $captcha['form'];
 
-    // Add CAPTCHA description if required:
-    // #description is default (NULL) and a description is set in the admin interface.
-    if ($element['#description'] === NULL) {
-      $captcha_description = _captcha_get_description();
-      if ($captcha_description) {
-        $element['#description'] = $captcha_description;
-      }
+    // Add a validation callback for the CAPTCHA form element (when not in admin mode).
+    if (!$element['#captcha_admin_mode']) {
+      $element['#element_validate'] = array('captcha_validate');
     }
 
-    if (!$element['#captcha_admin_mode']) {
-      // Add a validation callback for the CAPTCHA form element.
-      $element['#element_validate'] = array('captcha_validate');
+    // Set a custom CAPTCHA validate function if requested.
+    if (isset($captcha['captcha_validate'])) {
+      $element['#captcha_validate'] = $captcha['captcha_validate'];
     }
 
     // Add pre_render callback for additional CAPTCHA processing.
@@ -298,6 +303,11 @@ function captcha_form_alter(&$form, $form_state, $form_id) {
           '#type' => 'captcha',
           '#captcha_type' => $captcha_point->module .'/'. $captcha_point->type,
         );
+        // Add a CAPTCHA description if required.
+        if (variable_get('captcha_add_captcha_description', TRUE)) {
+          $captcha_element['#description'] = _captcha_get_description();
+        }
+
         # Get placement in form and insert in form.
         $captcha_placement = _captcha_get_captcha_placement($form_id, $form);
         _captcha_insert_captcha_element($form, $captcha_placement, $captcha_element);
@@ -355,6 +365,26 @@ function captcha_form_alter(&$form, $form_state, $form_id) {
 }
 
 /**
+ * CAPTCHA validation function to tests strict equality.
+ * @param $solution the solution of the test.
+ * @param $response the response to the test.
+ * @return TRUE when strictly equal, FALSE otherwise.
+ */
+function captcha_validate_strict_equality($solution, $response) {
+  return $solution === $response;
+}
+
+/**
+ * CAPTCHA validation function to tests case insensitive equality.
+ * @param $solution the solution of the test.
+ * @param $response the response to the test.
+ * @return TRUE when case insensitive equal, FALSE otherwise.
+ */
+function captcha_validate_case_insensitive_equality($solution, $response) {
+  return strtolower($solution) === strtolower($response);
+}
+
+/**
  * CAPTCHA validation handler.
  *
  * This function is placed in the main captcha.module file to make sure that
@@ -387,13 +417,14 @@ function captcha_validate($element, &$form_state) {
     form_set_error('captcha', t('CAPTCHA test failed (unknown csid).'));
   }
   else {
-    // In case of case insensitive validation: convert solution and response to lower case.
-    if (!variable_get('captcha_case_sensitive_validation', TRUE)) {
-      $solution = strtolower($solution);
-      $captcha_response = strtolower($captcha_response);
+    // Get CAPTCHA validate function or fall back on strict equality.
+    $captcha_validate = $element['#captcha_validate'];
+    if (!function_exists($captcha_validate)) {
+       $captcha_validate = 'captcha_validate_strict_equality';
     }
-    // Check answer.
-    if ($captcha_response == $solution) {
+    // Check the response.
+    // TODO: also add $element and $form_state as arguments?
+    if ($captcha_validate($solution, $captcha_response)) {
       // Correct answer.
       $_SESSION['captcha_success_form_ids'][$form_id] = $form_id;
       // Record success.
@@ -452,14 +483,13 @@ function captcha_pre_render_process($element) {
     // Update captcha_sessions table: store the solution of the generated CAPTCHA.
     _captcha_update_captcha_session($captcha_sid, $captcha_info['solution']);
 
-    if (!$element['#captcha_admin_mode']) {
-      // Empty the value of the captcha_response form item before rendering
-      $element['captcha_widgets']['captcha_response']['#value'] = '';
+    // Handle the response field if it is available and if it is a textfield.
+    if (isset($element['captcha_widgets']['captcha_response']['#type']) && $element['captcha_widgets']['captcha_response']['#type'] == 'textfield') {
+      // Before rendering: presolve an admin mode challenge or
+      // empty the value of the captcha_response form item.
+      $value = $element['#captcha_admin_mode'] ? $captcha_info['solution'] : '';
+      $element['captcha_widgets']['captcha_response']['#value'] = $value;
     }
-    else {
-      $element['captcha_widgets']['captcha_response']['#value'] = $captcha_info['solution'];
-    }
-
   }
   else {
     // Remove CAPTCHA widgets from form.

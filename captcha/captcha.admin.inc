@@ -1,5 +1,5 @@
 <?php
-// $Id: captcha.admin.inc,v 1.25 2009/05/26 22:06:22 soxofaan Exp $
+// $Id: captcha.admin.inc,v 1.28 2009/07/02 23:45:05 soxofaan Exp $
 
 /**
  * Return an array with the available CAPTCHA types, for use as options array
@@ -32,6 +32,9 @@ function _captcha_available_challenge_types($add_special_options=TRUE) {
  */
 function captcha_admin_settings() {
   module_load_include('inc', 'captcha');
+
+  // Use javascript for some added usability on admin form.
+  drupal_add_js(drupal_get_path('module', 'captcha') .'/captcha.js');
 
   // Configuration of which forms to protect, with what challenge.
   $form['captcha_form_protection'] = array(
@@ -114,13 +117,21 @@ function captcha_admin_settings() {
     '#description' => t('This option makes it possible to add CAPTCHAs to forms on administrative pages. CAPTCHAs are disabled by default on administrative pages (which shouldn\'t be accessible to untrusted users normally) to avoid the related overhead. In some situations, e.g. in the case of demo sites, it can be usefull to allow CAPTCHAs on administrative pages.'),
   );
 
-  // field(s) for setting the additional CAPTCHA description
+  // Configuration option for adding a CAPTCHA description.
+  $form['captcha_add_captcha_description'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Add a description to the CAPTCHA'),
+    '#description' => t('Add a configurable description to explain the purpose of the CAPTCHA to the visitor.'),
+    '#default_value' => variable_get('captcha_add_captcha_description', TRUE),
+  );
+  // Textfield(s) for the CAPTCHA description.
   if (module_exists('locale')) {
     $langs = locale_language_list();
     $form['captcha_descriptions'] = array(
       '#type' => 'fieldset',
-      '#title' => t('Challenge description'),
-      '#description' => t('With this description you can explain the purpose of the challenge to the user.'),
+      '#title' => t('CAPTCHA description'),
+      '#description' => t('Configurable description of the CAPTCHA. An empty entry will reset the description.'),
+      '#attributes' => array('id' => 'edit-captcha-description-wrapper'),
     );
     foreach ($langs as $lang_code => $lang_name) {
       $form['captcha_descriptions']["captcha_description_$lang_code"] = array(
@@ -135,18 +146,23 @@ function captcha_admin_settings() {
     $form['captcha_description'] = array(
       '#type' => 'textfield',
       '#title' => t('Challenge description'),
-      '#description' => t('With this description you can explain the purpose of the challenge to the user.'),
+      '#description' => t('Configurable description of the CAPTCHA. An empty entry will reset the description.'),
       '#default_value' => _captcha_get_description(),
       '#maxlength' => 256,
+      '#attributes' => array('id' => 'edit-captcha-description-wrapper'),
     );
   }
 
   // Option for case sensitive/insensitive validation of the responses.
-  $form['captcha_case_sensitive_validation'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Case sensitive validation'),
-    '#description' => t('Disable this option to ignore uppercase/lowercase errors in the response.'),
-    '#default_value' => variable_get('captcha_case_sensitive_validation', TRUE),
+  $form['captcha_default_validation'] = array(
+    '#type' => 'radios',
+    '#title' => t('Default CAPTCHA validation'),
+    '#description' => t('Define how the response should be processed by default. Note that the modules that provide the actual challenges can override or ignore this.'),
+    '#options' => array(
+      CAPTCHA_DEFAULT_VALIDATION_CASE_SENSITIVE => t('Case sensitive validation: the response has to exactly match the solution.'),
+      CAPTCHA_DEFAULT_VALIDATION_CASE_INSENSITIVE => t('Case insensitive validation: lowercase/uppercase errors are ignored.'),
+    ),
+    '#default_value' => variable_get('captcha_default_validation', CAPTCHA_DEFAULT_VALIDATION_CASE_INSENSITIVE),
   );
 
   // Field for CAPTCHA persistence.
@@ -240,17 +256,33 @@ function captcha_admin_settings_submit($form, &$form_state) {
   }
 
   // CAPTCHA description stuff.
+  variable_set('captcha_add_captcha_description', $form_state['values']['captcha_add_captcha_description']);
+  // Save (or reset) the CAPTCHA descriptions.
   if (module_exists('locale')) {
     $langs = locale_language_list();
     foreach ($langs as $lang_code => $lang_name) {
-      variable_set("captcha_description_$lang_code", $form_state['values']["captcha_description_$lang_code"]);
+      $description = $form_state['values']["captcha_description_$lang_code"];
+      if ($description) {
+        variable_set("captcha_description_$lang_code", $description);
+      }
+      else {
+        variable_del("captcha_description_$lang_code");
+        drupal_set_message(t('Reset of CAPTCHA description for language %language.', array('%language' => $lang_name)), 'status');
+      }
     }
   }
   else {
-    variable_set('captcha_description', $form_state['values']['captcha_description']);
+    $description = $form_state['values']['captcha_description'];
+    if ($description) {
+      variable_set('captcha_description', $description);
+    }
+    else {
+      variable_del('captcha_description');
+      drupal_set_message(t('Reset of CAPTCHA description.'), 'status');
+    }
   }
 
-  variable_set('captcha_case_sensitive_validation', $form_state['values']['captcha_case_sensitive_validation']);
+  variable_set('captcha_default_validation', $form_state['values']['captcha_default_validation']);
   variable_set('captcha_persistence', $form_state['values']['captcha_persistence']);
   variable_set('captcha_log_wrong_responses', $form_state['values']['captcha_log_wrong_responses']);
 
