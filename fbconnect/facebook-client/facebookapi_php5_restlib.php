@@ -55,6 +55,7 @@ class FacebookRestClient {
   private $pending_batch;
   private $call_as_apikey;
   private $use_curl_if_available;
+  private $format = null;
 
   const BATCH_MODE_DEFAULT = 0;
   const BATCH_MODE_SERVER_PARALLEL = 0;
@@ -185,20 +186,13 @@ function toggleDisplay(id, type) {
       $method_feed[] = $this->create_url_string(array_merge($post, $get));
     }
 
-    $method_feed_json = json_encode($method_feed);
-
     $serial_only =
       ($this->batch_mode == FacebookRestClient::BATCH_MODE_SERIAL_ONLY);
-    $params = array('method_feed' => $method_feed_json,
-                    'serial_only' => $serial_only);
-    if ($this->call_as_apikey) {
-      $params['call_as_apikey'] = $this->call_as_apikey;
-    }
 
-    $xml = $this->post_request('batch.run', $params);
-
-    $result = $this->convert_xml_to_result($xml, 'batch.run', $params);
-
+    $params = array('method_feed' => json_encode($method_feed),
+                    'serial_only' => $serial_only,
+                    'format' => $this->format);
+    $result = $this->call_method('facebook.batch.run', $params);
 
     if (is_array($result) && isset($result['error_code'])) {
       throw new FacebookRestClientException($result['error_msg'],
@@ -207,10 +201,10 @@ function toggleDisplay(id, type) {
 
     for ($i = 0; $i < $item_count; $i++) {
       $batch_item = $this->batch_queue[$i];
-      $batch_item_result_xml = $result[$i];
-      $batch_item_result = $this->convert_xml_to_result($batch_item_result_xml,
-                                                        $batch_item['m'],
-                                                        $batch_item['p']);
+      $batch_item['p']['format'] = $this->format;
+      $batch_item_result = $this->convert_result($result[$i],
+                                                 $batch_item['m'],
+                                                 $batch_item['p']);
 
       if (is_array($batch_item_result) &&
           isset($batch_item_result['error_code'])) {
@@ -516,12 +510,20 @@ function toggleDisplay(id, type) {
    * behalf of app.  Successful creation guarantees app will be admin.
    *
    * @param assoc array $event_info  json encoded event information
+   * @param string $file             (Optional) filename of picture to set
    *
    * @return int  event id
    */
-  public function &events_create($event_info) {
-    return $this->call_method('facebook.events.create',
+  public function events_create($event_info, $file = null) {
+    if ($file) {
+      return $this->call_upload_method('facebook.events.create',
+        array('event_info' => $event_info),
+        $file,
+        Facebook::get_facebook_url('api-photo') . '/restserver.php');
+    } else {
+      return $this->call_method('facebook.events.create',
         array('event_info' => $event_info));
+    }
   }
 
   /**
@@ -529,13 +531,21 @@ function toggleDisplay(id, type) {
    *
    * @param int $eid                 event id
    * @param assoc array $event_info  json encoded event information
+   * @param string $file             (Optional) filename of new picture to set
    *
    * @return bool  true if successful
    */
-  public function &events_edit($eid, $event_info) {
-    return $this->call_method('facebook.events.edit',
+  public function events_edit($eid, $event_info, $file = null) {
+    if ($file) {
+      return $this->call_upload_method('facebook.events.edit',
+        array('eid' => $eid, 'event_info' => $event_info),
+        $file,
+        Facebook::get_facebook_url('api-photo') . '/restserver.php');
+    } else {
+      return $this->call_method('facebook.events.edit',
         array('eid' => $eid,
-              'event_info' => $event_info));
+        'event_info' => $event_info));
+    }
   }
 
   /**
@@ -935,7 +945,7 @@ function toggleDisplay(id, type) {
   /**
    * Makes an FQL query.  This is a generalized way of accessing all the data
    * in the API, as an alternative to most of the other method calls.  More
-   * info at http://developers.facebook.com/documentation.php?v=1.0&doc=fql
+   * info at http://wiki.developers.facebook.com/index.php/FQL
    *
    * @param string $query  the query to evaluate
    *
@@ -944,6 +954,21 @@ function toggleDisplay(id, type) {
   public function &fql_query($query) {
     return $this->call_method('facebook.fql.query',
       array('query' => $query));
+  }
+
+  /**
+   * Makes a set of FQL queries in parallel.  This method takes a dictionary
+   * of FQL queries where the keys are names for the queries.  Results from
+   * one query can be used within another query to fetch additional data.  More
+   * info about FQL queries at http://wiki.developers.facebook.com/index.php/FQL
+   *
+   * @param string $queries  JSON-encoded dictionary of queries to evaluate
+   *
+   * @return array  generalized array representing the results
+   */
+  public function &fql_multiquery($queries) {
+    return $this->call_method('facebook.fql.multiquery',
+      array('queries' => $queries));
   }
 
   /**
@@ -992,6 +1017,23 @@ function toggleDisplay(id, type) {
     }
     return $this->call_method('facebook.friends.get', $params);
 
+  }
+
+  /**
+   * Returns the mutual friends between the target uid and a source uid or
+   * the current session user.
+   *
+   * @param int $target_uid Target uid for which mutual friends will be found.
+   * @param int $source_uid (optional) Source uid for which mutual friends will
+   *                                   be found. If no source_uid is specified,
+   *                                   source_id will default to the session
+   *                                   user.
+   * @return array  An array of friend uids
+   */
+  public function &friends_getMutualFriends($target_uid, $source_uid = null) {
+    return $this->call_method('facebook.friends.getMutualFriends',
+                              array("target_uid" => $target_uid,
+                                    "source_uid" => $source_uid));
   }
 
   /**
@@ -2948,6 +2990,7 @@ function toggleDisplay(id, type) {
       array('uids' => $uids ? json_encode($uids) : null));
   }
 
+
   /* UTILITY FUNCTIONS */
 
   /**
@@ -2961,18 +3004,15 @@ function toggleDisplay(id, type) {
    *     See: http://wiki.developers.facebook.com/index.php/Using_batching_API
    */
   public function &call_method($method, $params = array()) {
+    if ($this->format) {
+      $params['format'] = $this->format;
+    }
     if (!$this->pending_batch()) {
       if ($this->call_as_apikey) {
         $params['call_as_apikey'] = $this->call_as_apikey;
       }
       $data = $this->post_request($method, $params);
-      if (empty($params['format']) || strtolower($params['format']) != 'json') {
-        $result = $this->convert_xml_to_result($data, $method, $params);
-      }
-      else {
-        $result = json_decode($data, true);
-      }
-
+      $result = $this->convert_result($data, $method, $params);
       if (is_array($result) && isset($result['error_code'])) {
         throw new FacebookRestClientException($result['error_msg'],
                                               $result['error_code']);
@@ -2985,6 +3025,32 @@ function toggleDisplay(id, type) {
     }
 
     return $result;
+  }
+
+  protected function convert_result($data, $method, $params) {
+    $is_xml = (empty($params['format']) ||
+               strtolower($params['format']) != 'json');
+    return ($is_xml) ? $this->convert_xml_to_result($data, $method, $params)
+                     : json_decode($data, true);
+  }
+
+  /**
+   * Change the response format
+   *
+   * @param string $format The response format (json, xml)
+   */
+  public function setFormat($format) {
+    $this->format = $format;
+    return $this;
+  }
+
+  /**
+   * get the current response serialization format
+   *
+   * @return string 'xml', 'json', or null (which means 'xml')
+   */
+  public function getFormat() {
+    return $this->format;
   }
 
   /**
@@ -3005,8 +3071,14 @@ function toggleDisplay(id, type) {
         throw new FacebookRestClientException($description, $code);
       }
 
-      $xml = $this->post_upload_request($method, $params, $file, $server_addr);
-      $result = $this->convert_xml_to_result($xml, $method, $params);
+      if ($this->format) {
+        $params['format'] = $this->format;
+      }
+      $data = $this->post_upload_request($method,
+                                         $params,
+                                         $file,
+                                         $server_addr);
+      $result = $this->convert_result($data, $method, $params);
 
       if (is_array($result) && isset($result['error_code'])) {
         throw new FacebookRestClientException($result['error_msg'],
@@ -3045,7 +3117,7 @@ function toggleDisplay(id, type) {
     return $result;
   }
 
-  private function finalize_params($method, $params) {
+  protected function finalize_params($method, $params) {
     list($get, $post) = $this->add_standard_params($method, $params);
     // we need to do this before signing the params
     $this->convert_array_values_to_json($post);
@@ -3146,7 +3218,7 @@ function toggleDisplay(id, type) {
       curl_setopt($ch, CURLOPT_USERAGENT, $useragent);
       curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
       curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-      $result = curl_exec($ch);
+      $result = $this->curl_exec($ch);
       curl_close($ch);
     } else {
       $content_type = 'application/x-www-form-urlencoded';
@@ -3156,6 +3228,17 @@ function toggleDisplay(id, type) {
                                                  $url_with_get);
     }
     return $result;
+  }
+
+  /**
+   * execute a curl transaction -- this exists mostly so subclasses can add
+   * extra options and/or process the response, if they wish.
+   *
+   * @param resource $ch a curl handle
+   */
+  protected function curl_exec($ch) {
+      $result = curl_exec($ch);
+      return $result;
   }
 
   private function post_upload_request($method, $params, $file, $server_addr = null) {
@@ -3175,7 +3258,7 @@ function toggleDisplay(id, type) {
       curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
       curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
       curl_setopt($ch, CURLOPT_USERAGENT, $useragent);
-      $result = curl_exec($ch);
+      $result = $this->curl_exec($ch);
       curl_close($ch);
     } else {
       $result = $this->run_multipart_http_transaction($method, $post,
@@ -3226,7 +3309,7 @@ function toggleDisplay(id, type) {
     }
   }
 
-  private function get_uid($uid) {
+  protected function get_uid($uid) {
     return $uid ? $uid : $this->user;
   }
 }
@@ -3261,6 +3344,7 @@ class FacebookAPIErrorCodes {
   const API_EC_DEPRECATED = 11;
   const API_EC_VERSION = 12;
   const API_EC_INTERNAL_FQL_ERROR = 13;
+  const API_EC_HOST_PUP = 14;
 
   /*
    * PARAMETER ERRORS
@@ -3295,6 +3379,7 @@ class FacebookAPIErrorCodes {
   const API_EC_PERMISSION = 200;
   const API_EC_PERMISSION_USER = 210;
   const API_EC_PERMISSION_NO_DEVELOPERS = 211;
+  const API_EC_PERMISSION_OFFLINE_ACCESS = 212;
   const API_EC_PERMISSION_ALBUM = 220;
   const API_EC_PERMISSION_PHOTO = 221;
   const API_EC_PERMISSION_MESSAGE = 230;
@@ -3383,6 +3468,7 @@ class FacebookAPIErrorCodes {
   const FQL_EC_DEPRECATED_TABLE = 611;
   const FQL_EC_EXTENDED_PERMISSION = 612;
   const FQL_EC_RATE_LIMIT_EXCEEDED = 613;
+  const FQL_EC_UNRESOLVED_DEPENDENCY = 614;
 
   const API_EC_REF_SET_FAILED = 700;
 
