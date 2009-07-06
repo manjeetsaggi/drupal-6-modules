@@ -1,0 +1,9 @@
+; $Id: activitystream_greadershared.info,v 1.0 2008/08/10 00:08:00 dmetzcher Exp $
+
+name = Google Reader Shared Items
+description = What's been shared
+dependencies[] = activitystream 
+dependencies[] = activitystream_feed
+package = Activity Stream
+core = 6.x
+

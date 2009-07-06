@@ -1,0 +1,8 @@
+; $Id$
+
+name = YouTube Favorites
+description = Your YouTube favorites
+dependencies[] = activitystream 
+dependencies[] = activitystream_feed
+package = Activity Stream
+core = 6.x

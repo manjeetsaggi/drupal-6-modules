@@ -1,0 +1,87 @@
+<?php
+// $Id: activitystream_greadershared.module,v 1.0 2008/08/10 00:08:00 dmetzcher Exp $
+
+/**
+ * @file
+ * The module for importing Google Reader Shared links.
+ */
+ 
+/*
+ * The API passes in a $user object that contains four properties:
+ * uid, userid, password, feed. These properties contain the account
+ * information entered into the user's settings page, along with the 
+ * uid of their Drupal account.
+ */
+function activitystream_greadershared_streamapi($user) {
+  // This user doesn't have a Google Reader ID entered
+  if (!$user->userid) {
+    return;
+  }
+  
+  // Use the activitystream_feed module to pull in the user's
+  // history. 
+  $user->feed = 'http://www.google.com/reader/public/atom/user/'. $user->userid .'/state/com.google/broadcast';
+  $items = activitystream_feed_streamapi($user);
+  
+  // Shorten body copy to 150 characters for each item
+  for ($i=0; $i<count($items); $i++) {
+    $items[$i]['body'] = substr(strip_tags($items[$i]['body']), 0, 150) .' ...';
+  }
+  
+  return $items;
+}
+
+
+/*
+ * Implement a user settings form hook. Modules should build a form
+ * using an array that mirrors the Drupal form API. activitystream.module
+ * will add the form elements to a tab called Activity Streams on the
+ * user's Profile Edit page. Fields should be named
+ * yourmodulename_fieldname. For instance, to store the user ID for 
+ * Flickr, the field name is activitystream_flickr_userid
+ *
+ * To avoid collisions with other activitystream module's forms
+ * use your module's name as the form array's key.
+ *
+ * @param $edit
+ *   The values of the form fields, used for setting defaults
+ * 
+ */
+function activitystream_greadershared_activitystream_settings(&$edit) {
+  $form['activitystream_greadershared'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Google Reader Shared Items settings'));
+  $form['activitystream_greadershared']['activitystream_greadershared_userid'] = array(
+    '#type' => 'textfield',
+    '#title' => t('User ID Number'),
+    '#default_value' => empty($edit['activitystream_greadershared_userid']) ? '' : $edit['activitystream_greadershared_userid'],
+    '#description' => t('Your Google Reader User ID Number that appears in the URL of your shared items feed page.'));
+  return $form;  
+}
+
+function theme_activitystream_greadershared_icon() {
+  return theme_image(drupal_get_path('module', 'activitystream_greadershared') .'/googlereader.png', 'Google');
+}
+
+function theme_activitystream_greadershared_item($activity) {
+  $node = node_load($activity->nid);
+  $date = theme('activitystream_date', $node->created);
+  $user = user_load(array('uid' => $node->uid));
+  $name = theme('activitystream_username', $user);
+  return '<span class="activitystream-item">'. theme('activitystream_greadershared_icon') ." <span>$name shared ". l($node->title, $activity->link) ." <span class=\"activitystream-created\">$date</span></span>". l('#', 'node/'. $node->nid, array('class' => 'permalink')) .'</span>';
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function activitystream_greadershared_theme() {
+  return array(
+    'activitystream_greadershared_icon' => array(
+      'arguments' => array(),
+    ),
+    'activitystream_greadershared_item' => array(
+      'arguments' => array('activity' => NULL),
+    ),
+  );
+}
+

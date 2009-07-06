@@ -1,0 +1,78 @@
+<?php
+// $Id: activitystream_youtube_favorites.module,v 1.2.2.2.2.1 2008/08/16 08:51:43 akalsey Exp $
+/**
+ * @file
+ * The module for importing YouTube favorites feed
+ */
+ 
+/*
+ * The API passes in a $user object that contains four properties:
+ * uid, userid, password, feed. These properties contain the account
+ * information entered into the user's settings page, along with the 
+ * uid of their Drupal account.
+ */
+function activitystream_youtube_favorites_streamapi($user) {
+  // This user doesn't have a Goodreads ID entered
+  // into their settings. Move along. Nothing
+  // to see here.
+  if (!$user->userid) {
+    return;
+  }
+  
+  // Use the activitystream_feed module to pull in the user's
+  // YouTube videos
+  $user->feed = 'http://www.youtube.com/profile?user='. $user->userid .'&view=favorites';
+  $items = activitystream_feed_streamapi($user);
+  return $items;
+}
+
+
+/*
+ * Implement a user settings form hook. Modules should build a form
+ * using an array that mirrors the Drupal form API. activitystream.module
+ * will add the form elements to a tab called Activity Streams on the
+ * user's Profile Edit page. Fields should be named
+ * yourmodulename_fieldname. For instance, to store the user ID for 
+ * Flickr, the field name is activitystream_flickr_userid
+ *
+ * To avoid collisions with other activitystream module's forms
+ * use your module's name as the form array's key.
+ *
+ * @param $edit
+ *   The values of the form fields, used for setting defaults
+ * 
+ */
+function activitystream_youtube_favorites_activitystream_settings(&$edit) {
+  $form['activitystream_youtube_favorites'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('YouTube Favorites settings'));
+  $form['activitystream_youtube_favorites']['activitystream_youtube_favorites_userid'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Username'),
+    '#default_value' => empty($edit['activitystream_youtube_favorites_userid']) ? '' : $edit['activitystream_youtube_favorites_userid'],
+    '#description' => t('The username for your YouTube account'));
+  return $form;  
+}
+
+function theme_activitystream_youtube_favorites_icon() {
+  return theme_image(drupal_get_path('module', 'activitystream_youtube_favorites') .'/youtube.jpeg', 'YouTube');
+}
+
+function theme_activitystream_youtube_favorites_item($action) {
+  $node = node_load($action->nid);
+  $date = theme('activitystream_date', $node->created);
+  $user = activitystream_user_load($node->uid);
+  $name = theme('activitystream_username', $user);
+  return '<span class="activitystream-item">'. theme('activitystream_youtube_favorites_icon') ." <span>$name favorited ". l($node->title, $action->link) ." <span class=\"activitystream-created\">$date</span></span>". l('#', 'node/'. $node->nid, array('attributes' => array('class' => 'permalink'))) .'</span>';
+}
+
+function activitystream_youtube_favorites_theme() {
+  return array(
+    'activitystream_youtube_favorites_icon' => array(
+      'arguments' => array(),
+    ),
+    'activitystream_youtube_favorites_item' => array(
+      'arguments' => array('action' => NULL),
+    ),
+  );
+}

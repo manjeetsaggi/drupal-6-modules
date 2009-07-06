@@ -1,0 +1,8 @@
+; $Id$
+
+name = Hulu Feed
+description = Your Hulu activity
+dependencies[] = activitystream 
+dependencies[] = activitystream_feed
+package = Activity Stream
+core = 6.x
