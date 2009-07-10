@@ -1,5 +1,5 @@
 <?php
-// $Id: user_relationships_api.api.inc,v 1.1.2.11 2009/03/24 11:07:55 alexk Exp $
+// $Id: user_relationships_api.api.inc,v 1.1.2.15 2009/07/06 15:55:04 alexk Exp $
 
 /**
  * @file
@@ -101,7 +101,7 @@ function user_relationships_types_load($reset = NULL) {
 function user_relationships_type_save(&$rtype) {
   _user_relationships_invoke('presave', $rtype, TRUE);
 
-  $op = $rtype->rtid ? 'update' : 'insert';
+  $op = (isset($rtype->rtid) && $rtype->rtid) ? 'update' : 'insert';
 
   // find a relationship type with the name we're trying to save
   // if it's an update action check to see that the rtypes match
@@ -165,7 +165,7 @@ function user_relationships_request_relationship($requester, $requestee, $type, 
 
   //check requester is allowed to create this rtype
   if (!user_relationships_api_can_request($requester, $type)) {
-    watchdog('user_relationships_api', t('User %user has no suitable roles to request a %rtype relationship', array('%user' => $requester->name, '%rtype' => $type->name)), WATCHDOG_WARNING);
+    watchdog('user_relationships_api', 'User %user has no suitable roles to request a %rtype relationship', array('%user' => $requester->name, '%rtype' => $type->name), WATCHDOG_WARNING);
     //it would be good to return a reason why save is denied, but it's the API portion, it does not expose anything user-visible
     return FALSE;
   }
@@ -174,7 +174,7 @@ function user_relationships_request_relationship($requester, $requestee, $type, 
     $relationship = (object)array(
       'requester_id'  => $requester->uid,
       'requestee_id'  => $requestee->uid,
-      'approved'      => $approved || !$type->requires_approval || $requestee->user_relationships_ui_auto_approve[$type->rtid],
+      'approved'      => $approved || !$type->requires_approval || (isset($requestee->user_relationships_ui_auto_approve) && $requestee->user_relationships_ui_auto_approve[$type->rtid]),
       'rtid'          => $type->rtid,
     );
 
@@ -202,11 +202,13 @@ function user_relationships_save_relationship(&$relationship, $op = 'request') {
   !isset($relationship->created_at) ? $relationship->created_at = time() : NULL;
   $relationship->updated_at = time();
   
+  if ($op == 'approve') {
+    $relationship->approved = 1;
+  }
+  
   _user_relationships_invoke('presave', $relationship);
 
-  if ($relationship->rid) {
-    db_query("DELETE FROM {user_relationships} WHERE rid = %d", $relationship->rid);
-
+  if (isset($relationship->rid)) {
     // Delete possible requests coming the other direction
     $relationship_type = user_relationships_type_load($relationship->rtid);
     if (!$relationship_type->is_oneway) {
@@ -217,7 +219,8 @@ function user_relationships_save_relationship(&$relationship, $op = 'request') {
     }
   }
 
-  if ($valid = drupal_write_record('user_relationships', $relationship)) {
+  //#454680 make sure that an update is performed if this is an existing relationship
+  if ($valid = drupal_write_record('user_relationships', $relationship, (isset($relationship->rid) ? array('rid') : array()))) {
     // if the relationship has been approved and is two-way we need
     // to do a double entry for DB efficiency
     $relationship_type = user_relationships_type_load($relationship->rtid);
@@ -286,6 +289,7 @@ function user_relationships_delete_relationship(&$relationship, &$deleted_by, $o
   *
   *   sort
   *     a string containing a valid column name which will become the key for the returned array of relationships
+  *     default is 'rid'
   *
   *   order
   *     a string containing SQL stating the column and direction of the sort (ex. "requester_id ASC, rtid DESC")
@@ -296,6 +300,11 @@ function user_relationships_delete_relationship(&$relationship, &$deleted_by, $o
   *   include_user_info
   *     a boolean that will load basic user info without having to call user_load
   *     columns: uid, name, mail, data, picture
+  *     
+  *   include_twoway_reverse (not used unless there is a specific need)
+  *     a boolean that, if present, and if sort is set to other than 'rid', will include records for both directions for
+  *     two-way relationships. Normally for a two-way relationship only one entry is returned, although in the database there
+  *     are two records. This flag has no effect if sort is 'rid'
   *
   * @param $reset
   *   a boolean that will reset the internal static $relationships variable to ensure programatic relationship insertion works
@@ -328,15 +337,15 @@ function user_relationships_load($param = array(), $options = array(), $reset = 
 
   $query = _user_relationships_generate_query($param, $options);
 
-  $results = db_query($query[($count ? 'count' : 'query')], $query['arguments']);
+  $results = db_query($query[(isset($count) && $count ? 'count' : 'query')], $query['arguments']);
 
-  if ($count) {
+  if (isset($count) && $count) {
     return (int)db_result($results);
   }
 
   $relationships = array();
   while ($relationship = db_fetch_object($results)) {
-    if ($include_user_info) {
+    if (isset($include_user_info)) {
       user_relationships_api_translate_user_info($relationship);
     }
 
@@ -348,7 +357,7 @@ function user_relationships_load($param = array(), $options = array(), $reset = 
     }
   }
 
-  $return = $rid ? $relationships[$rid] : $relationships;
+  $return = isset($rid) ? $relationships[$rid] : $relationships;
   _user_relationships_invoke('load', $return);
 
   return $return;
@@ -402,7 +411,7 @@ function user_relationships_api_can_request($requester, $relationship_type) {
     return TRUE;
   }
   //if no roles have been set, any user can request
-  if (!count($relationship_type->roles)) {
+  if (!isset($relationship_type->roles) || !count($relationship_type->roles)) {
     return TRUE;
   }
   //check user has at least one required role

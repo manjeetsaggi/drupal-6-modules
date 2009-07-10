@@ -1,5 +1,5 @@
 <?php
-// $Id: user_relationship_blocks.templates.inc,v 1.1.2.6 2008/10/30 12:49:33 alexk Exp $
+// $Id: user_relationship_blocks.templates.inc,v 1.1.2.8 2009/06/28 16:46:38 alexk Exp $
 /**
  * @file 
  * misc block theming functions
@@ -24,7 +24,7 @@ function template_preprocess_user_relationships_block(&$variables) {
   }
 
   $query_opts['limit'] = $settings->size;
-
+  
   $key = $extra ? ($extra == 'you_to_them' ? 'requester_id' : 'requestee_id') : 'user';
   $args = array($key => $account->uid, 'approved' => TRUE);
 

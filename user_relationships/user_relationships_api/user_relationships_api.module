@@ -1,5 +1,5 @@
 <?php
-// $Id: user_relationships_api.module,v 1.1.2.10 2009/02/26 23:07:34 alexk Exp $
+// $Id: user_relationships_api.module,v 1.1.2.15 2009/06/28 21:47:12 alexk Exp $
 
 /**
  * @file
@@ -15,6 +15,9 @@ define('UR_BANNED', 0x1);
 // Pre Loading files that will be required in this module
 foreach (array('api', 'actions', 'socnet') as $file) {
   module_load_include("inc", "user_relationships_api", "user_relationships_api.{$file}");
+}
+if (module_exists('privatemsg')) {
+  module_load_include('inc', 'user_relationships_api', 'user_relationships_api.privatemsg');
 }
 
 
@@ -35,6 +38,7 @@ function _user_relationships_invoke($type, &$relationship, $is_type = FALSE) {
 function _user_relationships_generate_query($param = array(), $options = array()) {
   extract($options, EXTR_SKIP);
 
+  $twoway_reverse_clause = FALSE;//#479486
   // Turn the conditions into a query.
   foreach ($param as $key => $value) {
     if (!isset($value)) {
@@ -45,10 +49,14 @@ function _user_relationships_generate_query($param = array(), $options = array()
 
     switch ($key) {
     case 'between':
-      $cond[] =
-        "((ur.requester_id {$operator[0]} AND ur.requestee_id {$operator[1]})".
-        ' OR '.
-        "(ur.requestee_id {$operator[0]} AND ur.requester_id {$operator[1]}))";
+      $between_cond = "((ur.requester_id {$operator[0]} AND ur.requestee_id {$operator[1]}) OR (";
+      //#479486 do not include reverse records of two-way relationships by default
+      if (!isset($include_twoway_reverse)) {
+        $between_cond .= 'urt.is_oneway <> 0 AND ';
+        $twoway_reverse_clause = TRUE;
+      }
+      $between_cond .= "ur.requestee_id {$operator[0]} AND ur.requester_id {$operator[1]}))";
+      $cond[] = $between_cond;
       $arguments[] = $value[0];
       $arguments[] = $value[1];
       $arguments[] = $value[0];
@@ -56,10 +64,21 @@ function _user_relationships_generate_query($param = array(), $options = array()
       break;
 
     case 'user':
-      $cond[] = "(ur.requester_id {$operator} OR ur.requestee_id {$operator})";
+      //#479486 when showing all user's relationships, do not include reverse records of two-way relationships
+      if (!isset($include_twoway_reverse)) {
+        $cond[] = "(ur.requester_id {$operator} OR (urt.is_oneway <> 0 AND ur.requestee_id {$operator}))";
+        $twoway_reverse_clause = TRUE;
+      }
+      else {
+        $cond[] = "(ur.requester_id {$operator} OR ur.requestee_id {$operator})";
+      }
       $arguments[] = $value;
       $arguments[] = $value;
       break;
+    
+    case 'requester_id':
+    case 'requestee_id':
+      $twoway_reverse_clause = TRUE;//#479486 these columns automatically should exclude duplicates
 
     default:
       $types_cols = array('name', 'plural_name', 'is_oneway', 'requires_approval', 'expires_val');
@@ -75,6 +94,12 @@ function _user_relationships_generate_query($param = array(), $options = array()
       }
     }
   }
+  
+  //#479486 add a general clause that removed reverse direction from two-way relationship results, unless it's been addressed above
+  if (!$twoway_reverse_clause && !isset($include_twoway_reverse)) {
+    $cond[] = '(urt.is_oneway <> 0 OR ur.approved <> 1 OR ur.requester_id < ur.requestee_id)';
+    $twoway_reverse_clause = TRUE;
+  }
 
   $selects = array('DISTINCT ur.rid', 'ur.*', 'urt.*');
   $joins = array('INNER JOIN {user_relationship_types} urt USING ( rtid )');
@@ -82,7 +107,7 @@ function _user_relationships_generate_query($param = array(), $options = array()
   // We wont need anything after this point for the count SQL
   $count_joins = implode(' ', $joins);
 
-  if ($include_user_info) {
+  if (isset($include_user_info) && $include_user_info) {
     $selects = array_merge($selects, array(
       'requesters.name AS requester_name',
       'requestees.name AS requestee_name',

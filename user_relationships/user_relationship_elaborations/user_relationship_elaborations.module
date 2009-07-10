@@ -1,5 +1,5 @@
 <?php
-// $Id: user_relationship_elaborations.module,v 1.1.2.6 2009/01/27 17:39:05 jaydub Exp $
+// $Id: user_relationship_elaborations.module,v 1.1.2.9 2009/05/07 08:21:46 alexk Exp $
 
 /**
  * @file
@@ -26,7 +26,9 @@ function user_relationships_save_elaboration($rid, &$elaboration) {
     'elaboration' => $elaboration,
   );
 
-  return drupal_write_record('user_relationship_elaborations', $record);
+  //#456056 need to check if a record already exists, and update. do not assume there is no such rid
+  $existing_rid = $message = db_result(db_query("SELECT rid FROM {user_relationship_elaborations} WHERE rid = %d", $rid));
+  return drupal_write_record('user_relationship_elaborations', $record, ($existing_rid ? array('rid') : array()));
 }
 
 /**
@@ -57,27 +59,30 @@ function user_relationship_elaborations_user_relationships($op, &$relationships)
   if (!is_array($relationships)) {
     $relationships->elaboration = db_result(db_query('SELECT elaboration FROM {user_relationship_elaborations} WHERE rid = %d'), $relationships->rid);
 
-    if (in_array($op, array('cancel', 'delete', 'remove'))) {
+    if (in_array($op, array('cancel', 'delete', 'remove', 'disapprove'))) {
       db_query('DELETE FROM {user_relationship_elaborations} WHERE rid = %d', $relationships->rid);
     }
   }
   else {
+    //have several relationships to process
     $rids = array();
+    //collect rids from the array
     _user_relationship_elaborations_walk_recursive('find_rids', $relationships, $rids);
 
     if ($rids) {
-      if (in_array($op, array('cancel', 'delete', 'remove'))) {
+      if (in_array($op, array('cancel', 'delete', 'remove', 'disapprove'))) {
         db_query('DELETE FROM {user_relationship_elaborations} WHERE rid IN ('. db_placeholders($rids) .')', $rids);
       }
       else {
-      $results = db_query('SELECT rid, elaboration FROM {user_relationship_elaborations} WHERE rid IN ('. db_placeholders($rids) .')', $rids);
-      while ($result = db_fetch_object($results)) {
-        $elaborations[$result->rid] = $result->elaboration;
+        //load elaboration data into these relationships
+        $results = db_query('SELECT rid, elaboration FROM {user_relationship_elaborations} WHERE rid IN ('. db_placeholders($rids) .')', $rids);
+        while ($result = db_fetch_object($results)) {
+          $elaborations[$result->rid] = $result->elaboration;
+        }
+  
+        _user_relationship_elaborations_walk_recursive('load', $relationships, $elaborations);
       }
-
-      _user_relationship_elaborations_walk_recursive('load', $relationships, $elaborations);
     }
-  }
   }
 }
 
@@ -110,7 +115,7 @@ function user_relationship_elaborations_preprocess_user_relationships(&$variable
   if (!variable_get('user_relationships_elaborations_api_only', FALSE)) {
     user_relationship_elaborations_user_relationships('load', $variables['relationships']);
     foreach ($variables['relationships'] as $rid => $relationship) {
-      $variables['relationships'][$rid]->extra_for_display .= $variables['relationships'][$rid]->elaboration;
+      $variables['relationships'][$rid]->extra_for_display .= check_plain($variables['relationships'][$rid]->elaboration);
     }
   }
 }

@@ -1,5 +1,5 @@
 <?php
-// $Id: nodequeue.module,v 1.84 2009/06/10 22:19:30 ezrag Exp $
+// $Id: nodequeue.module,v 1.87 2009/07/08 15:04:34 ezrag Exp $
 
 // --------------------------------------------------------------------------
 // Drupal Hooks
@@ -1036,18 +1036,10 @@ function nodequeue_arrange_subqueue($queue, $subqueue) {
   $output = '';
   $body = '';
   $order = $queue->reverse ? 'DESC' : 'ASC';
-  $nids_visible = array();
-  
-  //Get the list of nodes in the subqueue.
-  //First, get a list of nodes taking into account node access restrictions
-  if (!user_access('administer nodes')) {
-    $node_status_sql = ' AND n.status = 1';
-  }
-  $query_restricted = db_query(db_rewrite_sql("SELECT DISTINCT(n.nid) FROM {node} n LEFT JOIN {nodequeue_nodes} nq ON nq.nid = n.nid WHERE nq.sqid = %d$node_status_sql ORDER BY nq.position $order"), $sqid); 
-  while ($result_restricted = db_fetch_object($query_restricted)) {
-    $nids_visible[$result_restricted->nid] = $result_restricted->nid;
-  }
 
+  //Get the list of nodes in the subqueue.
+  //First, get a list of nodes taking into account node access restrictions.
+  $nids_visible = nodequeue_nids_visible($subqueue->sqid);
   //Then, get an unrestricted list of nodes in the subqueue.
   //Titles are not displayed for nodes that are not present in the result set of both queries.
   $result = db_query("SELECT DISTINCT(n.nid), n.title, n.uid, u.name, n.created, nq.position FROM {node} n LEFT JOIN {users} u on n.uid = u.uid LEFT JOIN {nodequeue_nodes} nq ON nq.nid = n.nid WHERE nq.sqid = %d ORDER BY nq.position $order", $sqid);
@@ -1378,10 +1370,9 @@ function nodequeue_arrange_subqueue_form_add_submit($form, &$form_state) {
  * javascript is disabled in the client, and is a fallback technique.
  */
 function nodequeue_admin_up($queue, $subqueue, $pos) {
-  if (!is_numeric($pos) || !is_numeric($subqueue) || !nodequeue_check_token($pos)) {
+  if (!is_numeric($pos) || !is_object($subqueue) || !nodequeue_check_token($pos)) {
     return drupal_goto();
   }
-  $subqueue = nodequeue_load_subqueue($subqueue);
   // This function is safe if $pos is out of bounds.
   if (!$queue->reverse) {
     nodequeue_queue_up($subqueue, $pos);
@@ -1398,10 +1389,9 @@ function nodequeue_admin_up($queue, $subqueue, $pos) {
  * javascript is disabled in the client, and is a fallback technique.
  */
 function nodequeue_admin_down($queue, $subqueue, $pos) {
-  if (!is_numeric($pos) || !is_numeric($subqueue) || !nodequeue_check_token($pos)) {
+  if (!is_numeric($pos) || !is_object($subqueue) || !nodequeue_check_token($pos)) {
     return drupal_goto();
   }
-  $subqueue = nodequeue_load_subqueue($subqueue);
   // This function is safe if $pos is out of bounds.
   if ($queue->reverse) {
     nodequeue_queue_up($subqueue, $pos);
@@ -1418,10 +1408,9 @@ function nodequeue_admin_down($queue, $subqueue, $pos) {
  * only if javascript is disabled in the client, and is a fallback technique.
  */
 function nodequeue_admin_front($queue, $subqueue, $pos) {
-  if (!is_numeric($pos) || !is_numeric($subqueue) || !nodequeue_check_token($pos)) {
+  if (!is_numeric($pos) || !is_object($subqueue) || !nodequeue_check_token($pos)) {
     return drupal_goto();
   }
-  $subqueue = nodequeue_load_subqueue($subqueue);
   // This function is safe if $pos is out of bounds.
   if (!$queue->reverse) {
     nodequeue_queue_front($subqueue, $pos);
@@ -1438,10 +1427,9 @@ function nodequeue_admin_front($queue, $subqueue, $pos) {
  * only if javascript is disabled in the client, and is a fallback technique.
  */
 function nodequeue_admin_back($queue, $subqueue, $pos) {
-  if (!is_numeric($pos) || !is_numeric($subqueue) || !nodequeue_check_token($node->nid)) {
+  if (!is_numeric($pos) || !is_object($subqueue) || !nodequeue_check_token($pos)) {
     return drupal_goto();
   }
-  $subqueue = nodequeue_load_subqueue($subqueue);
   // This function is safe if $pos is out of bounds.
   if ($queue->reverse) {
     nodequeue_queue_front($subqueue, $pos);
@@ -1461,7 +1449,7 @@ function nodequeue_admin_back($queue, $subqueue, $pos) {
  * multiple times.
  */
 function nodequeue_admin_remove($queue, $subqueue, $pos) {
-  if (!is_numeric($pos) || !is_numeric($subqueue) || !nodequeue_check_token($node->nid)) {
+  if (!is_numeric($pos) || !is_object($subqueue) || !nodequeue_check_token($pos)) {
     return drupal_goto();
   }
 
@@ -1584,14 +1572,34 @@ function _nodequeue_ajax_add($sqid, $position, $string) {
   }
 
   $node->position = $position;
+  $nids_visible = nodequeue_nids_visible($subqueue->sqid);
   return array(
     'status' => 1,
     'extra' => $node->nid,
     'max' => $queue->size,
-    'data' => nodequeue_arrange_subqueue_entry($queue, $subqueue, $node),
+    'data' => nodequeue_arrange_subqueue_entry($queue, $subqueue, $node, $nids_visible),
   );
 }
 
+/*
+ * Get the list of nodes in the subqueue, taking into account node access restrictions.
+ */
+function nodequeue_nids_visible($sqid = -1, $account = NULL) {
+  if (!$account) {
+    global $user;
+    $account = $user;
+  }
+  $nids_visible = array();
+  if (!user_access('administer nodes', $account)) {
+    $node_status_sql = ' AND n.status = 1';
+  }
+
+  $query_restricted = db_query(db_rewrite_sql("SELECT DISTINCT(n.nid) FROM {node} n LEFT JOIN {nodequeue_nodes} nq ON nq.nid = n.nid WHERE nq.sqid = %d $node_status_sql ORDER BY nq.position $order"), $sqid); 
+  while ($result_restricted = db_fetch_object($query_restricted)) {
+    $nids_visible[$result_restricted->nid] = $result_restricted->nid;
+  }
+  return $nids_visible;
+}
 // --------------------------------------------------------------------------
 // Nodequeue manipulation API.
 
@@ -2590,7 +2598,7 @@ function nodequeue_load_back($sqid, $teaser = TRUE, $links = TRUE) {
  */
 function nodequeue_view_random_node($sqid, $teaser = TRUE, $links = TRUE) {
   $count = db_result(db_query(db_rewrite_sql("SELECT COUNT(n.nid) FROM {node} n INNER JOIN {nodequeue_nodes} nn ON n.nid = nn.nid WHERE nn.sqid = %d AND n.status = 1"), $sqid));
-  return array_shift(nodequeue_view_nodes($sqid, FALSE, $teaser, $links, rand(0, $count - 1), 1));
+  return nodequeue_view_nodes($sqid, FALSE, $teaser, $links, rand(0, $count - 1), 1);
 }
 
 /**
@@ -2729,8 +2737,12 @@ function nodequeue_api_autocomplete($queue, $subqueue, $string) {
     return $matches;
   }
 
+  global $user;
+  if (!user_access('administer nodes', $user)) {
+    $where = 'n.status = 1 AND ';
+  }
 
-  $where = "n.type IN (". db_placeholders($queue->types, 'varchar') .')';
+  $where .= "n.type IN (". db_placeholders($queue->types, 'varchar') .')';
   $where_args = $queue->types;
 
   // Run a match to see if they're specifying by nid.
