@@ -1,0 +1,186 @@
+<?php
+// $Id: cck_sync.module,v 1.1 2009/07/06 19:39:31 amitaibu Exp $
+
+/**
+ * @file
+ * Synchronize content type by code export.
+ */
+
+/*******************************************************************************
+ * API functions
+ ******************************************************************************/
+
+/**
+ * Import content type from a file containing the exported code.
+ *
+ * @param $file
+ *   The path to the file.
+ */
+function cck_sync_from_file($file = '') {
+  // The import will be populate into the $content variable.
+  $content = array();
+
+  ob_start();
+  include $file;
+  ob_end_clean();
+
+  cck_sync_crud($content);
+}
+
+/**
+ * Get content type and field definitions and add, update or delete accordingly.
+ *
+ * @param $content
+ *   The content type and fields export.
+ */
+function cck_sync_crud($content = array()) {
+  $content += array('fields' => array(), 'groups'=> array(), 'extra' => array());
+
+  $rebuild = FALSE;
+  $type_name = $content['type']['type'];
+
+  // Gather type information.
+  $type = content_types($type_name);
+  if (empty($type['type'])) {
+    // Content type doesn't exist - import.
+    cck_sync_import_content($content);
+  }
+  // Content type exists.
+  else {
+    module_load_include('inc', 'content', 'includes/content.crud');
+    $groups = $fields = array('create' => array(), 'update' => array(), 'delete' => array());
+
+    $groups = cck_sync_group_crud($content);
+
+
+    $new_fields = _cck_sync_get_content($content, 'field');
+
+    // Get all the fields that should be updated.
+    $fields['update'] = array_intersect_key($new_fields, $type['fields']);
+
+    $fields['create'] = array_diff_key($new_fields, $type['fields']);
+    $fields['delete'] = array_diff_key($type['fields'], $new_fields);
+  }
+
+  if (!empty($fields)) {
+    // We'll rebuild in the end, so update will be quicker.
+    $rebuild = TRUE;
+  }
+
+  foreach (array('create', 'update', 'delete') as $op) {
+    if (!empty($fields[$op])) {
+      foreach ($fields[$op] as $field => &$value) {
+        $value['type_name'] = $type_name;
+        switch ($op) {
+          case 'create':
+          case 'update':
+            call_user_func_array('content_field_instance_'. $op, array($value, FALSE));
+            if ($groups) {
+              // There are groups so update the fields.
+              fieldgroup_update_fields($value);
+            }
+            break;
+
+          case 'delete':
+            content_field_instance_delete($field, $type_name, FALSE);
+            break;
+        }
+      }
+    }
+  }
+
+  if ($rebuild) {
+    content_clear_type_cache(TRUE);
+    menu_rebuild();
+  }
+
+  // Import weights of non-CCK fields.
+  if (isset($content['extra'])) {
+    variable_set('content_extra_weights_'. $type_name, $content['extra']);
+  }
+}
+
+
+/*******************************************************************************
+ * Helper functions
+ ******************************************************************************/
+
+function cck_sync_group_crud($content = array()) {
+  if (module_exists('fieldgroup')) {
+    $return = FALSE;
+    $type_name = $content['type']['type'];
+
+    $groups = array('create' => array(), 'update' => array(), 'delete' => array());
+    $existing_groups = fieldgroup_groups($type_name);
+    $new_groups = _cck_sync_get_content($content, 'group');
+    // Get all the fields that should be updated.
+    $groups['update'] = array_intersect_key($new_groups, $existing_groups);
+
+    $groups['create'] = array_diff_key($new_groups, $existing_groups);
+    $groups['delete'] = array_diff_key($existing_groups, $new_groups);
+
+    foreach (array('create', 'update', 'delete') as $op) {
+      if (!empty($groups[$op])) {
+        $return = TRUE;
+        foreach ($groups[$op] as $group => $value) {
+          switch ($op) {
+            case 'create':
+            case 'update':
+              fieldgroup_save_group($type_name, $value);
+              break;
+
+            case 'delete':
+              fieldgroup_delete($type_name, $group);
+              break;
+          }
+        }
+      }
+    }
+  }
+  return $return;
+}
+
+/**
+ * Import a content type from exported code.
+ *
+ * This method can be more easy to implement than manually creating node types
+ * with the node.inc and then creating fields with content.inc. Content copy
+ * can create the node type and all the fields in a single command.
+ *
+ * Taken from install profile api module.
+ *
+ * @param $content
+ *   The content type and fields export.
+ * @param $type_name
+ *   If importing into an existing type, pass the content type name along
+ *   and the type will be updated.
+ */
+function cck_sync_import_content($content = array(), $type_name = '') {
+  $form_state = array();
+  $form = content_copy_import_form($form_state, $type_name);
+
+  $form_state['values']['type_name'] = $type_name ? $type_name : '<create>';
+  $form_state['values']['macro'] = '$content = '. var_export($content, 1) .';';
+  $form_state['values']['op'] = t('Import');
+
+  // Call the submit function directly.
+  // Using drupal_execute() leads to problems with the form_state when called
+  // again within this submit function.
+  content_copy_import_form_submit($form, $form_state);
+}
+
+/**
+ * Return an array with the key as the field or group name.
+ * @param $type
+ *   Should be 'field' or 'group'.
+ */
+function _cck_sync_get_content($content = array(), $type = '') {
+  $key = $type == 'field' ? 'fields' : 'groups';
+  $return = array();
+  if (!empty($content[$key])) {
+    foreach ($content[$key] as $field) {
+      $return[$field[$type .'_name']] = $field;
+    }
+  }
+  return $return;
+}
