@@ -22,9 +22,7 @@
       <?php print $message_body; ?>
     </div>
     <?php if ( isset($message_actions) ) : ?>
-      <div class="message-actions">
-        <?php print $message_actions; ?>
-      </div>
+       <?php print $message_actions ?>
     <?php endif ?>
   </div>
   <div class="clear-both bottom-border"></div>

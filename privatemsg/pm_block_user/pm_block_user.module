@@ -1,5 +1,5 @@
 <?php
-// $Id: pm_block_user.module,v 1.1 2008/11/05 05:29:47 litwol Exp $
+// $Id: pm_block_user.module,v 1.1.2.5 2009/06/08 13:38:41 litwol Exp $
 
 /**
  * @file
@@ -14,7 +14,7 @@ function pm_block_user_menu() {
     'title'            => 'Block user messages',
     'page callback'    => 'drupal_get_form',
     'page arguments'   => array('pm_block_user_form', 2),
-    'access arguments' => array('read privatemsg'),
+    'access callback'  => 'privatemsg_user_access',
     'type'             => MENU_CALLBACK,
     'weight'           => -10,
   );
@@ -89,31 +89,46 @@ function pm_block_user_form_submit($form, &$form_state) {
 /**
  * Implementation of hook_privatemsg_block_message.
  */
- function pm_block_user_privatemsg_block_message($author, $recipient) {
+ function pm_block_user_privatemsg_block_message($author, $recipients) {
   global $user;
-  $result = db_result(db_query('SELECT COUNT(*) FROM {pm_block_user} WHERE author = %d AND recipient = %d', $author->uid, $recipient->uid));
-  if ($result <> 0) {
-    return t('!name has chosen to not recieve any more messages from you.', array('!name' => $recipient->name));
+  $args = array_merge(array($author->uid), array_keys($recipients));
+  $result = db_query('SELECT recipient FROM {pm_block_user} WHERE author = %d AND recipient IN ('. db_placeholders($recipients) .') GROUP BY recipient', $args);
+  $blocked = array();
+  while ($row = db_fetch_array($result)) {
+    $blocked[] = array(
+      'uid' => $row['recipient'],
+      'message' => t('%name has chosen to not recieve any more messages from you.', array('%name' => $recipients[$row['recipient']]->name))
+    );
   }
+  return $blocked;
+}
+
+function pm_block_user_privatemsg_sql_load_alter(&$fragments, $pmid, $uid) {
+  $fragments['select'][] = 'pmbu.recipient AS is_blocked';
+  $fragments['select'][] = 'pmi.thread_id';
+
+  $fragments['inner_join'][] = 'LEFT JOIN {pm_block_user} pmbu ON (pm.author = pmbu.author AND pmi.uid = pmbu.recipient)';
 }
 
 /**
- * Implementation of hook_privatemsg_pm_controls.
+ * Implementation of hook_privatemsg_message_view_alter.
  */
- function pm_block_user_privatemsg_pm_controls($pmid) {
+ function pm_block_user_privatemsg_message_view_alter(&$vars) {
   global $user;
-  $author_id = db_result(db_query('SELECT author FROM {pm_message} WHERE mid = %d', $pmid));
-  $thread = db_result(db_query('SELECT thread_id FROM {pm_index} WHERE mid = %d', $pmid));
+
+  $author_id = $vars['message']['author']->uid;
+  if (!isset($vars['message']['thread_id'])) {
+    // No thread id, this is probably only a preview
+    return;
+  }
+  $thread_id = $vars['message']['thread_id'];
 
   if ($user->uid <> $author_id) {
-    if (db_result(db_query('SELECT COUNT(recipient) FROM {pm_block_user} WHERE author = %d AND recipient = %d', $author_id, $user->uid))) {
-      $output = l(t('Unblock author'), 'messages/block/'. $author_id, array('query' => 'destination=messages/view/' . $thread));
+    if ($vars['message']['is_blocked']) {
+      $vars['message_actions'][] = array('title' => t('Unblock author'), 'href' => 'messages/block/'. $author_id, array('query' => 'destination=messages/view/' . $thread_id));
     }
     else {
-      $output = l(t('Block author'), 'messages/block/'. $author_id, array('query' => 'destination=messages/view/' . $thread));
+      $vars['message_actions'][] = array('title' => t('Block author'), 'href' => 'messages/block/'. $author_id, array('query' => 'destination=messages/view/' . $thread_id));
     }
-  }
-  if (isset($output)) {
-    return $output;
   }
 }

@@ -1,32 +1,38 @@
 <?php
-// $Id: pm_block_user.install,v 1.1 2008/11/05 05:29:47 litwol Exp $
-
+// $Id: pm_block_user.install,v 1.1.2.2 2009/02/20 08:30:27 litwol Exp $
+/**
+ * @file
+ * Install file for pm_block_user.module
+ */
+/**
+ * @return unknown
+ */
 function pm_block_user_schema() {
-  $schema = array();  
+  $schema = array();
 
   $schema['pm_block_user'] = array(
-    'description'       => t('{pm_block_user} holds data mapping which authors who cannot messages to which recipients '),
+    'description'       => '{pm_block_user} holds data mapping which authors who cannot messages to which recipients ',
     'fields'        => array(
       'author'    => array(
-        'description'   => t('ID of the author'),
+        'description'   => 'ID of the author',
         'type'          => 'int',
         'not null'      => TRUE,
         'unsigned'      => TRUE,
       ),
       'recipient'    => array(
-        'description'   => t('ID of the recipient'),
+        'description'   => 'ID of the recipient',
         'type'          => 'int',
         'not null'      => TRUE,
         'unsigned'      => TRUE,
       ),
     ),
   );
-  
+
   return $schema;
 }
 function pm_block_user_install() {
   drupal_install_schema('pm_block_user');
-  
+
 }
 
 function pm_block_user_uninstall() {
