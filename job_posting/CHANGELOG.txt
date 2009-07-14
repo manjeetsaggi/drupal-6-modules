@@ -1,4 +1,17 @@
-// $Id: CHANGELOG.txt,v 1.2.2.12 2008/10/09 16:55:30 gmarus Exp $
+// $Id: CHANGELOG.txt,v 1.2.2.15 2009/07/13 16:31:08 gmarus Exp $
+
+job_posting 6.x-1.x-dev, 2009-07-13
+- #302791 by gmarus: applied Views 2 integration patch provided by drupal users
+  gains and defconjuan
+
+job_posting 6.x-1.x-dev, 2009-02-17
+- #374383 by gmarus: fixed bug whereby postgresql users would get an error on
+  installation due to incorrect sql when the supplemental country lookup table
+  is inserted. Credit to ccurvey for report and remedy.
+
+job_posting 6.x-1.x-dev, 2008-10-15
+- #321636 by gmarus: fixed bug preventing use of WYSIWIG module with job_posting
+  description field. Credit to rheenen for report and remedy.
 
 job_posting 6.x-1.x-dev, 2008-10-09
 - fixed bug that was preventing proper sender header from being populated during
