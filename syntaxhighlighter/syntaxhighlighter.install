@@ -1,5 +1,5 @@
 <?php
-// $Id: syntaxhighlighter.install,v 1.4 2009/05/03 04:07:31 mattyoung Exp $
+// $Id: syntaxhighlighter.install,v 1.5 2009/07/16 20:51:06 mattyoung Exp $
 
 /**
  * @file
@@ -12,6 +12,8 @@ function syntaxhighlighter_uninstall() {
   variable_del('syntaxhighlighter_theme');
   variable_del('syntaxhighlighter_tagname');
   variable_del('syntaxhighlighter_legacy_mode');
+  variable_del('syntaxhighlighter_off_pages');
+  variable_del('syntaxhighlighter_default_expressions');
   cache_clear_all('variables', 'cache');
 }
 

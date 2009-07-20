@@ -1,5 +1,5 @@
 <?php
-// $Id: system_service.inc,v 1.1.2.7 2009/06/10 17:12:43 marcingy Exp $
+// $Id: system_service.inc,v 1.1.2.5 2009/03/07 22:35:04 marcingy Exp $
 /**
  * @author Services Dev Team
  * @file
@@ -71,4 +71,19 @@ function system_service_module_exists($module) {
   }
 
   return "";
+}
+
+/**
+ * Returns all the available services
+ */
+function system_service_getservices() {
+  return services_get_all();
+}
+
+/**
+ * Clear all caches
+ */
+function system_service_cache_clear_all() {
+  drupal_flush_all_caches();
+  watchdog('cache clear service', 'caches cleared');
 }

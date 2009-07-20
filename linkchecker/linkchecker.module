@@ -1,5 +1,5 @@
 <?php
-// $Id: linkchecker.module,v 1.7.2.58 2009/03/25 22:59:52 hass Exp $
+// $Id: linkchecker.module,v 1.7.2.86 2009/07/13 22:34:19 hass Exp $
 
 /**
  * @file
@@ -12,7 +12,7 @@
  * Implementation of hook_perm().
  */
 function linkchecker_perm() {
-  return array('access linkchecker', 'administer linkchecker');
+  return array('access linkchecker', 'edit link settings', 'administer linkchecker');
 }
 
 /**
@@ -21,10 +21,7 @@ function linkchecker_perm() {
 function linkchecker_help($path, $arg) {
   switch ($path) {
     case 'admin/help#linkchecker':
-      $output = '<p>';
-      $output .= t('This module provides an aid to finding broken links on your site. It periodically checks contents of all public nodes, tries to find any html links and check for their validity. It reports broken links through the admin interface. For more information about status codes see <a href="@rfc">Status Code Definitions</a>.', array('@rfc' => 'http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html'));
-      $output .= '</p>';
-      return $output;
+      return '<p>' . t('This module provides an aid to finding broken links on your site. It periodically checks contents of all public nodes, tries to find any html links and check for their validity. It reports broken links through the admin interface. For more information about status codes see <a href="@rfc">Status Code Definitions</a>.', array('@rfc' => 'http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html')) . '</p>';
   }
 }
 
@@ -39,7 +36,7 @@ function linkchecker_menu() {
     'page callback' => 'drupal_get_form',
     'page arguments' => array('linkchecker_admin_settings_form'),
     'access arguments' => array('administer linkchecker'),
-    'file' => 'linkchecker.admin.inc',
+    'file' => 'includes/linkchecker.admin.inc',
   );
   $items['admin/reports/linkchecker'] = array(
     'title' => 'Broken links',
@@ -47,7 +44,15 @@ function linkchecker_menu() {
     'page callback' => 'linkchecker_admin_report',
     'type' => MENU_NORMAL_ITEM,
     'access arguments' => array('access linkchecker'),
-    'file' => 'linkchecker.admin.inc',
+    'file' => 'includes/linkchecker.admin.inc',
+  );
+  $items['linkchecker/%linkchecker_link/edit'] = array(
+    'title' => 'Edit link settings',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('linkchecker_link_edit_form', 1),
+    'access arguments' => array('edit link settings'),
+    'file' => 'includes/linkchecker.admin.inc',
+    'type' => MENU_CALLBACK,
   );
 
   return $items;
@@ -196,7 +201,7 @@ function _linkchecker_batch_import_boxes_op($row, $limit, &$context) {
 
 function _linkchecker_batch_box_import_finished($success, $results, $operations) {
   if ($success) {
-    $message = format_plural(count($results), 'One block has been scanned.', '@count block have been scanned.');
+    $message = format_plural(count($results), 'One block has been scanned.', '@count blocks have been scanned.');
   }
   else {
     $message = t('Finished importing blocks with an error.');
@@ -209,8 +214,8 @@ function _linkchecker_batch_box_import_finished($success, $results, $operations)
  */
 function linkchecker_cron() {
 
-  // Remove outdated links no longer in use.
-  if (time() - variable_get('linkchecker_cleanup_links_last', 0) >= variable_get('linkchecker_cleanup_links_interval', 604800)) {
+  // Remove outdated links no longer in use once per day.
+  if (time() - variable_get('linkchecker_cleanup_links_last', 0) >= 86400) {
     _linkchecker_cleanup_links();
     variable_set('linkchecker_cleanup_links_last', time());
   }
@@ -231,10 +236,10 @@ function linkchecker_cron() {
   $useragent = variable_get('linkchecker_check_useragent', 'Drupal (+http://drupal.org/)');
 
   // Get URLs for checking.
-  $result = db_query_range("SELECT * FROM {linkchecker_links} WHERE last_checked < %d ORDER BY last_checked, lid ASC", time() - $check_links_interval, 0, $check_links_max_per_cron_run);
+  $result = db_query_range("SELECT * FROM {linkchecker_links} WHERE last_checked < %d AND status = %d ORDER BY last_checked, lid ASC", time() - $check_links_interval, 1, 0, $check_links_max_per_cron_run);
   while ($link = db_fetch_object($result)) {
     // Fetch URL.
-    $response = drupal_http_request($link->url, array('User-Agent' => 'User-Agent: ' . $useragent), $link->method, NULL, 0);
+    $response = drupal_http_request($link->url, array('User-Agent' => 'User-Agent: ' . $useragent), $link->method, NULL, 1);
     _linkchecker_status_handling($link, $response);
 
     if ((timer_read('page') / 1000) > (ini_get('max_execution_time') / 2)) {
@@ -325,11 +330,11 @@ function _linkchecker_status_handling($link, $response) {
             }
           }
 
+          // Always use the default revision setting. See node_object_prepare().
+          $node_options = variable_get('node_options_'. $node->type, array('status', 'promote'));
+          $node->revision = in_array('revision', $node_options);
           // Save changed node and update the node link list.
           node_save($node);
-          // TODO: Logic could theoretically be optimized for more speed -> do
-          // the link update only once and not after every changed link (minor).
-          _linkchecker_add_node_links($node);
           watchdog('linkchecker', 'Changed permanently moved link in %node from %src to %dst.', array('%node' => url('node/' . $row->nid), '%src' => $link->url, '%dst' => $response->redirect_url), WATCHDOG_INFO);
         }
 
@@ -351,9 +356,6 @@ function _linkchecker_status_handling($link, $response) {
 
             // Save changed comment and update the comment link list.
             comment_save($comment);
-            // TODO: Logic could theoretically be optimized for more speed -> do
-            // the link update only once and not after every changed link (minor).
-            _linkchecker_add_comment_links($comment);
             watchdog('linkchecker', 'Changed permanently moved link in comment %comment from %src to %dst.', array('%comment' => $comment['cid'], '%src' => $link->url, '%dst' => $response->redirect_url), WATCHDOG_INFO);
           }
         }
@@ -376,8 +378,7 @@ function _linkchecker_status_handling($link, $response) {
 
           // Save changed node and update the node link list.
           block_box_save($box, $row->bid);
-          // TODO: Logic could theoretically be optimized for more speed -> do
-          // the link update only once and not after every changed link (minor).
+          // There is no hook that fires on block_box_save(), therefore do it programmatically.
           _linkchecker_add_box_links($box, $row->bid);
           watchdog('linkchecker', 'Changed permanently moved link in box %bid from %src to %dst.', array('%bid' => $row->bid, '%src' => $link->url, '%dst' => $response->redirect_url), WATCHDOG_INFO);
         }
@@ -443,7 +444,7 @@ function linkchecker_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       if (arg(0) == 'node' && is_numeric(arg(1)) && arg(2) == 'edit') {
         // Show a message on node edit page if a link check failed once or more.
         $ignore_response_codes = preg_split('/(\r\n?|\n)/', variable_get('linkchecker_ignore_response_codes', "200\n304\n401\n403"));
-        $links = db_query("SELECT url, code, fail_count FROM {linkchecker_nodes} ln INNER JOIN {linkchecker_links} ll ON ln.lid = ll.lid WHERE ln.nid = %d AND ll.fail_count > %d AND ll.code NOT IN (" . db_placeholders($ignore_response_codes, 'int') . ")", array_merge(array($node->nid, 0), $ignore_response_codes));
+        $links = db_query("SELECT url, code, fail_count FROM {linkchecker_nodes} ln INNER JOIN {linkchecker_links} ll ON ln.lid = ll.lid WHERE ln.nid = %d AND ll.fail_count > %d AND ll.status = %d AND ll.code NOT IN (" . db_placeholders($ignore_response_codes, 'int') . ")", array_merge(array($node->nid, 0, 1), $ignore_response_codes));
         while ($link = db_fetch_object($links)) {
           drupal_set_message(format_plural($link->fail_count, 'Link check of <a href="@url">@url</a> failed once (status code: @code).', 'Link check of <a href="@url">@url</a> failed @count times (status code: @code).', array('@url' => $link->url, '@code' => $link->code)), 'warning', FALSE);
         }
@@ -493,14 +494,11 @@ function linkchecker_form_alter(&$form, &$form_state, $form_id) {
       if (arg(0) == 'comment' && arg(1) == 'edit' && is_numeric(arg(2))) {
         // Show a message on comment edit page if a link check failed once or more.
         $ignore_response_codes = preg_split('/(\r\n?|\n)/', variable_get('linkchecker_ignore_response_codes', "200\n304\n401\n403"));
-        $links = db_query("SELECT url, code, fail_count FROM {linkchecker_comments} lc INNER JOIN {linkchecker_links} ll ON lc.lid = ll.lid WHERE lc.cid = %d AND ll.fail_count > %d AND ll.code NOT IN (" . db_placeholders($ignore_response_codes, 'int') . ")", array_merge(array(arg(2), 0), $ignore_response_codes));
+        $links = db_query("SELECT url, code, fail_count FROM {linkchecker_comments} lc INNER JOIN {linkchecker_links} ll ON lc.lid = ll.lid WHERE lc.cid = %d AND ll.fail_count > %d AND ll.status = %d AND ll.code NOT IN (" . db_placeholders($ignore_response_codes, 'int') . ")", array_merge(array(arg(2), 0, 1), $ignore_response_codes));
         while ($link = db_fetch_object($links)) {
           drupal_set_message(format_plural($link->fail_count, 'Link check of <a href="@url">@url</a> failed once (status code: @code).', 'Link check of <a href="@url">@url</a> failed @count times (status code: @code).', array('@url' => $link->url, '@code' => $link->code)), 'warning', FALSE);
         }
       }
-      break;
-
-    default:
       break;
   }
 }
@@ -841,7 +839,6 @@ function _linkchecker_cleanup_links() {
               SELECT DISTINCT lid FROM {linkchecker_nodes}
             )');
 
-  watchdog('linkchecker', 'Wiped out obsolete links.', array(), WATCHDOG_INFO);
 }
 
 /**
@@ -852,32 +849,128 @@ function _linkchecker_extract_links($text = '') {
   // Try to find URLs and make them compatible with _linkchecker_extract_links regex.
   $text = _linkchecker_filter_url($text);
 
-  // Finds any links in the content.
-  $matches = array();
-  preg_match_all("@
-    <
-    (a|area)
-    \s
-    (.(?!(href)))*?
-    \s*
-    (href\s*=\s*['\"]?
-    ([^\'#\[%\">][^\'\">]*[^\'\"> ])
-    \s*['\"]?)
-  @ix", $text, $matches);
+  // Finds all hyperlinks in the content.
+  $matches_a = array();
+  if (variable_get('linkchecker_extract_from_a', 1) == 1) {
+    // Extract all chars in the href value, except double and single quotes.
+    $pattern_a = '/<(a|area)\s[^>]*href=["\']([^"\']*)["\'][^>]*>/i';
+    preg_match_all($pattern_a, $text, $matches_a);
+  }
+
+  // Finds all audio links in the content.
+  $matches_audio = array();
+  if (variable_get('linkchecker_extract_from_audio', 1) == 1) {
+    $pattern_audio = '/<audio\s[^>]*src=["\']([^"\']*)["\'][^>]*>/i';
+    preg_match_all($pattern_audio, $text, $matches_audio);
+  }
+
+  // Finds embed tags with links in the content.
+  $matches_embed = array();
+  if (variable_get('linkchecker_extract_from_embed', 0) == 1) {
+    $pattern_embed_src = '/<embed\s[^>]*src=["\']([^"\']*)["\'][^>]*>/i';
+    $pattern_embed_pluginurl = '/<embed\s[^>]*pluginurl=["\']([^"\']*)["\'][^>]*>/i';
+    $pattern_embed_pluginspage = '/<embed\s[^>]*pluginspage=["\']([^"\']*)["\'][^>]*>/i';
+
+    preg_match_all($pattern_embed_src, $text, $matches_embed_src);
+    preg_match_all($pattern_embed_pluginurl, $text, $matches_embed_pluginurl);
+    preg_match_all($pattern_embed_pluginspage, $text, $matches_embed_pluginspage);
+
+    $matches_embed = array_merge(
+      (array)$matches_embed_src[1],
+      (array)$matches_embed_pluginurl[1],
+      (array)$matches_embed_pluginspage[1]
+    );
+  }
+
+  // Finds iframe tags with links in the content.
+  $matches_iframe = array();
+  if (variable_get('linkchecker_extract_from_iframe', 0) == 1) {
+    $pattern_iframe = '/<iframe\s[^>]*src=["\']([^"\']*)["\'][^>]*>/i';
+    preg_match_all($pattern_iframe, $text, $matches_iframe);
+  }
+
+  // Finds img tags with links in the content.
+  $matches_img = array();
+  if (variable_get('linkchecker_extract_from_img', 0) == 1) {
+    $pattern_img = '/<img\s[^>]*src=["\']([^"\']*)["\'][^>]*>/i';
+    preg_match_all($pattern_img, $text, $matches_img);
+  }
+
+  // Finds object/param tags with links in the content.
+  $matches_object = array();
+  if (variable_get('linkchecker_extract_from_object', 0) == 1) {
+    // TODO's:
+    //  * Allow flipped order of attributes in "param".
+    //  * Try to extract links in unkown "flashvars" values (for e.g. file=http://, data=http://).
+    $pattern_object_data = '/<object\s[^>]*data=["\']([^"\']*)["\'][^>]*>/i';
+    $pattern_object_codebase = '/<object\s[^>]*codebase=["\']([^"\']*)["\'][^>]*>/i';
+    $pattern_param = '/<param\s[^>]*((name|src)=["\'](archive|filename|href|movie|src|url)["\']\s[^>]*)+value=["\']([^"\']*)["\'][^>]*>/i';
+
+    preg_match_all($pattern_object_data, $text, $matches_object_data);
+    preg_match_all($pattern_object_codebase, $text, $matches_object_codebase);
+    preg_match_all($pattern_param, $text, $matches_param);
+
+    $matches_object = array_merge(
+      (array)$matches_object_data[1],
+      (array)$matches_object_codebase[1],
+      (array)$matches_param[4]
+    );
+  }
+
+  // Finds img tags with links in the content.
+  $matches_source = array();
+  if (variable_get('linkchecker_extract_from_source', 0) == 1) {
+    $pattern_source = '/<source\s[^>]*src=["\']([^"\']*)["\'][^>]*>/i';
+    preg_match_all($pattern_source, $text, $matches_source);
+  }
+
+  // Finds video tags with links in the content.
+  $matches_video = array();
+  if (variable_get('linkchecker_extract_from_video', 0) == 1) {
+    $pattern_video_poster = '/<video\s[^>]*poster=["\']([^"\']*)["\'][^>]*>/i';
+    $pattern_video_src = '/<video\s[^>]*src=["\']([^"\']*)["\'][^>]*>/i';
+
+    preg_match_all($pattern_video_poster, $text, $matches_video_poster);
+    preg_match_all($pattern_video_src, $text, $matches_video_src);
+
+    $matches_video = array_merge(
+      (array)$matches_video_poster[1],
+      (array)$matches_video_src[1]
+    );
+  }
+
+  // Merge all extracted links into one array.
+  $ret = array_merge(
+    (array)$matches_a[2],
+    (array)$matches_audio[1],
+    (array)$matches_embed,
+    (array)$matches_iframe[1],
+    (array)$matches_img[1],
+    (array)$matches_object,
+    (array)$matches_source[1],
+    (array)$matches_video
+  );
 
   $links = array();
-  $ret = $matches[5];
   for ($i=0; isset($ret[$i]); $i++) {
     // Full qualified URLs.
     if (valid_url($ret[$i], TRUE)) {
       // Add to Array and change HTML links into plain text links.
       $links[] = decode_entities($ret[$i]);
     }
+    // Skip mailto:, javascript:, etc.
+    elseif (preg_match('/^\w[\w.+]*:/', $ret[$i])) {
+      continue;
+    }
     // Local URLs.
     elseif (valid_url($ret[$i], FALSE)) {
-      if (variable_get('linkchecker_fqdn_only', 1) == 0) {
-        // Add to Array and change HTML links into plain text links.
+      // Absolute local URLs need to start with [/?#].
+      if (preg_match('!^[/?#]!', $ret[$i]) && variable_get('linkchecker_fqdn_only', 1) == 0) {
+        // Add to Array and change HTML encoded links into plain text links.
         $links[] = decode_entities('http://'. $_SERVER['HTTP_HOST'] . $ret[$i]);
+      }
+      else {
+        // TODO: Relative URLs like "../foo/bar" are currently not supported.
       }
     }
   }
@@ -917,14 +1010,82 @@ function _linkchecker_filter_url($text = '') {
  *   The old link to search for.
  * @param $new_link
  *   The old link should be overwritten with this new link.
- * @return
- *   Text with replaced TRUE if the status code is valid.
  */
 function _linkchecker_link_replace(&$text, $old_link = '', $new_link = '') {
   // Don't do any string replacement if one of the values is empty.
   if (!empty($text) && !empty($old_link) && !empty($new_link)) {
-    $text = str_replace(check_url($old_link), check_url($new_link), $text);
-    $text = str_replace($old_link, check_url($new_link), $text);
+    // Remove hostname from local URLs.
+    $old_link = str_replace('http://'. $_SERVER['HTTP_HOST'], '', $old_link);
+    $new_link = str_replace('http://'. $_SERVER['HTTP_HOST'], '', $new_link);
+
+    // Create array of regex link with HTML decoded and encoded URLs.
+    $old_links = array();
+    $old_links[] = preg_quote(check_url($old_link), '/');
+    $old_links[] = preg_quote($old_link, '/');
+
+    // Remove duplicate URLs from array if URLs do not have URL parameters.
+    // If more than one URL parameter exists - one URL in the array will have
+    // an unencoded ampersand "&" and a second URL will have an HTML encoded
+    // ampersand "&amp;".
+    $regex_old_links = implode('|', array_unique($old_links));
+    $new_html_link = check_url($new_link);
+
+    // Create array to fill with replacement rules.
+    $replacements = array();
+
+    // Add replace rules for a/area tags.
+    if (variable_get('linkchecker_extract_from_a', 1) == 1) {
+      // TODO: If link text between opening an closing a-tag having the same
+      // URL, also replace the link text. Create a replace regex for this task.
+      $text = str_replace('>' . check_url($old_link) . '</a>', '>' . check_url($new_link) . '</a>', $text);
+      $text = str_replace('>' . $old_link . '</a>', '>' . check_url($new_link) . '</a>', $text);
+      $replacements['/(<(a|area)\s[^>]*href=["\'])('. $regex_old_links .')(["\'][^>]*>)/i'] = '\1'. $new_html_link .'\4';
+    }
+
+    // Add replace rules for audio tags.
+    if (variable_get('linkchecker_extract_from_audio', 0) == 1) {
+      $replacements['/(<audio\s[^>]*src=["\'])('. $regex_old_links .')(["\'][^>]*>)/i'] = '\1'. $new_html_link .'\3';
+    }
+
+    // Add replace rules for embed tags.
+    if (variable_get('linkchecker_extract_from_embed', 0) == 1) {
+      $replacements['/(<embed\s[^>]*src=["\'])('. $regex_old_links .')(["\'][^>]*>)/i'] = '\1'. $new_html_link .'\3';
+      $replacements['/(<embed\s[^>]*pluginurl=["\'])('. $regex_old_links .')(["\'][^>]*>)/i'] = '\1'. $new_html_link .'\3';
+      $replacements['/(<embed\s[^>]*pluginspage=["\'])('. $regex_old_links .')(["\'][^>]*>)/i'] = '\1'. $new_html_link .'\3';
+    }
+
+    // Add replace rules for iframe tags.
+    if (variable_get('linkchecker_extract_from_iframe', 0) == 1) {
+      $replacements['/(<iframe\s[^>]*src=["\'])('. $regex_old_links .')(["\'][^>]*>)/i'] = '\1'. $new_html_link .'\3';
+    }
+
+    // Add replace rules for img tags.
+    if (variable_get('linkchecker_extract_from_img', 0) == 1) {
+      $replacements['/(<img\s[^>]*src=["\'])('. $regex_old_links .')(["\'][^>]*>)/i'] = '\1'. $new_html_link .'\3';
+    }
+
+    // Add replace rules for object/param tags.
+    if (variable_get('linkchecker_extract_from_object', 0) == 1) {
+      $replacements['/(<object\s[^>]*data=["\'])('. $regex_old_links .')(["\'][^>]*>)/i'] = '\1'. $new_html_link .'\3';
+      $replacements['/(<object\s[^>]*codebase=["\'])('. $regex_old_links .')(["\'][^>]*>)/i'] = '\1'. $new_html_link .'\3';
+      $replacements['/(<param\s[^>]*((name|src)=["\'](archive|filename|href|movie|src|url)["\']\s[^>]*)+value=["\'])('. $regex_old_links .')(["\'][^>]*>)/i'] = '\1'. $new_html_link .'\6';
+    }
+
+    // Add replace rules for source tags.
+    if (variable_get('linkchecker_extract_from_source', 0) == 1) {
+      $replacements['/(<source\s[^>]*src=["\'])('. $regex_old_links .')(["\'][^>]*>)/i'] = '\1'. $new_html_link .'\3';
+    }
+
+    // Add replace rules for video tags.
+    if (variable_get('linkchecker_extract_from_video', 0) == 1) {
+      $replacements['/(<video\s[^>]*poster=["\'])('. $regex_old_links .')(["\'][^>]*>)/i'] = '\1'. $new_html_link .'\3';
+      $replacements['/(<video\s[^>]*src=["\'])('. $regex_old_links .')(["\'][^>]*>)/i'] = '\1'. $new_html_link .'\3';
+    }
+
+    // Replace link by applying all replacement rules on text.
+    foreach ($replacements as $pattern => $replacement) {
+      $text = preg_replace($pattern, $replacement, $text);
+    }
   }
 }
 
@@ -1028,4 +1189,11 @@ function _linkchecker_unpublish_nodes($lid) {
  */
 function _linkchecker_comment_load($cid) {
   return db_fetch_array(db_query('SELECT * FROM {comments} WHERE cid = %d', $cid));
+}
+
+/**
+ * Load link as array.
+ */
+function linkchecker_link_load($lid) {
+  return db_fetch_array(db_query("SELECT * FROM {linkchecker_links} WHERE lid = %d", $lid));
 }

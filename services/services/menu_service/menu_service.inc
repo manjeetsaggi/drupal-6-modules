@@ -1,5 +1,5 @@
 <?php
-// $Id: menu_service.inc,v 1.1.2.6 2009/06/10 17:12:42 marcingy Exp $
+// $Id: menu_service.inc,v 1.1.2.4 2009/05/30 21:38:02 marcingy Exp $
 /**
  * @file
  * Adds a service type for a menu
@@ -14,13 +14,13 @@
  *   Array. A list of all children menu items from a given menu item.
  */
 function menu_service_get($menu_id = NULL, $fields = array()) {
-  if ($menu_id === NULL or trim($menu_id) === '') {
+  if ($menu_id === NULL || trim($menu_id) === '') {
     $menu_id = 'primary-links';
   }
   if (sizeof($fields) === 0) {
     $fields = FALSE;
   }
-  $data = menu_tree_page_data($menu_id);
+  $data = menu_tree_all_data($menu_id);
   return menu_service_process($data, $fields);
 }
 
@@ -45,7 +45,7 @@ function menu_service_process($data, $fields) {
       else {
         $tmp = (object) $item['link'];
       }
-      if (!$fields or in_array('path_alias', $fields, TRUE)) {
+      if (!$fields || in_array('path_alias', $fields, TRUE)) {
         $tmp->path_alias = drupal_get_path_alias($tmp->link_path);
       }
       $tmp->children = menu_service_process($item['below'], $fields);

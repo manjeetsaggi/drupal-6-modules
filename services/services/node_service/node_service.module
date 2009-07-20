@@ -1,5 +1,5 @@
 <?php
-// $Id: node_service.module,v 1.5.2.23 2009/06/10 17:12:42 marcingy Exp $
+// $Id: node_service.module,v 1.5.2.21 2009/05/18 20:55:21 marcingy Exp $
 /**
  * @author Services Dev Team
  * @file
@@ -23,7 +23,7 @@ function node_service_help($path, $arg) {
  */
 function node_service_perm() {
   return array(
-    'load any node data', 'load own node data'
+    'load node data',
   );
 }
 
@@ -39,7 +39,6 @@ function node_service_service() {
       '#callback'         => 'node_service_get',
       '#access callback'  => 'node_service_get_access',
       '#file'             => array('file' => 'inc', 'module' => 'node_service'),
-      '#key'              => FALSE,
       '#args'             => array(
         array(
           '#name'           => 'nid',
@@ -52,7 +51,36 @@ function node_service_service() {
           '#description'    => t('A list of fields to return.'))),
       '#return'           => 'struct',
       '#help'             => t('Returns a node data.')),
-
+    
+    // node.view
+    array(
+      '#method'           => 'node.view',
+      '#callback'         => 'node_service_view',
+      '#access callback'  => 'node_service_view_access',
+      '#file'             => array('file' => 'inc', 'module' => 'node_service'),
+      '#args'             => array(
+        array(
+          '#name'         => 'nid',
+          '#type'         => 'int',
+          '#description'  => t('A node id.')),
+        array(
+          '#name'         => 'fields',
+          '#type'         => 'array',
+          '#optional'     => TRUE, 
+          '#description'  => t('A list of fields to return.'))),
+        array(
+          '#name'         => 'teaser',
+          '#type'         => 'boolean',
+          '#optional'     => TRUE, 
+          '#description'  => t('Is this a teaser version of the node?')),
+        array(
+          '#name'         => 'page',
+          '#type'         => 'boolean',
+          '#optional'     => TRUE, 
+          '#description'  => t('Is this a page version of the node?')),
+      '#return'           => 'struct',
+      '#help'             => t('Returns a node data.')),
+    
     // node.save
     array(
       '#method'           => 'node.save',
@@ -80,4 +108,12 @@ function node_service_service() {
           '#description'    => t('A node ID.'))),
       '#help'             => t('Delete a node.')),
   );
+}
+
+function node_service_disable() {
+  cache_clear_all('services:methods', 'cache');
+}
+
+function node_service_enable() {
+  cache_clear_all('services:methods', 'cache');
 }

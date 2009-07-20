@@ -1,4 +1,4 @@
-/* $Id: avatar_selection_pager.js,v 1.1.2.2 2008/06/30 23:43:04 snpower Exp $ */
+/* $Id: avatar_selection_pager.js,v 1.1.2.3 2009/06/07 23:34:23 snpower Exp $ */
 
 /**
  * Fetches the new page and puts it inline.
@@ -10,14 +10,18 @@
  * @param js_file  - The javascript file to run upon completion.
  */
 function fetchPage(form_id, id, url, page, js_file) {
+  $("body").css({'opacity': 0.5});
+  $("#avatar-selection-loading").show();
   $.get(url, {page: page}, function(data, status) {
     var selects = $(data).find(id);
     $(id).html(selects);
-    var pager = $(data).find(".avatar_selection_pager_nav");
-    $(".avatar_selection_pager_nav").html(pager);
+    var pager = $(data).find(".avatar-selection-pager-nav");
+    $(".avatar-selection-pager-nav").html(pager);
     $.getScript(js_file);
     var action = url + "?page="+page;
     $(form_id).attr("action", action);
+    $("#avatar-selection-loading").hide();
+    $("body").css({'opacity': null});
   });
   return false;
 }

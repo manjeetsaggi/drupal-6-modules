@@ -1,5 +1,5 @@
 <?php
-// $Id: feedapi_mapper_date.inc,v 1.1.2.3.2.10 2009/05/14 21:25:52 alexb Exp $
+// $Id: feedapi_mapper_date.inc,v 1.1.2.3.2.11 2009/07/17 13:39:44 alexb Exp $
 
 /**
  * On behalf implementation of hook_feedapi_mapper for date field from content.module (CCK),
@@ -89,6 +89,7 @@ function feedapi_mapper_date_datetime(&$node, $field, $feed_element, $sub_field)
     }
     else {
       // Bring the date back to UTC.
+      $direction = ($direction == '+' ? '-' : '+');
       date_modify($value, $direction . trim($hours) .' hours');
       date_modify($value, $direction . trim($minutes) .' minutes');       
     }

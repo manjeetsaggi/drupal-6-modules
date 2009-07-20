@@ -1,5 +1,5 @@
 <?php
-// $Id: avatar_selection.module,v 1.1.2.22.2.53 2008/08/06 21:29:13 snpower Exp $
+// $Id: avatar_selection.module,v 1.1.2.22.2.61 2009/06/08 15:51:38 snpower Exp $
 
 /**
  * @file
@@ -34,7 +34,7 @@ function avatar_selection_help($path, $arg) {
  * Define the permissions this module uses.
  */
 function avatar_selection_perm() {
-  return array('administer avatar selection', 'access avatars');
+  return array('administer avatar selection', 'access avatars', 'upload avatar in profile');
 }
 
 
@@ -158,7 +158,7 @@ function avatar_selection_form_user_register_alter(&$form, $form_state, $form_id
   $anon_user = drupal_anonymous_user();
 
   // See if user has access to avatars.
-  $disable_upload = variable_get('avatar_selection_disable_user_upload', 0);
+  $disable_upload = variable_get('avatar_selection_disable_user_upload', 0) & !user_access('upload avatar in profile');
   if (!user_access('access avatars')) {
     // If uploads also disabled, remove the field altogether.
     if ($disable_upload) {
@@ -196,8 +196,9 @@ function avatar_selection_form_user_register_alter(&$form, $form_state, $form_id
       '#description' => $upload ? '' : t('Your virtual face or picture.'),
       '#options' => $selects['avatars'],
       '#required' => $force_choose ? TRUE : FALSE,
-      '#attributes' => array('class' => 'user_avatar_select'),
-      '#suffix' => theme('avatar_selection_pager', 'form#user-register', 'div.user_avatar_select', $selects['total'], $avatars_per_page, '/'. $js_file),
+      '#attributes' => array('class' => 'user-avatar-select'),
+      '#prefix' =>  '<div id="avatar-selection-loading"></div>',
+      '#suffix' => theme('avatar_selection_pager', 'form#user-register', 'div.user-avatar-select', $selects['total'], $avatars_per_page, '/'. $js_file),
     );
     $form['#validate'][] = 'avatar_selection_validate_user_avatar';
   }
@@ -236,7 +237,7 @@ function avatar_selection_form_user_profile_form_alter(&$form, $form_state, $for
   $user = user_load(array("uid" => $form['#uid']));
 
   // See if user has access to avatars.
-  $disable_upload = variable_get('avatar_selection_disable_user_upload', 0);
+  $disable_upload = variable_get('avatar_selection_disable_user_upload', 0) & !user_access('upload avatar in profile');
   if (!user_access('access avatars')) {
     // If uploads also disabled, remove the field altogether.
     if ($disable_upload) {
@@ -281,8 +282,9 @@ function avatar_selection_form_user_profile_form_alter(&$form, $form_state, $for
         '#options' => $selects['avatars'],
         '#default_value' => array_key_exists($current_avatar, $selects['avatars']) ? $current_avatar : '',
         '#required' => $force_choose ? TRUE : FALSE,
-        '#attributes' => array('class' => 'user_avatar_select'),
-        '#suffix' => theme('avatar_selection_pager', 'form#user-profile-form', 'div.user_avatar_select', $selects['total'], $avatars_per_page, '/'. $js_file),
+        '#attributes' => array('class' => 'user-avatar-select'),
+        '#prefix' =>  '<div id="avatar-selection-loading"></div>',
+        '#suffix' => theme('avatar_selection_pager', 'form#user-profile-form', 'div.user-avatar-select', $selects['total'], $avatars_per_page, '/'. $js_file),
       );
       if (array_key_exists($current_avatar, $selects['avatars'])) {
         $form['_account']['#value']->picture = NULL;
@@ -395,11 +397,11 @@ function _avatar_selection_image_list($user = "", $set_type = "", $set_id = 0, $
   // If we're searching on a particular role.
   if ($set_type =='role') {
     if ($set_id) {
-      $total = db_result(db_query("SELECT count(*) FROM {avatar_selection} avs, {avatar_selection_roles} avsr WHERE avs.aid = avsr.aid AND avsr.rid = %d ORDER BY weight, name, avatar", $set_id));
+      $total = db_result(db_query("SELECT count(*) FROM {avatar_selection} avs, {avatar_selection_roles} avsr WHERE avs.aid = avsr.aid AND avsr.rid = %d", $set_id));
       $result = db_query_range("SELECT DISTINCT avatar, name, weight FROM {avatar_selection} avs, {avatar_selection_roles} avsr WHERE avs.aid = avsr.aid AND avsr.rid = %d ORDER BY weight, name, avatar", $set_id, $from, $count);
     }
     else {
-      $total = db_result(db_query("SELECT count(*) FROM {avatar_selection} avs LEFT JOIN {avatar_selection_roles} avsr ON avs.aid = avsr.aid WHERE avsr.rid IS NULL ORDER BY weight, name, avatar"));
+      $total = db_result(db_query("SELECT count(*) FROM {avatar_selection} avs LEFT JOIN {avatar_selection_roles} avsr ON avs.aid = avsr.aid WHERE avsr.rid IS NULL"));
       $result = db_query_range("SELECT DISTINCT avatar, name, weight FROM {avatar_selection} avs LEFT JOIN {avatar_selection_roles} avsr ON avs.aid = avsr.aid WHERE avsr.rid IS NULL ORDER BY weight, name, avatar", $from, $count);
     }
   }
@@ -407,12 +409,12 @@ function _avatar_selection_image_list($user = "", $set_type = "", $set_id = 0, $
   // If we're searching on a particular organic group.
   elseif ($set_type =='og') {
     if ($set_id) {
-      $total = db_result(db_query("SELECT count(*) FROM {avatar_selection} avs, {avatar_selection_og} og WHERE avs.aid = og.aid AND og.ogid = %d ORDER BY weight, name, avatar", $set_id));
+      $total = db_result(db_query("SELECT count(*) FROM {avatar_selection} avs, {avatar_selection_og} og WHERE avs.aid = og.aid AND og.ogid = %d", $set_id));
       $result = db_query_range("SELECT DISTINCT avatar, name, weight FROM {avatar_selection} avs, {avatar_selection_og} og WHERE avs.aid = og.aid AND og.ogid = %d ORDER BY weight, name, avatar", $set_id, $from
 , $count);
     }
     else {
-      $total = db_result(db_query("SELECT count(*) FROM {avatar_selection} avs LEFT JOIN {avatar_selection_og} og ON avs.aid = og.aid WHERE og.ogid IS NULL ORDER BY weight, name, avatar"));
+      $total = db_result(db_query("SELECT count(*) FROM {avatar_selection} avs LEFT JOIN {avatar_selection_og} og ON avs.aid = og.aid WHERE og.ogid IS NULL"));
       $result = db_query_range("SELECT DISTINCT avatar, name, weight FROM {avatar_selection} avs LEFT JOIN {avatar_selection_og} og ON avs.aid = og.aid WHERE og.ogid IS NULL ORDER BY weight, name, avatar", $from, $count);
     }
   }  // Searching for available avatars for a particular user.
@@ -430,27 +432,28 @@ function _avatar_selection_image_list($user = "", $set_type = "", $set_id = 0, $
     if (variable_get('avatar_selection_distinctive_avatars', FALSE)) {
       // Organic groups enabled.
       if (module_exists("og") && !empty($user_og)) {
-        $total = db_result(db_query("SELECT count(*) FROM {avatar_selection} avs LEFT JOIN {users} u ON u.picture = concat('%s/', avs.avatar) LEFT JOIN {avatar_selection_roles} avsr ON avs.aid = avsr.aid LEFT JOIN {avatar_selection_og} avso ON avs.aid = avso.aid WHERE u.picture IS NULL AND (avsr.rid IS NULL OR avsr.rid IN (". db_placeholders($user_roles) .")) AND (avso.ogid IS NULL OR avso.ogid IN (". db_placeholders($user_og) .")) ORDER BY avs.weight, avs.name, avatar", $dir, $user_roles, $user_og));
+        $total = db_result(db_query("SELECT count(distinct avs.aid) FROM {avatar_selection} avs LEFT JOIN {users} u ON u.picture = concat('%s/', avs.avatar) LEFT JOIN {avatar_selection_roles} avsr ON avs.aid = avsr.aid LEFT JOIN {avatar_selection_og} avso ON avs.aid = avso.aid WHERE u.picture IS NULL AND (avsr.rid IS NULL OR avsr.rid IN (". db_placeholders($user_roles) .")) AND (avso.ogid IS NULL OR avso.ogid IN (". db_placeholders($user_og) ."))", array_merge(array($dir), $user_roles, $user_og)));
         if ($count == 0) $count = $total;
-        $result = db_query_range("SELECT DISTINCT avatar, avs.name, avs.weight FROM {avatar_selection} avs LEFT JOIN {users} u ON u.picture = concat('%s/', avs.avatar) LEFT JOIN {avatar_selection_roles} avsr ON avs.aid = avsr.aid LEFT JOIN {avatar_selection_og} avso ON avs.aid = avso.aid WHERE u.picture IS NULL AND (avsr.rid IS NULL OR avsr.rid IN (". db_placeholders($user_roles) .")) AND (avso.ogid IS NULL OR avso.ogid IN (". db_placeholders($user_og) .")) ORDER BY avs.weight, avs.name, avatar", $dir, $user_roles, $user_og, $from, $count);
+        $result = db_query_range("SELECT DISTINCT avatar, avs.name, avs.weight FROM {avatar_selection} avs LEFT JOIN {users} u ON u.picture = concat('%s/', avs.avatar) LEFT JOIN {avatar_selection_roles} avsr ON avs.aid = avsr.aid LEFT JOIN {avatar_selection_og} avso ON avs.aid = avso.aid WHERE u.picture IS NULL AND (avsr.rid IS NULL OR avsr.rid IN (". db_placeholders($user_roles) .")) AND (avso.ogid IS NULL OR avso.ogid IN (". db_placeholders($user_og) .")) ORDER BY avs.weight, avs.name, avatar", array_merge(array($dir), $user_roles, $user_og), $from, $count);
       }
       else {
-        $total = db_result(db_query("SELECT count(*) FROM {avatar_selection} avs LEFT JOIN {users} u ON u.picture = concat('%s/', avs.avatar) LEFT JOIN {avatar_selection_roles} avsr ON avs.aid = avsr.aid WHERE u.picture IS NULL AND avsr.rid IS NULL OR avsr.rid IN (". db_placeholders($user_roles) .") ORDER BY avs.weight, avs.name, avatar", $dir, $user_roles));
+        $total = db_result(db_query("SELECT count(distinct avs.aid) FROM {avatar_selection} avs LEFT JOIN {users} u ON u.picture = concat('%s/', avs.avatar) LEFT JOIN {avatar_selection_roles} avsr ON avs.aid = avsr.aid WHERE u.picture IS NULL AND (avsr.rid IS NULL OR avsr.rid IN (". db_placeholders($user_roles) ."))", array_merge(array($dir), $user_roles)));
         if ($count == 0) $count = $total;
-        $result = db_query_range("SELECT DISTINCT avatar, avs.name, avs.weight FROM {avatar_selection} avs LEFT JOIN {users} u ON u.picture = concat('%s/', avs.avatar) LEFT JOIN {avatar_selection_roles} avsr ON avs.aid = avsr.aid WHERE u.picture IS NULL AND avsr.rid IS NULL OR avsr.rid IN (". db_placeholders($user_roles) .") ORDER BY avs.weight, avs.name, avatar", $dir, $user_roles, $from, $count);
+        $result = db_query_range("SELECT DISTINCT avatar, avs.name, avs.weight FROM {avatar_selection} avs LEFT JOIN {users} u ON u.picture = concat('%s/', avs.avatar) LEFT JOIN {avatar_selection_roles} avsr ON avs.aid = avsr.aid WHERE u.picture IS NULL AND (avsr.rid IS NULL OR avsr.rid IN (". db_placeholders($user_roles) .")) ORDER BY avs.weight, avs.name, avatar", array_merge(array($dir), $user_roles), $from, $count);
       }
     }
 
     // Not root user, check permissions.
-    elseif ($user->uid != 0) {
+    // User is logged in and is not root, or is an anonymous user.
+    elseif ($user->uid > 1 || in_array(1, array_keys($user->roles))) {
       // Organic groups enabled.
       if (module_exists("og") && !empty($user_og)) {
-        $total = db_result(db_query("SELECT count(*) FROM {avatar_selection} avs LEFT JOIN {avatar_selection_roles} avsr ON avs.aid = avsr.aid LEFT JOIN {avatar_selection_og} avso ON avs.aid = avso.aid WHERE (avsr.rid IS NULL OR avsr.rid IN (". db_placeholders($user_roles) .")) AND (avso.ogid IS NULL OR avso.ogid IN (". db_placeholders($user_og) .")) ORDER BY weight, name, avatar", $user_roles, $user_og));
+        $total = db_result(db_query("SELECT count(distinct avs.aid) FROM {avatar_selection} avs LEFT JOIN {avatar_selection_roles} avsr ON avs.aid = avsr.aid LEFT JOIN {avatar_selection_og} avso ON avs.aid = avso.aid WHERE (avsr.rid IS NULL OR avsr.rid IN (". db_placeholders($user_roles) .")) AND (avso.ogid IS NULL OR avso.ogid IN (". db_placeholders($user_og) ."))", array_merge($user_roles, $user_og)));
         if ($count == 0) $count = $total;
-        $result = db_query_range("SELECT DISTINCT avatar, name, weight FROM {avatar_selection} avs LEFT JOIN {avatar_selection_roles} avsr ON avs.aid = avsr.aid LEFT JOIN {avatar_selection_og} avso ON avs.aid = avso.aid WHERE (avsr.rid IS NULL OR avsr.rid IN (". db_placeholders($user_roles) .")) AND (avso.ogid IS NULL OR avso.ogid IN (". db_placeholders($user_og) .")) ORDER BY weight, name, avatar", $user_roles, $user_og, $from, $count);
+        $result = db_query_range("SELECT DISTINCT avatar, name, weight FROM {avatar_selection} avs LEFT JOIN {avatar_selection_roles} avsr ON avs.aid = avsr.aid LEFT JOIN {avatar_selection_og} avso ON avs.aid = avso.aid WHERE (avsr.rid IS NULL OR avsr.rid IN (". db_placeholders($user_roles) .")) AND (avso.ogid IS NULL OR avso.ogid IN (". db_placeholders($user_og) .")) ORDER BY weight, name, avatar", array_merge($user_roles, $user_og), $from, $count);
       }
       else {
-        $total = db_result(db_query("SELECT count(*) FROM {avatar_selection} avs LEFT JOIN {avatar_selection_roles} avsr ON avs.aid = avsr.aid WHERE avsr.rid IS NULL OR avsr.rid IN (". db_placeholders($user_roles) .") ORDER BY weight, name, avatar", $user_roles));
+        $total = db_result(db_query("SELECT count(distinct avs.aid) FROM {avatar_selection} avs LEFT JOIN {avatar_selection_roles} avsr ON avs.aid = avsr.aid WHERE avsr.rid IS NULL OR avsr.rid IN (". db_placeholders($user_roles) .")", $user_roles));
         if ($count == 0) $count = $total;
         $result = db_query_range("SELECT DISTINCT avatar, name, weight FROM {avatar_selection} avs LEFT JOIN {avatar_selection_roles} avsr ON avs.aid = avsr.aid WHERE avsr.rid IS NULL OR avsr.rid IN (". db_placeholders($user_roles) .") ORDER BY weight, name, avatar", $user_roles, $from, $count);
       }
@@ -458,7 +461,7 @@ function _avatar_selection_image_list($user = "", $set_type = "", $set_id = 0, $
 
     // Root user, so just fetch all avatars.
     else {
-      $total = db_result(db_query("SELECT count(*) FROM {avatar_selection} avs ORDER BY weight, name, avatar"));
+      $total = db_result(db_query("SELECT count(*) FROM {avatar_selection} avs"));
       if ($count == 0) $count = $total;
       $result = db_query_range("SELECT aid, avatar, name, weight FROM {avatar_selection} avs ORDER BY weight, name, avatar", $from, $count);
     }
@@ -547,7 +550,7 @@ function theme_avatar_selection_pager($form_id, $dom_identifier, $total = 10, $l
   $first_page = $current_page - $middle_page + 1;
   $last_page = $current_page + $middle_page + 1;
 
-  $output = '<div class="avatar_selection_pager_nav">';
+  $output = '<div class="avatar-selection-pager-nav">';
   if ($current_page > 0) {
     $output .= theme('avatar_selection_pager_link', t('« first'), $path, 0, $form_id, $dom_identifier, $js_file);
     $output .= theme('avatar_selection_pager_link', t('‹ previous'), $path, ($current_page - 1), $form_id, $dom_identifier, $js_file);
@@ -611,7 +614,7 @@ function theme_avatar_selection_pager($form_id, $dom_identifier, $total = 10, $l
  */
 function theme_avatar_selection_pager_link($text, $path, $page, $form_id, $dom_identifier, $js_file) {
   $url = url($path);
-  $onclick = "return fetchPage('$form_id', '$dom_identifier', '$url', ". $page .", '$js_file');";
+  $onclick = "return fetchPage('$form_id', '$dom_identifier', '$url', $page, '$js_file');";
   $output .= l($text, $path, array('attributes' => array('onclick' => $onclick), 'query' => "page=$page"));
   return $output;
 }

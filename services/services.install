@@ -1,5 +1,5 @@
 <?php
-// $Id: services.install,v 1.3.2.24 2009/06/10 17:17:59 marcingy Exp $
+// $Id: services.install,v 1.3.2.21 2009/05/26 02:55:14 heyrocker Exp $
 /**
  * @author Services Dev Team
  * @file
@@ -10,65 +10,7 @@
  * Implementation of hook_schema().
  */
 function services_schema() {
-  $schema['services_keys'] = array(
-    'description' => 'Stores all Service keys.',
-    'fields' => array(
-      'kid' => array(
-        'description' => 'The service key ID.',
-        'type' => 'varchar',
-        'length' => 32,
-        'not null' => TRUE,
-        'default' => ''
-      ),
-      'title' => array(
-        'description' => 'The title of the service key.',
-        'type' => 'varchar',
-        'length' => 255,
-        'not null' => TRUE,
-        'default' => ''
-      ),
-      'domain' => array(
-        'description' => 'The domain of the service key.',
-        'type' => 'varchar',
-        'length' => 255,
-        'not null' => TRUE,
-        'default' => ''
-      ),
-    ),
-    'primary key' => array('kid')
-  );
-
-  $schema['services_timestamp_nonce'] = array(
-    'description' => 'Stores timestamp against nonce for repeat attacks.',
-    'fields' => array(
-      'timestamp' => array(
-        'description' => 'The timestamp used with the Nonce.',
-        'type'        => 'varchar',
-        'length'      => 32,
-        'not null'    => TRUE,
-        'default'     => ''
-      ),
-      'nonce' => array(
-        'description' => 'The random string used on the request.',
-        'type'        => 'varchar',
-        'length'      => 32,
-        'not null'    => TRUE,
-        'default'     => ''
-      ),
-      'domain' => array(
-        'description' => 'The domain that submitted the request.',
-        'type'        => 'varchar',
-        'length'      => 255,
-        'not null'    => TRUE,
-        'default'     => ''
-      ),
-    ),
-    'indexes' => array( 
-       'timestamp' => array('timestamp'), 
-    ), 
-    'primary key' => array('nonce'),    
-  );
-  return $schema;
+  return array();
 }
 
 /**
@@ -83,9 +25,20 @@ function services_install() {
  */
 function services_uninstall() {
   drupal_uninstall_schema('services');
+  $ret = array();
+  
+  // Drop legacy tables
+  $legacy_tables = array('services_keys', 'services_timestamp_nonce');
+  foreach ($legacy_tables as $table) {
+    if (db_table_exists($table)) {
+      db_drop_table($ret, $table);
+    }
+  }
+
   variable_del('services_use_key');
   variable_del('services_use_sessid');
   variable_del('services_debug');
+  variable_del('services_auth_module');
 }
 
 /**
@@ -119,16 +72,18 @@ function services_update_6001() {
         'default'     => ''
       ),
     ),
+    'indexes' => array( 
+       'timestamp' => array('timestamp'), 
+    ), 
+    'primary key' => array('nonce'),
   );
   $update = array();
   db_create_table($update, 'services_timestamp_nonce', $schema['services_timestamp_nonce']);
   return $update;
 }
 
-/*
- * Update to ensure that new menu options are loaded.
- */
 function services_update_6002() {
-  $update = array();
-  return $update;
+  $ret = array();
+  menu_rebuild();
+  return $ret;
 }

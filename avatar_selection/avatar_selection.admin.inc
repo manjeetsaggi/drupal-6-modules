@@ -1,5 +1,5 @@
 <?php
-// $Id: avatar_selection.admin.inc,v 1.1.2.7 2008/07/20 14:55:40 snpower Exp $
+// $Id: avatar_selection.admin.inc,v 1.1.2.9 2009/02/09 10:47:18 snpower Exp $
 
 /**
  * @file
@@ -29,7 +29,7 @@ function _avatar_selection_scan_images($name, $access, $og = array(), $weight = 
 
   $dir = file_create_path('avatar_selection');
   $mask = '.*\.(gif|GIF|Gif|jpg|JPG|Jpg|jpeg|JPEG|Jpeg|png|PNG|Png)';
-  $listings = file_scan_directory($dir, $mask, array('.', '..', 'CVS'), 0, FALSE);
+  $listings = file_scan_directory($dir, $mask, array('.', '..', 'CVS'), 0, TRUE);
 
   $result = db_query("SELECT avatar FROM {avatar_selection} avs");
   while ($avatar = db_fetch_object($result)) {
@@ -38,11 +38,12 @@ function _avatar_selection_scan_images($name, $access, $og = array(), $weight = 
 
   // Search for new files.  Remove matching records from avatars array.
   foreach ($listings as $listing) {
-    if (in_array($listing->basename, $avatars)) {
-      unset($avatars[$listing->basename]);
+    $filename = str_replace("$dir/", '', $listing->filename);
+    if (in_array($filename, $avatars)) {
+      unset($avatars[$filename]);
     }
     else {
-      _avatar_selection_save_avatar_info(0, $listing->basename, (empty($name) ?  $listing->basename : $name), $access, $og, $weight);
+      _avatar_selection_save_avatar_info(0, $filename, (empty($name) ?  $filename : $name), $access, $og, $weight);
       $add_count++;
     }
   }
@@ -375,7 +376,7 @@ function avatar_selection_edit_form($form_state) {
       if ($set_type == 'role') {
         $sets = avatar_selection_handler_filter_role();
       }
-      else if ($set_type == 'og') {
+      elseif ($set_type == 'og') {
         $sets = og_all_groups_options();
       }
       drupal_set_title(t('Manage Avatars - %name', array('%name' => $sets[$set_id])));
@@ -400,7 +401,7 @@ function avatar_selection_edit_form($form_state) {
       drupal_add_js($js_file, 'module', 'header');
 
     }
-    else if ($step == "edit") {
+    elseif ($step == "edit") {
       drupal_set_title(t('Manage Avatars'));
       $form['#redirect'] = array('admin/settings/avatar_selection/edit');
       $roles = avatar_selection_handler_filter_role();

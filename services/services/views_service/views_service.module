@@ -1,5 +1,5 @@
 <?php
-// $Id: views_service.module,v 1.4.2.22 2009/06/10 17:12:43 marcingy Exp $
+// $Id: views_service.module,v 1.4.2.20 2009/05/18 20:55:22 marcingy Exp $
 /**
  * @author Services Dev Team
  * @file
@@ -29,7 +29,6 @@ function views_service_service() {
       '#callback'         => 'views_service_get',
       '#access callback'  => 'views_service_get_access',
       '#file'             => array('file' => 'inc', 'module' => 'views_service'),
-      '#key'              => FALSE,
       '#args'             => array(
         array(
           '#name'           => 'view_name',
@@ -107,4 +106,12 @@ function views_service_service() {
       '#help'             => t('Imports a view through code, equivalent to using the Import tab in the views admin.'),
     ),
   );
+}
+
+function views_service_disable() {
+  cache_clear_all('services:methods', 'cache');
+}
+
+function views_service_enable() {
+  cache_clear_all('services:methods', 'cache');
 }

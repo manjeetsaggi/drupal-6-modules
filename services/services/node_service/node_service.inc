@@ -1,5 +1,5 @@
 <?php
-// $Id: node_service.inc,v 1.1.2.13 2009/06/10 17:12:42 marcingy Exp $
+// $Id: node_service.inc,v 1.1.2.11 2009/06/06 22:17:19 marcingy Exp $
 /**
  * @author Services Dev Team
  * @file
@@ -32,14 +32,53 @@ function node_service_get($nid, $fields = array()) {
  * @param $nid
  *   Number. The node ID.
  * @return
- *   Boolean. TRUE if the user has the permission to get the
- *   node's data thru services.
+ *   Boolean. TRUE if the user has view access.
  */
 function node_service_get_access($nid) {
   global $user;
   $node = node_load($nid);
-  return ($node->uid == $user->uid and user_access('load own node data')) or
-    ($node->uid != $user->uid and user_access('load any node data'));
+  return (node_access('view', $node) && user_access('load node data'));
+}
+
+/**
+ * Returns a specified node.
+ *
+ * @param $nid
+ *   Number. The node ID.
+ * @param $fields
+ *   Array (optional). The node fields needed. If its empty,
+ *   all fields will be returned
+ * @param $teaser
+ *   Boolean (optional). Format as teaser.
+ * @param $page
+  *   Boolean (optional). Format as page.
+ * @return
+ *   Object. The node object with all wanted fields.
+ */
+function node_service_view($nid, $fields = array(), $teaser = FALSE, $page = FALSE) {
+  $node = services_node_load(node_build_content(node_load($nid), $teaser, $page), $fields);
+  
+  if (!$node) {
+    return services_error(t("Could not find the node."));
+  }
+  
+  return $node;
+}
+
+/**
+ * Check if the user has the permission to get the
+ * node's formated data thru services.
+ *
+ * @param $nid
+ *   Number. The node ID.
+ * @return
+ *   Boolean. TRUE if the user has the permission to get the
+ *   node's data thru services.
+ */
+function node_service_view_access($nid) {
+  global $user;
+  $node = node_load($nid);
+  return (node_access('view', $node) && user_access('load node data'));
 }
 
 /**
@@ -56,7 +95,7 @@ function node_service_save($edit) {
   // Load the required includes for drupal_execute
   module_load_include('inc', 'node', 'node.pages');
   $nid = NULL;
-
+  $edit = (array) $edit;
   if ($edit['nid']) {
     $node = node_load($edit['nid']);
     if ($node->nid) {
@@ -96,10 +135,6 @@ function node_service_save($edit) {
   if ($errors = form_get_errors()) {
     return services_error(implode("\n", $errors));
   }
-
-  watchdog('content', '@type: updated %title.',
-    array('@type' => t($node->type), '%title' => $node->title),
-    WATCHDOG_NOTICE, l(t('view'), 'node/'. $node->nid));
   return $nid;
 }
 
@@ -112,6 +147,7 @@ function node_service_save($edit) {
  *   Boolean. TRUE if the user has the permission to save a node.
  */
 function node_service_save_access($node) {
+  $node = (array) $node;
   if (isset($node['nid'])) {
     return node_access('update', $node);
   }

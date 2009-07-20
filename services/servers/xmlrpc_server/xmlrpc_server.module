@@ -1,5 +1,5 @@
 <?php
-// $Id: xmlrpc_server.module,v 1.6.2.16 2009/06/10 17:12:18 marcingy Exp $
+// $Id: xmlrpc_server.module,v 1.6.2.14.2.2 2009/06/13 22:43:44 marcingy Exp $
 /**
  * @author Services Dev Team
  * @file
@@ -25,20 +25,7 @@ function xmlrpc_server_server() {
 function xmlrpc_server_xmlrpc() {
   $callbacks = array();
   foreach (services_get_all() as $method) {
-    $args = array();
-    foreach ($method['#args'] as $arg) {
-      if (!is_array($arg)) {
-        $args[] = $arg;
-      }
-      else {
-        $args[] = $arg['#type'];
-      }
-    }
-    $callbacks[] = array(
-      $method['#method'],
-      'xmlrpc_server_call_wrapper',
-      array_merge(array($method['#return']), $args),
-      $method['#help']);
+    $callbacks[$method['#method']] = 'xmlrpc_server_call_wrapper';
   }
   return $callbacks;
 }
@@ -51,12 +38,19 @@ function xmlrpc_server_call_wrapper() {
 }
 
 function xmlrpc_server_server_error($message) {
-  static $xmlrpcusererr;
   if (!is_array($message)) {
-    $message = array($message);
+    $message = (array)$message;
   }
 
   $message = implode(' ', $message);
 
-  return xmlrpc_error($xmlrpcusererr + 1, strip_tags($message));
+  $matches = array();
+  if (preg_match("/\#(\d+)/", $message, $matches)) {
+    $code = $matches[1];
+  } 
+  else {
+    $code = 1;
+  }
+  
+  return xmlrpc_error($code, strip_tags($message));
 }

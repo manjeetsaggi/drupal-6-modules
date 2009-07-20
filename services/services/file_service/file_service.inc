@@ -1,5 +1,5 @@
 <?php
-// $Id: file_service.inc,v 1.1.2.9 2009/06/10 17:12:27 marcingy Exp $
+// $Id: file_service.inc,v 1.1.2.7 2009/02/15 20:33:14 snelson Exp $
 /**
  * @author Services Dev Team
  * @file
@@ -7,16 +7,16 @@
  */
 
 /**
- * Get all elements fomr a given file
+ * Get all elements from a given file
  *
  * @param $fid
  *   Number. File ID
  * @return
- *   Array. All elements fomr a given file
+ *   Array. All elements from a given file
  */
 function file_service_get($fid) {
   if ($file = db_fetch_array(db_query('SELECT * FROM {files} WHERE fid = %d', $fid))) {
-    $filepath = file_create_path($file->filepath);
+    $filepath = file_create_path($file['filepath']);
     $binaryfile = fopen($filepath, 'rb');
     $file['file'] = base64_encode(fread($binaryfile, filesize($filepath)));
     fclose($binaryfile);
@@ -36,7 +36,7 @@ function file_service_get_access($fid) {
     return TRUE;
   }
   elseif ($file = db_fetch_array(db_query('SELECT * FROM {files} WHERE fid = %d', $fid))) {
-    return $file['uid'] == $user->uid and user_access('get own binary files');
+    return $file['uid'] == $user->uid && user_access('get own binary files');
   }
 }
 
@@ -92,6 +92,6 @@ function file_service_get_node_files_access($nid) {
     return TRUE;
   }
   elseif ($node = node_load($nid)) {
-    return $node->uid == $user->uid and user_access('get own binary files');
+    return $node->uid == $user->uid && user_access('get own binary files');
   }
 }

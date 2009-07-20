@@ -1,5 +1,5 @@
 <?php
-// $Id: file_service.module,v 1.1.2.9 2009/06/10 17:12:27 marcingy Exp $
+// $Id: file_service.module,v 1.1.2.7 2009/05/18 20:55:21 marcingy Exp $
 /**
  * @author Services Dev Team
  * @file
@@ -52,4 +52,12 @@ function file_service_service() {
       '#help'             => t('Returns the files attached to a node.')
     ),
   );
+}
+
+function file_service_disable() {
+  cache_clear_all('services:methods', 'cache');
+}
+
+function file_service_enable() {
+  cache_clear_all('services:methods', 'cache');
 }

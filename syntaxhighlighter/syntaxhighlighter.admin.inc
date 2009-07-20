@@ -1,5 +1,5 @@
 <?php
-// $Id: syntaxhighlighter.admin.inc,v 1.4 2009/06/24 19:39:48 mattyoung Exp $
+// $Id: syntaxhighlighter.admin.inc,v 1.5 2009/07/16 20:51:06 mattyoung Exp $
 
 /**
  * @file
@@ -21,7 +21,7 @@ function syntaxhighlighter_settings_form() {
   ksort($lang_options);
   $form['syntaxhighlighter_enabled_languages'] = array(
     '#type' => 'checkboxes',
-    '#title' => t('Syntax highlighter enabled languages'),
+    '#title' => t('Enabled languages'),
     '#options' => $lang_options,
     '#default_value' => variable_get('syntaxhighlighter_enabled_languages', array('shBrushPhp.js')),
     '#description' => t('Only the selected languages will be enabled and its corresponding required Javascript files loaded.  You may only want to choose the languages you actual display on your site to lower the amount of Javascript files loaded. For details please see <a href="http://alexgorbatchev.com/wiki/SyntaxHighlighter:Brushes">the Syntax Highlighter Javascript Library Page</a>.'),
@@ -63,6 +63,14 @@ function syntaxhighlighter_settings_form() {
     '#default_value' => variable_get('syntaxhighlighter_off_pages', "admin\nadmin/*\nuser\nuser/*\nimce\nimce/*\n"),
     '#description' => t("Enter one page per line as Drupal paths. The '*' character is a wildcard. Example paths are %blog for the blog page and %blog-wildcard for every personal blog. %front is the front page.", array('%blog' => 'blog', '%blog-wildcard' => 'blog/*', '%front' => '<front>')),
   );
+
+  $form['syntaxhighlighter_default_expressions'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Default expressions'),
+    '#default_value' => variable_get('syntaxhighlighter_default_expressions', ''),
+    '#description' => t("Enter syntaxhihglighter default settings javascript expressions, e.g. !example", array('!example' => 'SyntaxHighlighter.defaults[\'auto-links\'] = true;SyntaxHighlighter.defaults[\'gutter\'] = false;')),
+  );
+  
   return system_settings_form($form);
 }
 

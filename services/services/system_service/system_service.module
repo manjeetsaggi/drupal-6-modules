@@ -1,5 +1,5 @@
 <?php
-// $Id: system_service.module,v 1.3.2.22 2009/06/10 17:12:43 marcingy Exp $
+// $Id: system_service.module,v 1.3.2.20 2009/05/20 01:53:15 marcingy Exp $
 /**
  * @author Services Dev Team
  * @file
@@ -22,7 +22,7 @@ function system_service_help($path, $arg) {
  * Implementation of hook_perm().
  */
 function system_service_perm() {
-  return array('send mail from remote', 'get variable from remote', 'set variable from remote', 'check module exists from remote');
+  return array('send mail from remote', 'get variable from remote', 'set variable from remote', 'check module exists from remote', 'clear cache from remote');
 }
 
 /**
@@ -36,8 +36,6 @@ function system_service_service() {
       '#method'   => 'system.connect',
       '#callback' => 'system_service_connect',
       '#file'             => array('file' => 'inc', 'module' => 'system_service'),
-      '#auth'     => FALSE,
-      '#key'      => FALSE,
       '#return'   => 'struct',
       '#help'     => t('Returns an object containing a sessid and user.')),
 
@@ -138,5 +136,34 @@ function system_service_service() {
       ),
       '#return'   => 'string',
       '#help'     => t('Check if a module is enabled. If so, return its version.')),
+    
+      // system.getServices
+      array(
+        '#method'   => 'system.getServices',
+        '#callback' => 'system_service_getservices',
+        '#access arguments' => array('get available services'),
+        '#file'             => array('file' => 'inc', 'module' => 'system_service'),
+        '#return'   => 'struct',
+        '#help'     => t('Returns an object containing all the available services.')
+      ),
+
+      // system.cacheClearAll
+      array(
+        '#method'   => 'system.cacheClearAll',
+        '#callback' => 'system_service_cache_clear_all',
+        '#access arguments' => array('clear cache from remote'),
+        '#file'     => array('file' => 'inc', 'module' => 'system_service'),
+        '#args'     => array(),
+        '#return'   => 'bool',
+        '#help'     => t('Clear cache on remote site.'),
+      ),
   );
+}
+
+function system_service_disable() {
+  cache_clear_all('services:methods', 'cache');
+}
+
+function system_service_enable() {
+  cache_clear_all('services:methods', 'cache');
 }

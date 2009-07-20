@@ -1,5 +1,5 @@
 <?php
-// $Id: user_service.module,v 1.3.2.18 2009/06/10 17:12:43 marcingy Exp $
+// $Id: user_service.module,v 1.3.2.16 2009/05/18 20:55:22 marcingy Exp $
 /**
  * @author Services Dev Team
  * @file
@@ -108,13 +108,21 @@ function user_service_service() {
       '#file'             => array('file' => 'inc', 'module' => 'user_service'),
       '#args'             => array(
         array(
-          '#name'           => 'uid',
-          '#type'           => 'int',
-          '#description'    => t('User ID.'),
+          '#name'           => 'account',
+          '#type'           => 'struct',
+          '#description'    => t('A user object.'),
         ),
       ),
-      '#return'           => 'struct',
+      '#return'           => 'int',
       '#help'             => t('Save user details.')
     ),
   );
+}
+
+function user_service_disable() {
+  cache_clear_all('services:methods', 'cache');
+}
+
+function user_service_enable() {
+  cache_clear_all('services:methods', 'cache');
 }

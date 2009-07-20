@@ -1,24 +1,24 @@
-/* $Id: avatar_selection.js,v 1.1.2.1.4.13 2008/06/30 20:06:00 snpower Exp $ */
+/* $Id: avatar_selection.js,v 1.1.2.1.4.14 2009/06/07 23:34:23 snpower Exp $ */
 function radio_button_handler() {
   // handle radio buttons
-  $('div.user_avatar_select input.form-radio').hide();
-  $('div.user_avatar_select img').hover(
+  $('div.user-avatar-select input.form-radio').hide();
+  $('div.user-avatar-select img').hover(
     function(){
-      $(this).addClass("avatar_hover");
+      $(this).addClass("avatar-hover");
     },
     function(){
-      $(this).removeClass("avatar_hover");
+      $(this).removeClass("avatar-hover");
     }
   );
 }
 
 function image_click_handler() {
-  $('div.user_avatar_select img').bind("click", function(){
-    $("div.user_avatar_select img.avatar_select").each(function(){
-      $(this).removeClass("avatar_select");
+  $('div.user-avatar-select img').bind("click", function(){
+    $("div.user-avatar-select img.avatar-select").each(function(){
+      $(this).removeClass("avatar-select");
       $(this).parent().children("input").attr("checked", "");
     });
-    $(this).addClass("avatar_select");
+    $(this).addClass("avatar-select");
     $(this).parent().children("input").attr("checked", "checked");
   });
 }

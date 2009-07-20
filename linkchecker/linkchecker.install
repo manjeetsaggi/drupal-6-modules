@@ -1,5 +1,5 @@
 <?php
-// $Id: linkchecker.install,v 1.2.2.14 2009/03/24 22:43:54 hass Exp $
+// $Id: linkchecker.install,v 1.2.2.22 2009/07/13 18:30:46 hass Exp $
 
 /**
  * @file
@@ -21,19 +21,26 @@ function linkchecker_install() {
 function linkchecker_uninstall() {
   drupal_uninstall_schema('linkchecker');
 
-  variable_del('linkchecker_fqdn_only');
-  variable_del('linkchecker_ignore_response_codes');
-  variable_del('linkchecker_check_useragent');
-  variable_del('linkchecker_check_links_max');
-  variable_del('linkchecker_check_links_interval');
   variable_del('linkchecker_action_status_code_301');
   variable_del('linkchecker_action_status_code_404');
-  variable_del('linkchecker_cleanup_links_interval');
+  variable_del('linkchecker_check_links_interval');
+  variable_del('linkchecker_check_links_max');
+  variable_del('linkchecker_check_useragent');
   variable_del('linkchecker_cleanup_links_last');
+  variable_del('linkchecker_extract_from_a');
+  variable_del('linkchecker_extract_from_audio');
+  variable_del('linkchecker_extract_from_embed');
+  variable_del('linkchecker_extract_from_iframe');
+  variable_del('linkchecker_extract_from_img');
+  variable_del('linkchecker_extract_from_object');
+  variable_del('linkchecker_extract_from_source');
+  variable_del('linkchecker_extract_from_video');
+  variable_del('linkchecker_fqdn_only');
+  variable_del('linkchecker_ignore_response_codes');
   variable_del('linkchecker_pathfilter_support');
-  variable_del('linkchecker_scan_nodetypes');
-  variable_del('linkchecker_scan_comments');
   variable_del('linkchecker_scan_blocks');
+  variable_del('linkchecker_scan_comments');
+  variable_del('linkchecker_scan_nodetypes');
 }
 
 /**
@@ -89,6 +96,12 @@ function linkchecker_schema() {
         'not null' => TRUE,
         'default' => 0,
         'description' => 'Timestamp of the last link check.',
+      ),
+      'status' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 1,
+        'description' => 'Boolean indicating if a link should be checked or not.',
       ),
     ),
     'primary key' => array('lid'),
@@ -159,7 +172,7 @@ function linkchecker_requirements($phase) {
   switch ($phase) {
     case 'install' :
       // Module cannot work without external HTTP requests.
-      if (variable_get('drupal_http_request_fails', FALSE)) {
+      if (variable_get('drupal_http_request_fails', TRUE) && !system_check_http_request()) {
         $requirements['http requests'] = array(
           'title' => $t('HTTP request status'),
           'value' => $t('Fails'),
@@ -186,7 +199,7 @@ function linkchecker_requirements($phase) {
           'title' => $t('Job queue'),
           'value' => $t('Not found'),
           'severity' => REQUIREMENT_WARNING,
-          'description' => $t('Install job_queue module if you have a node, comment or block with more than 100 links. Without the job_queue module only the first 100 links will be checked!'),
+          'description' => $t('Install <a href="@url">job_queue</a> module if you have a node, comment or block with more than 100 links. Without the job_queue module only the first 100 links may be checked!', array('@url' => 'http://drupal.org/project/job_queue')),
         );
       }
 /*      $requirements['linkchecker_curl'] = array(
@@ -443,6 +456,31 @@ function linkchecker_update_6205() {
 
   $ret[] = update_sql("DELETE FROM {linkchecker_nodes} WHERE nid IN (SELECT nid FROM {node} WHERE status = 0)");
   $ret[] = update_sql("DELETE FROM {linkchecker_comments} WHERE cid IN (SELECT c.cid FROM {node} n INNER JOIN {comments} c ON c.nid = n.nid WHERE n.status = 0)");
+
+  return $ret;
+}
+
+/**
+ * Add status column to links table.
+ */
+function linkchecker_update_6206() {
+  $ret = array();
+
+  // Add the column only if not exists. Column may been added in D5 (5207).
+  if (!db_column_exists('linkchecker_links', 'status')) {
+    db_add_field($ret, 'linkchecker_links', 'status', array('type' => 'int', 'not null' => TRUE, 'default' => 1));
+  }
+
+  return $ret;
+}
+
+/**
+ * Remove obsolte variable.
+ */
+function linkchecker_update_6207() {
+  $ret = array();
+
+  variable_del('linkchecker_cleanup_links_interval');
 
   return $ret;
 }

@@ -1,5 +1,5 @@
 <?php
-// $Id: user_service.inc,v 1.1.2.10 2009/06/10 17:12:43 marcingy Exp $
+// $Id: user_service.inc,v 1.1.2.8 2009/05/18 00:19:40 marcingy Exp $
 /**
  * @author Services Dev Team
  * @file
@@ -31,8 +31,8 @@ function user_service_delete($uid) {
  */
 function user_service_delete_access($uid) {
   global $user;
-  return (($user->uid == $uid and user_access('delete own user')) or
-    ($user->uid != $uid and user_access('delete any user')));
+  return (($user->uid == $uid && user_access('delete own user')) ||
+    ($user->uid != $uid && user_access('delete any user')));
 }
 
 /**
@@ -59,8 +59,7 @@ function user_service_get($uid) {
  */
 function user_service_get_access($uid) {
   global $user;
-  return (($user->uid == $uid and user_access('get own user data')) or
-    ($user->uid != $uid and user_access('get any user data')));
+  return (($user->uid == $uid && user_access('get own user data')) || ($user->uid != $uid && user_access('get any user data')));
 }
 
 /**
@@ -82,10 +81,14 @@ function user_service_login($username, $password) {
   $user = user_authenticate(array('name' => $username, 'pass' => $password));
 
   if ($user->uid) {
-    session_start();
+    // Regenerate the session ID to prevent against session fixation attacks.
+    sess_regenerate();
+    module_invoke_all('user', 'login', NULL, $user);
+
     $return = new stdClass();
     $return->sessid = session_id();
     $return->user = $user;
+
     return $return;
   }
   session_destroy();
@@ -122,7 +125,10 @@ function user_service_logout() {
  *   Object. The user object with all user data.
  */
 function user_service_save($account) {
-  if (!$account = user_save($account)) {
+  // if uid is present then update, otherwise insert
+  $update = user_load($account['uid']);	
+  $account = isset($update->uid) ? user_save($update,$account) : user_save('', $account);  
+  if (!$account) {
     return services_error(t('Error on saving the user.'));
   }
 
@@ -139,7 +145,7 @@ function user_service_save($account) {
  */
 function user_service_save_access($account) {
   global $user;
-  return ((empty($account->uid) and user_access('create new users')) or
-    ($user->uid == $account->uid and user_access('update own user data')) or
-    ($user->uid !=  $account->uid and user_access('update any user data')));
+  return ((empty($account['uid']) && user_access('create new users')) ||
+    ($user->uid == $account['uid'] && user_access('update own user data')) ||
+    ($user->uid !=  $account['uid'] && user_access('update any user data')));
 }
