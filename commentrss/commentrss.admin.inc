@@ -1,5 +1,5 @@
 <?php
-// $Id: commentrss.admin.inc,v 1.1.2.1 2008/10/01 14:09:17 goba Exp $
+// $Id: commentrss.admin.inc,v 1.1.2.3 2009/07/17 15:56:31 davereid Exp $
 
 /**
  * @file

@@ -1,5 +1,5 @@
 <?php
-// $Id: commentrss.pages.inc,v 1.1.2.1 2008/10/01 14:09:17 goba Exp $
+// $Id: commentrss.pages.inc,v 1.1.2.3 2009/07/17 15:45:53 davereid Exp $
 
 /**
  * @file
@@ -114,11 +114,11 @@ function commentrss_feed_term($tid = NULL) {
  * @param $namespaces
  *   Associative array of namespace arguments to add. Keyed by namespace
  *   argument name to add, for example 'xmlns:dc', with the value of the
- *   namespace URI such as http://purl.org/dc/elements/1.1/ in this case. 
+ *   namespace URI such as http://purl.org/dc/elements/1.1/ in this case.
  */
 function commentrss_format_feed($items, $channel = array(), $namespaces = array()) {
   global $base_url, $language;
-  
+
   $channel_defaults = array(
     'version'     => '2.0',
     'title'       => t('@site_name - Comments', array('@site_name' => variable_get('site_name', 'Drupal'))),
@@ -128,7 +128,7 @@ function commentrss_format_feed($items, $channel = array(), $namespaces = array(
   );
   $channel = array_merge($channel_defaults, $channel);
   $namespaces = array_merge(array('xmlns:dc' => 'http://purl.org/dc/elements/1.1/'), $namespaces);
-  
+
   $output = '<?xml version="1.0" encoding="utf-8"?>'."\n";
   $output .= '<rss version="'. $channel['version'] .'" xml:base="'. $base_url .'"'. drupal_attributes($namespaces) .">\n";
   $output .= format_rss_channel($channel['title'], $channel['link'], $channel['description'], $items, $channel['language']);
@@ -163,7 +163,7 @@ function commentrss_format_items($nidselector, $joins = '', $where = '', $param 
   $items = '';
 
   // Build SQL query from the passed elements.
-  $SQL = 'SELECT '. $nidselector .', c.cid, c.subject, c.comment, c.timestamp, c.uid, c.name, c.format, u.name username, n.title FROM {node} n '. $joins .' INNER JOIN {comments} c ON c.nid = n.nid INNER JOIN {users} u ON c.uid = u.uid WHERE '. $where .' n.status = 1 AND c.status = %d ORDER BY c.timestamp DESC';
+  $SQL = 'SELECT '. $nidselector .', c.cid, c.subject, c.comment, c.timestamp, c.uid, c.name, c.format, u.name AS username, n.title FROM {node} n '. $joins .' INNER JOIN {comments} c ON c.nid = n.nid INNER JOIN {users} u ON c.uid = u.uid WHERE '. $where .' n.status = 1 AND c.status = %d ORDER BY c.timestamp DESC';
 
   // Add passed query parameter; plus we are looking for published comments.
   $params = isset($param) ? array($param) : array();
@@ -182,7 +182,7 @@ function commentrss_format_items($nidselector, $joins = '', $where = '', $param 
       // Fall back on anonymous name if no other name was specified.
       $comment->name = variable_get('anonymous', 'Anonymous');
     }
-    
+
     $extra = array(
       array(
         'key' => 'pubDate',
@@ -203,10 +203,10 @@ function commentrss_format_items($nidselector, $joins = '', $where = '', $param 
     // Build up item content with node title if required.
     $content = '';
     if ($include_node_title) {
-      $content = '<p>'. t('In reply to <a href="@url">@title</a>', array('@url' => url('node/'. $comment->nid), '@title' => $comment->title)) .":</p>\n\n";
+      $content = '<p>'. t('In reply to <a href="@url">@title</a>', array('@url' => url('node/'. $comment->nid, array('absolute' => TRUE)), '@title' => $comment->title)) .":</p>\n\n";
     }
     $content .= check_markup($comment->comment, $comment->format, FALSE);
-    
+
     // Format RSS item with input format used on comment. The format
     // was validated previously and the visitor might not have access to that,
     // so skip the format validation in check_markup() itself.
