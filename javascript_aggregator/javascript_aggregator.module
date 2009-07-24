@@ -1,5 +1,5 @@
 <?php
-// $Id: javascript_aggregator.module,v 1.17.2.13 2009/05/23 14:54:49 derjochenmeyer Exp $
+// $Id: javascript_aggregator.module,v 1.17.2.14 2009/07/22 21:42:44 derjochenmeyer Exp $
 
 /**
  * Implementation of hook_help().
@@ -28,6 +28,14 @@ function javascript_aggregator_form_alter(&$form, $form_state, $form_id) {
       '#default_value' => variable_get('javascript_aggregator_gzip', FALSE),
       '#weight' => 3,
     );
+    $form['bandwidth_optimizations']['javascript_aggregator_jsminplus'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Use JSMin+ instead of JSMin'),
+      '#description' => t('Check this option to use <a href="@jsminplus">JSMin+</a> instead of JSMin.', array('@jsminplus' => 'http://crisp.tweakblogs.net/blog/1665/a-new-javascript-minifier-jsmin+.html')),
+      '#default_value' => variable_get('javascript_aggregator_jsminplus', FALSE),
+      '#weight' => 4,
+    );
+
   }
 }
 
@@ -81,38 +89,41 @@ function _javascript_aggregator_minify($scripts) {
   // Only process it is JavaScript Optimization is enabled.
   if (variable_get('preprocess_js', 0)) {
     // Strip out the aggregated JavaScript file.
-    $path = base_path() . file_directory_path();
-    $pattern = "!(<script type=\"text\/javascript\" src=\"$path)(.*?)(\"(.*?)><\/script>)!";
-    preg_match_all($pattern, $scripts, $matches);
-    $aggregated_file = $matches[2][0];
-    if (empty($aggregated_file)) {
-      $jsmin_file = '/min.js';
-    }
-    else {
-      $jsmin_file = $aggregated_file .'min.js';
-    }
+    $path_to_files_directory = base_path() . file_directory_path();
+    $pattern = "!(<script type=\"text\/javascript\" src=\"$path_to_files_directory)(.*?)(\"(.*?)><\/script>)!";
+    if (preg_match_all($pattern, $scripts, $matches) > 0) {
+      $aggregated_file_name = $matches[2][0];
+      $jsmin_file_name = $aggregated_file_name .'min.js';
 
-    // Construct the final JSMin file path.
-    $jsmin_file_path = file_directory_path() . $jsmin_file;
+      // Construct the final JSMin file path.
+      $jsmin_file_path = file_directory_path() . $jsmin_file_name;
 
-    // Create the JSMinified file if it doesn't exist yet.
-    if (!file_exists($jsmin_file_path)) {
-      // JSMin the contents of the aggregated file.
-      require_once(drupal_get_path('module', 'javascript_aggregator') .'/jsmin.php');
-      $contents = JSMin::minify(file_get_contents(file_directory_path() . $aggregated_file));
+      // Create the JSMinified file if it doesn't exist yet.
+      if (!file_exists($jsmin_file_path)) {
 
-      // GZip the JavaScript if required.
-      $htaccess = file_directory_path() . '/js/.htaccess';
-      if (variable_get('javascript_aggregator_gzip', FALSE)) {
-
-        // Create the GZip file if it doesn't already exist.
-        if (!file_exists($jsmin_file .'.gz')) {
-          file_save_data(gzencode($contents, 9), $jsmin_file .'.gz', FILE_EXISTS_REPLACE);
+        if (variable_get('javascript_aggregator_jsminplus', FALSE)) {
+          // JSMin+ the contents of the aggregated file.
+          require_once(drupal_get_path('module', 'javascript_aggregator') .'/jsminplus.php');
+          $contents = JSMinPlus::minify(file_get_contents(file_directory_path() . $aggregated_file_name));
+        }
+        else {
+          // JSMin the contents of the aggregated file.
+          require_once(drupal_get_path('module', 'javascript_aggregator') .'/jsmin.php');
+          $contents = JSMin::minify(file_get_contents(file_directory_path() . $aggregated_file_name));
         }
 
-        // Make sure the .htaccess file is active to handle GZipped JavaScript files.
-        if (!file_exists($htaccess)) {
-          $htaccess_contents = <<<EOT
+        // GZip the JavaScript if required.
+        $htaccess = file_directory_path() . '/js/.htaccess';
+        if (variable_get('javascript_aggregator_gzip', FALSE)) {
+
+          // Create the GZip file if it doesn't already exist.
+          if (!file_exists($jsmin_file_name .'.gz')) {
+            file_save_data(gzencode($contents, 9), $jsmin_file_name .'.gz', FILE_EXISTS_REPLACE);
+          }
+
+          // Make sure the .htaccess file is active to handle GZipped JavaScript files.
+          if (!file_exists($htaccess)) {
+            $htaccess_contents = <<<EOT
 <Files *.js.gz>
 AddEncoding x-gzip .gz
 ForceType text/javascript
@@ -125,22 +136,23 @@ RewriteCond %{REQUEST_FILENAME}.gz -f
 RewriteRule ^(.*)\.js $1.js.gz [L,QSA]
 </IfModule>
 EOT;
-          file_save_data($htaccess_contents, $htaccess, FILE_EXISTS_REPLACE);
+            file_save_data($htaccess_contents, $htaccess, FILE_EXISTS_REPLACE);
+          }
         }
-      }
-      else {
-        // Delete .htaccess file so *.gz files do not get served.
-        if (file_exists($htaccess)) {
-          file_delete($htaccess);
+        else {
+          // Delete .htaccess file so *.gz files do not get served.
+          if (file_exists($htaccess)) {
+            file_delete($htaccess);
+          }
         }
+
+        // Save the contents to the JavaScript file.
+        file_save_data($contents, $jsmin_file_path, FILE_EXISTS_REPLACE);
       }
 
-      // Save the contents to the JavaScript file.
-      file_save_data($contents, $jsmin_file_path, FILE_EXISTS_REPLACE);
+      // Replace the aggregated file with the minified JavaScript file.
+      $scripts = str_replace($aggregated_file_name, $jsmin_file_name, $scripts);
     }
-
-    // Replace the aggregated file with the minified JavaScript file.
-    $scripts = str_replace($aggregated_file, $jsmin_file, $scripts);
   }
   
   return $scripts;
