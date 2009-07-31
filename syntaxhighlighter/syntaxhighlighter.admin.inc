@@ -1,5 +1,5 @@
 <?php
-// $Id: syntaxhighlighter.admin.inc,v 1.5 2009/07/16 20:51:06 mattyoung Exp $
+// $Id: syntaxhighlighter.admin.inc,v 1.7 2009/07/27 23:16:29 mattyoung Exp $
 
 /**
  * @file
@@ -12,7 +12,7 @@
  * An admin form to specify which language to support for highlighting
  */
 function syntaxhighlighter_settings_form() {
-  $path = drupal_get_path('module', 'syntaxhighlighter') .'/syntaxhighlighter';
+  $path = _syntaxhighlighter_get_js_location();
   
   $files = file_scan_directory($path .'/scripts', 'shBrush.*\.js');
   foreach ($files as $file) {
@@ -25,6 +25,7 @@ function syntaxhighlighter_settings_form() {
     '#options' => $lang_options,
     '#default_value' => variable_get('syntaxhighlighter_enabled_languages', array('shBrushPhp.js')),
     '#description' => t('Only the selected languages will be enabled and its corresponding required Javascript files loaded.  You may only want to choose the languages you actual display on your site to lower the amount of Javascript files loaded. For details please see <a href="http://alexgorbatchev.com/wiki/SyntaxHighlighter:Brushes">the Syntax Highlighter Javascript Library Page</a>.'),
+    '#multicolumn' => array('width' => 4),
   );
   
   $files = file_scan_directory($path .'/styles', 'shTheme.*\.css');
@@ -38,6 +39,7 @@ function syntaxhighlighter_settings_form() {
     '#description' => t('Choose a syntax highlight theme.'),
     '#options' => $theme_options,
     '#default_value' => variable_get('syntaxhighlighter_theme', 'shThemeDefault.css'),
+    '#multicolumn' => array('width' => 2),
   );
   
   $form['syntaxhighlighter_tagname'] = array(

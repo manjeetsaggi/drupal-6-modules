@@ -1,5 +1,5 @@
 <?php
-// $Id: admin.signup_administration.inc,v 1.1 2008/11/15 02:03:50 dww Exp $
+// $Id: admin.signup_administration.inc,v 1.1.2.1 2009/07/22 22:00:04 dww Exp $
 
 
 /**
@@ -101,7 +101,7 @@ function signup_admin_form($form_state) {
     if ($access_broadcast) {
       $op_links .= '<br />';
       $options['attributes']['title'] = t('Send an email message to all users who signed up.');
-      $op_links .= l(t('Signup broadcast'), "node/$signup_node->nid/signup-broadcast", $options);
+      $op_links .= l(t('Signup broadcast'), "node/$signup_node->nid/signups/broadcast", $options);
     }
     $row['operations'] = array(
       '#type' => 'markup',

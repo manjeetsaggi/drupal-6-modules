@@ -1,4 +1,4 @@
-$Id: INSTALL.txt,v 1.13.2.1 2008/12/20 00:53:06 dww Exp $
+$Id: INSTALL.txt,v 1.13.2.2 2009/01/22 19:00:54 dww Exp $
 
 It is assumed that you have Drupal up and running.  Be sure to check
 the http://drupal.org web site if you need assistance.  If you run
@@ -61,6 +61,12 @@ the Drupal package and read the online documentation.
      only users with 'administer all signups' or 'administer signups for
      own content' permission are allowed to cancel signups.
      NOTE: Anonymous users aren't allowed cancel their signups even if
+     this permission is granted to the role 'anonymous user'.
+
+   'edit own signups':
+     Allows users to edit their own signups.  When viewing their own
+     signup information, users will be able to update the values.
+     NOTE: Anonymous users aren't allowed edit their signups even if
      this permission is granted to the role 'anonymous user'.
 
    'view all signups':

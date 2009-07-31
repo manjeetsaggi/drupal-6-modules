@@ -1,5 +1,5 @@
 <?php
-// $Id: signup.install,v 1.24.2.2 2008/12/19 01:00:35 dww Exp $
+// $Id: signup.install,v 1.24.2.3 2008/12/27 00:40:30 dww Exp $
 
 
 /**
@@ -180,19 +180,6 @@ function signup_insert_default_signup_info() {
     1, 'Enter your default confirmation email message here',
     1, 1, 'Enter your default reminder email message here',
     0, 0, 1)");
-}
-
-/**
- * UTF8 table update
- */
-function signup_update_1() {
-  return _system_update_utf8(array('signup', 'signup_log'));
-}
-
-function signup_update_2() {
-  $ret = array();
-  $ret[] = update_sql("ALTER TABLE {signup} DROP permissions");
-  return $ret;
 }
 
 function signup_update_3() {

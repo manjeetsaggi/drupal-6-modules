@@ -1,5 +1,5 @@
 <?php
-// $Id: syntaxhighlighter.module,v 1.9 2009/07/16 20:51:06 mattyoung Exp $
+// $Id: syntaxhighlighter.module,v 1.12 2009/07/28 20:36:42 mattyoung Exp $
 
 /**
  * @file
@@ -53,13 +53,13 @@ function syntaxhighlighter_init() {
     return;
   }
   
-  
-  $styles_path = drupal_get_path('module', 'syntaxhighlighter') .'/syntaxhighlighter/styles/';
+  $syntaxhighlighter_js_location = _syntaxhighlighter_get_js_location();
+  $styles_path = $syntaxhighlighter_js_location .'/styles/';
   drupal_add_css($styles_path .'shCore.css', 'module');
   $theme = variable_get('syntaxhighlighter_theme', 'shThemeDefault.css');
   drupal_add_css($styles_path . $theme, 'module');
 
-  $scripts_path = drupal_get_path('module', 'syntaxhighlighter') .'/syntaxhighlighter/scripts/';
+  $scripts_path = $syntaxhighlighter_js_location .'/scripts/';
   drupal_add_js($scripts_path .'shCore.js', 'module');
   if (variable_get('syntaxhighlighter_legacy_mode', 0)) {
     drupal_add_js($scripts_path .'shLegacy.js', 'module');
@@ -102,16 +102,16 @@ function syntaxhighlighter_init() {
 function syntaxhighlighter_filter_tips($delta, $format, $long = FALSE) {
   $tag_name = variable_get('syntaxhighlighter_tagname', 'pre');
   return $long ?
-      '<p>'. t('Syntax highlight code surrounded by the !ex0 tags, where LANG is a language aliase, optionally followed by parameters separated by \';\'.', 
+      '<p>'. t('Syntax highlight code surrounded by the <code>!ex0</code> tags, where LANG is a language alias, optionally followed by parameters separated by \';\'.', 
                array('!ex0' => "&lt;$tag_name class=\"brush: LANG\"&gt;...&lt;/$tag_name&gt;")) .'</p>'.
-      '<p>'. t('Example: !ex1 syntax highlights PHP code, initially collapsed, start line number at 50.',
-               array('!ex1' => "&lt;$tag_name class=\"brush: php;collapse: true;first-line:50\"&gt;...&lt;/$tag_name&gt;")) .'</p>'.
+      '<p>'. t('Example: <code>!ex1</code> syntax highlights PHP code, initially collapsed, start line number at 50.',
+               array('!ex1' => "&lt;$tag_name class=\"brush:php;collapse:true;first-line:50\"&gt;...&lt;/$tag_name&gt;")) .'</p>'.
       '<p>'. t('See <a href="!url0">usage</a>, <a href="!url1">language aliases</a> and <a href="!url2">options</a> for additional helps.',
                array('!url0' => 'http://alexgorbatchev.com/wiki/SyntaxHighlighter:Usage#Adding_code_blocks',
                      '!url1' => 'http://alexgorbatchev.com/wiki/SyntaxHighlighter:Brushes#About',
                      '!url2' => 'http://alexgorbatchev.com/wiki/SyntaxHighlighter:Configuration#SyntaxHighlighter.defaults')) .'</p>'
-    : t('Syntax highlight code surrounded by the !ex0 tags. See <a href="/filter/tips">here</a> for details.',
-         array('!ex0' => "&lt;$tag_name class=\"brush: LANG\"&gt;...&lt;/$tag_name&gt;"));
+    : t('Syntax highlight code surrounded by the <code>!ex0</code> tags. See <a href="@filter_tips_path">here</a> for details.',
+         array('!ex0' => "&lt;$tag_name class=\"brush: LANG\"&gt;...&lt;/$tag_name&gt;", '@filter_tips_path' => url('filter/tips')));
 }
 
 
@@ -134,3 +134,28 @@ function syntaxhighlighter_filter($op, $delta = 0, $format = -1, $text = '') {
       return $text;
   }
 }
+
+
+
+/**
+ * Allow the syntaxhighlighter js library to be installed in:
+ *   1) sites/default/files          (can be inside sub directory)
+ *   2) sites/<site_domain>/files    (can be insdie sub directory)
+ *   3) <module>/syntaxhighlighter
+ *   
+ * @return the directory path where the syntaxhighlighter js lib is installed, NULL if not found
+ */
+function _syntaxhighlighter_get_js_location() {
+  $directories = array(
+    'sites/all/libraries',
+    file_directory_path(),
+    drupal_get_path('module', 'syntaxhighlighter'),
+  );
+  foreach ($directories as $d) {
+    foreach (file_scan_directory($d, 'shCore\.js$', array('.', '..', 'CVS', 'src')) as $filename => $file_info) {
+      return substr($filename, 0, -18);    // the path to syntaxhighlighter lib, (-18 to chop off "/scripts/shCore.js" at the end
+    }
+  }
+  return NULL;
+}
+

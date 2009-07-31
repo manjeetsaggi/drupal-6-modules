@@ -1,4 +1,4 @@
-/* $Id: admin.content_types.js,v 1.3 2008/11/06 10:20:48 dww Exp $ */
+/* $Id: admin.content_types.js,v 1.3.2.1 2009/04/15 22:25:44 dww Exp $ */
 
 /**
  * Conditionally show or hide the signup date field setting.
@@ -8,7 +8,7 @@
  * hide the date field setting.  Otherwise, show it.
  */
 Drupal.behaviors.signupShowDateField = function () {
-  $('div.signup-node-default-state-radios input[@type=radio], div.event-nodeapi-radios input[@type=radio]').click(function () {
+  $('div.signup-node-default-state-radios input[type=radio], div.event-nodeapi-radios input[type=radio]').click(function () {
     var eventEnabled = false;
     var signupDisabled = true;
     $('div.event-nodeapi-radios input.form-radio').each(function() {

@@ -1,22 +1,20 @@
 REQUIREMENTS
 -------------
 
-Download the latest Syntax Highlighter javascript library from http://alexgorbatchev.com/wiki/SyntaxHighlighter,
-extract the content and place it inside the syntaxhighlighter directory this module's directory.
+Download the latest Syntax highlighter javascript library from http://alexgorbatchev.com/wiki/SyntaxHighlighter,
+extract the content and place it inside any of the following directories or sub-directory of any name therein(*):
 
-In the end,  you should have a directory structure like this:
+  -  sites/all/libraries      (multisite install can share the same library install here)
+  -  site-file-directory-path (usually sites/<site_domain>/files but can be changed through 'admin/settings/file-system'
+  -  inside the syntaxhighlighter module directory
+  
+Examples:
 
-syntaxhighlighter
-  README.txt
-  syntaxhighlighter.admin.inc
-  syntaxhighlighter.info
-  syntaxhighlighter.install
-  syntaxhighlighter.module
-  syntaxhighlighter/
-    scripts/
-      shCore.js
-      ....
-    styles/
+sites/all/libraries/js/syntaxhighlighter_2.0.320
+site-file-directory-path
+
+(*) The directory name 'src' is not allowed. Do not place syntaxhighlighter library inside there.
+
 
 NOTES
 -----

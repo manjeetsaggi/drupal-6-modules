@@ -1,5 +1,5 @@
 <?php
-// $Id: date.inc,v 1.16.2.2 2008/12/19 01:00:35 dww Exp $
+// $Id: date.inc,v 1.16.2.4 2009/03/04 19:19:34 dww Exp $
 
 
 /**
@@ -19,14 +19,16 @@ function _signup_date_admin_sql($content_type) {
   // content types, we'll potentially be JOINing on the same tables and
   // columns for different content types.  To defend against duplicate table
   // names or ambiguous columns in the query, use the content type to alias.
-  $alias = $content_type;
+  $alias = db_escape_table($content_type);
 
   // See what fields to SELECT.
   $fields[] = $alias .'.'. $field['database']['columns']['value']['column'];
   if (isset($field['database']['columns']['timezone']['column'])) {
     $fields[] = $alias .'.'. $field['database']['columns']['timezone']['column'];
   }
-  $table = '{'. $field['database']['table'] .'} '. $alias;
+  // We need to quote the alias in case someone used a reserved word for the
+  // machine-readable name of a content type.
+  $table = '{'. $field['database']['table'] .'} `'. $alias .'`';
   return array(
     'fields' => $fields,
     'joins' => array("LEFT JOIN $table ON $alias.vid = n.vid"),
@@ -524,7 +526,8 @@ function _signup_date_format_date($node, $include_to_date = FALSE) {
   if ($db_tz != $display_tz) {
     date_timezone_set($date, timezone_open($display_tz));
   }
-  $date_out = date_format_date($date, 'custom', $field['output_format_date']);
+  $format = date_formatter_format('default', $field['field_name']);
+  $date_out = date_format_date($date, 'custom', $format);
 
   if ($include_to_date) {
     if (isset($node->{$field['field_name']})) {
@@ -537,9 +540,9 @@ function _signup_date_format_date($node, $include_to_date = FALSE) {
     if ($db_tz != $display_tz) {
       date_timezone_set($date, timezone_open($display_tz));
     }
-    $date = date_format_date($date, 'custom', $field['output_format_date']);
+    $date = date_format_date($date, 'custom', $format);
     if ($date_value) {
-      $date_out .= t(' to ') . date_format_date(date_make_date($date_value), 'custom', $field['output_format_date']);
+      $date_out .= t(' to ') . date_format_date(date_make_date($date_value), 'custom', $format);
     }
   }
 

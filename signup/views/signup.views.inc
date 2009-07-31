@@ -1,5 +1,5 @@
 <?php
-// $Id: signup.views.inc,v 1.4.2.3 2008/12/20 08:44:02 dww Exp $
+// $Id: signup.views.inc,v 1.4.2.7 2009/07/22 21:47:47 dww Exp $
 
 
 /**
@@ -150,10 +150,35 @@ function signup_views_data() {
   // Define base group for signup_log table.
   $data['signup_log']['table']['group'] = t('Signup');
 
+  // Advertise this table as a possible base table so that we can have
+  // "Signup" views. This is essential for Views Bulk Operations to work,
+  // since we need operations on the signups themselves, not the users or
+  // nodes they point to.  With proper use of relationships, we can get
+  // everything on signup views we'd want from either node or user views.
+  $data['signup_log']['table']['base'] = array(
+    'field' => 'sid',
+    'title' => t('Signup'),
+    'help' => t('A signup represents a relationship between a user and a node.'),
+  );
+
   $data['signup_log']['table']['join'] = array(
     'node' => array(
       'left_field' => 'nid',
       'field' => 'nid',
+    ),
+    'users' => array(
+      'left_field' => 'uid',
+      'field' => 'uid',
+    ),
+  );
+
+  $data['signup_log']['nid'] = array(
+    'title' => t('Node'),
+    'help' => t('The node a user signed up to.'),
+    'relationship' => array(
+      'base' => 'node',
+      'handler' => 'views_handler_relationship',
+      'label' => t('Signup node'),
     ),
   );
 
@@ -249,6 +274,14 @@ function signup_views_data() {
     ),
   );
 
+  $data['signup_log']['edit_link'] = array(
+    'title' => t('User: Edit signup link'),
+    'field' => array(
+      'handler' => 'signup_handler_field_signup_edit_link',
+      'help' => t('Link to edit this particular signup.'),
+    ),
+  );
+
   return $data;
 }
 
@@ -266,6 +299,9 @@ function signup_views_handlers() {
     'handlers' => array(
       'signup_handler_argument_signup_user_uid' => array(
         'parent' => 'views_handler_argument_numeric',
+      ),
+      'signup_handler_field_signup_edit_link' => array(
+        'parent' => 'views_handler_field_node_link',
       ),
       'signup_handler_field_signup_node_link' => array(
         'parent' => 'views_handler_field_node_link',
@@ -305,12 +341,22 @@ function signup_views_handlers() {
  * Implementation of hook_views_plugins().
  */
 function signup_views_plugins() {
+  $path = drupal_get_path('module', 'signup') .'/views/plugins';
   return array(
     'argument validator' => array(
       'signup_status' => array(
         'title' => t('Signup status'),
         'handler' => 'signup_plugin_argument_validate_signup_status',
-        'path' => drupal_get_path('module', 'signup') .'/views/plugins',
+        'path' => $path,
+      ),
+    ),
+    'access' => array(
+      'user_signup_list' => array(
+        'title' => t('View per-user signup lists'),
+        'help' => t("Access will be granted to users viewing their own signup list or with the 'view all signups' permission."),
+        'handler' => 'signup_plugin_access_user_signup_list',
+        'uses options' => TRUE,
+        'path' => $path,
       ),
     ),
   );

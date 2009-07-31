@@ -1,4 +1,4 @@
-/* $Id: admin.settings.js,v 1.3.2.1 2008/12/20 06:31:27 dww Exp $ */
+/* $Id: admin.settings.js,v 1.3.2.3 2009/01/24 08:52:46 dww Exp $ */
 
 /**
  * Conditionally show/hide settings based on the signup form location.
@@ -27,13 +27,30 @@ Drupal.behaviors.signupShowFormLocationSetting = function () {
  * If the signup user list is going to be an embedded view, show the
  * view-related settings, otherwise, hide them.
  */
-Drupal.behaviors.signupShowUserListSetting = function () {
+Drupal.behaviors.signupShowUserListViewSetting = function () {
   $('div.signup-display-signup-user-list-setting input.form-radio').click(function () {
-    if (this.value == 'embed-view') {
+    if (this.value == 'embed-view' || this.value == 'embed-view-tab') {
       $('div.signup-user-list-view-settings').show();
     }
     else {
       $('div.signup-user-list-view-settings').hide();
+    }
+  });
+};
+
+/**
+ * Conditionally show/hide settings based on the signup admin list setting.
+ *
+ * If the administer signup user list is going to be an embedded view,
+ * show the view-related settings, otherwise, hide them.
+ */
+Drupal.behaviors.signupShowAdminListViewSetting = function () {
+  $('div.signup-display-signup-admin-list-setting input.form-radio').click(function () {
+    if (this.value == 'embed-view') {
+      $('div.signup-admin-list-view-settings').show();
+    }
+    else {
+      $('div.signup-admin-list-view-settings').hide();
     }
   });
 };

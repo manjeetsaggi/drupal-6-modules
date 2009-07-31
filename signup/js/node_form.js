@@ -1,4 +1,4 @@
-/* $Id: node_form.js,v 1.5 2008/11/06 10:20:48 dww Exp $ */
+/* $Id: node_form.js,v 1.5.2.1 2009/04/15 22:25:44 dww Exp $ */
 
 /**
  * On a node form, if the "Allow signups" radios are set to 1
@@ -6,7 +6,7 @@
  * otherwise, hide them.
  */
 Drupal.behaviors.signupShowNodeSettings = function () {
-  $('div.signup-allow-radios input[@type=radio]').click(function () {
+  $('div.signup-allow-radios input[type=radio]').click(function () {
     $('div.signup-node-settings')[['hide', 'show', 'hide'][this.value]]();
   });
 };

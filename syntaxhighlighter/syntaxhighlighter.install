@@ -1,5 +1,5 @@
 <?php
-// $Id: syntaxhighlighter.install,v 1.5 2009/07/16 20:51:06 mattyoung Exp $
+// $Id: syntaxhighlighter.install,v 1.7 2009/07/29 06:48:52 mattyoung Exp $
 
 /**
  * @file
@@ -21,19 +21,16 @@ function syntaxhighlighter_uninstall() {
  * Make sure the user has installed the 'SyntaxHighlighter' library
  */
 function syntaxhighlighter_requirements($phase) {
-  $requirements = array();
-
-  if ($phase == 'runtime') {
-    // Raise warning if there the syntaxhighlighter script file is not install
-    $file = drupal_get_path('module', 'syntaxhighlighter') .'/syntaxhighlighter/scripts/shCore.js';
-    if (!file_exists($file)) {
-      $requirements['syntaxhighlighter'] = array(
-        'title' => t('Syntax highlighter module'),
-        'description' => t('The required Syntax Highlighter Javascript library has not been installed.  Please see README.txt.'),
-        'severity' => REQUIREMENT_ERROR,
-        'value' => t('The required SyntaxHighlighter Javascript library is not installed.'),
-      );
-    }
+  $t = get_t();
+  require_once('syntaxhighlighter.module');
+  $syntaxhighlighter_js_location = _syntaxhighlighter_get_js_location();
+  $requirements['syntaxhighlighter']['title'] = $t('Syntax highlighter js library');
+  $requirements['syntaxhighlighter']['value'] = $syntaxhighlighter_js_location != NULL ? $t('Installed') : $t('Not installed');
+  
+  // Raise warning if the syntaxhighlighter script file is not install
+  if ($syntaxhighlighter_js_location == NULL) {
+    $requirements['syntaxhighlighter']['severity'] = REQUIREMENT_ERROR;
+    $requirements['syntaxhighlighter']['description'] = $t('The required Syntax highlighter javascript library is not installed.  Please see the Syntaxhighlighter module README.txt.');
   }
 
   return $requirements;

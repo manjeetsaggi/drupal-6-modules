@@ -1,5 +1,5 @@
 <?php
-// $Id: node_output.inc,v 1.1.2.2 2008/12/20 06:31:27 dww Exp $
+// $Id: node_output.inc,v 1.1.2.9 2009/07/25 21:28:40 dww Exp $
 
 
 /**
@@ -40,6 +40,7 @@ function _signup_node_output($node, $type = 'node') {
 function _signup_current_user_signup($node, $type = 'node') {
   global $user;
   $output = '';
+  $fieldset = $type == 'node' ? TRUE : FALSE;
   // The node has been closed for signups, and the user has
   // signup permissions.  Let them know it's closed.
   if (!$node->signup_status) {
@@ -48,17 +49,15 @@ function _signup_current_user_signup($node, $type = 'node') {
       // If they're logged in and already signed up, show their current
       // signup info and give them the option to cancel.
       if ($user->uid) {
-        $result = db_query("SELECT * FROM {signup_log} WHERE uid = %d AND nid = %d", $user->uid, $node->nid);
-        $signup_info = db_fetch_object($result);
-        if (!empty($signup_info)) {
-          $current_signup = _signup_print_current_signup($node, $signup_info);
+        $signup = db_fetch_object(db_query("SELECT sl.*, n.title, u.name FROM {signup_log} sl INNER JOIN {node} n ON sl.nid = n.nid INNER JOIN {users} u ON sl.uid = u.uid WHERE sl.uid = %d AND sl.nid = %d", $user->uid, $node->nid));
+        if (!empty($signup)) {
+          $current_signup = _signup_render_signup_edit_form($signup, $type);
         }
       }
       $output .= theme('signup_signups_closed', $node, $current_signup);
     }
   }
   else {
-    $fieldset = $type == 'node' ? TRUE : FALSE;
     if ($user->uid == 0) {
       // This is an anonymous user.
       if (user_access('sign up for content')) {
@@ -91,9 +90,8 @@ function _signup_current_user_signup($node, $type = 'node') {
       // An authenticated user.
 
       // See if the user is already signed up for this node.
-      $result = db_query("SELECT * FROM {signup_log} WHERE uid = %d AND nid = %d", $user->uid, $node->nid);
-      $signup_info = db_fetch_object($result);
-      if (empty($signup_info)) {
+      $signup = db_fetch_object(db_query("SELECT sl.*, n.title, u.name FROM {signup_log} sl INNER JOIN {node} n ON sl.nid = n.nid INNER JOIN {users} u ON sl.uid = u.uid WHERE sl.uid = %d AND sl.nid = %d", $user->uid, $node->nid));
+      if (empty($signup)) {
         // Not yet signed up
         if (user_access('sign up for content')) {
           // User has permission to do so, so give them the form.
@@ -103,7 +101,7 @@ function _signup_current_user_signup($node, $type = 'node') {
       }
       else {
         // Already signed up, display their info.
-        $output .= _signup_print_current_signup($node, $signup_info);
+        $output .= _signup_render_signup_edit_form($signup, $type);
       }
     }
   }
@@ -113,16 +111,15 @@ function _signup_current_user_signup($node, $type = 'node') {
 /**
  * Helper function to generate the list of users signed up for a node.
  */
-function signup_user_list_page($node) {
+function signup_user_list_output($node) {
   $output = '';
 
   // How should the list of signed-up users be displayed, if at all?
   $display_list = variable_get('signup_display_signup_user_list', 'signup');
 
-  // If the user has the view signups perm and the admin decides to display
-  // the list at the bottom of the page, display the current signups.
-  if (user_access('view all signups')) {
-    if ($display_list == 'signup') {
+  // Ensure the user has permission to view the signup list for this node.
+  if (_signup_menu_access($node, 'list')) {
+    if ($display_list == 'signup' || $display_list == 'signup-tab') {
       // Admin wants the hard-coded signup listing.
       $registered_query = db_query("SELECT u.uid, u.name, s.signup_time, s.form_data FROM {signup_log} s INNER JOIN {users} u ON u.uid = s.uid WHERE s.nid = %d AND u.uid <> 0", $node->nid);
       $registered_signups = array();
@@ -136,12 +133,18 @@ function signup_user_list_page($node) {
       }
       $output .= theme('signup_user_list', $node, $registered_signups, $anon_signups);
     }
-    elseif ($display_list == 'embed-view' && module_exists('views')) {
-      $signup_view = variable_get('signup_user_list_view', 'signup_user_list:page');
+    elseif (($display_list == 'embed-view' || $display_list == 'embed-view-tab') && module_exists('views')) {
+      $signup_view = variable_get('signup_user_list_view', 'signup_user_list:default');
       $signup_view_parts = explode(':', $signup_view);
       $view_name = $signup_view_parts[0];
       $view_display = $signup_view_parts[1];
       $view = views_get_view($view_name);
+      if ($display_list == 'embed-view-tab') {
+        $view->override_path = 'node/%/signups/list';
+      }
+      else {
+        $view->override_path = 'node/%';
+      }
       $view_args = array($node->nid);
       $output .=  $view->preview($view_display, $view_args);
     }
@@ -172,36 +175,15 @@ function signup_node_tab($node) {
 }
 
 /**
- * Helper function to display the current user's signup information.
- *
- * Contains the logic to determine what should be displayed, then invokes the
- * appropriate form builder and theme functions.
- *
- * @param $node
- *   The fully-loaded node object to display signup data about.
- * @param $signup_info
- *   Database object with information about the signup to display.
- *
- * @return
- *   Themed HTML to output for the given node and signup.
- *
- * @see theme_signup_current_signup()
+ * Helper function to render the form to edit your own signup.
  */
-function _signup_print_current_signup($node, $signup_info) {
-  // Generate an array of data about the current signup for the theme function.
-  $signup_data = array();
-  $signup_data['custom_data'] = unserialize($signup_info->form_data);
-  $signup_data['signup_timestamp'] = $signup_info->signup_time;
-
-  // See if the current user is allowed to cancel their signup, and if so,
-  // render the HTML for the cancel form (which is just a single button).
-  $cancel_signup_form = '';
-  if (user_access('cancel own signups')) {
-    module_load_include('inc', 'signup', 'includes/signup_cancel_form');
-    $cancel_signup_form = drupal_get_form('signup_cancel_form', $signup_info->sid);
+function _signup_render_signup_edit_form($signup, $type) {
+  $path = drupal_get_path('module', 'signup');
+  if ($type == 'node') {
+    drupal_add_css("$path/signup.css");
   }
-
-  // Hand off everything to the theme function for actual HTML generation.
-  return theme('signup_current_signup', $signup_data, $cancel_signup_form);
+  drupal_add_js("$path/js/signup_edit_form.js");
+  module_load_include('inc', 'signup', 'includes/signup_edit_form');
+  return drupal_get_form('signup_edit_form', $signup, $type);
 }
 

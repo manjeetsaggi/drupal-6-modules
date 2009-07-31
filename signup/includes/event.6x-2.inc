@@ -1,5 +1,5 @@
 <?php
-// $Id: event.6x-2.inc,v 1.2 2008/11/25 17:54:05 dww Exp $
+// $Id: event.6x-2.inc,v 1.2.2.1 2009/01/09 03:49:54 dww Exp $
 
 
 /**
@@ -71,8 +71,8 @@ function _signup_event_admin_sql($content_type = NULL) {
  */
 function _signup_event_node_completed($node) {
   if (isset($node->event)) {
-    $closing_time = gmdate('Y-m-d H:i:s', time() - (variable_get('signup_close_early', 1) * 3600));
-    if (event_is_later($node->event['start_utc'], $closing_time, 'string')) {
+    $closing_time = gmdate('Y-m-d H:i:s', time() + (variable_get('signup_close_early', 1) * 3600));
+    if (event_is_later($closing_time, $node->event['start_utc'], 'string')) {
       return TRUE;
     }
   }
