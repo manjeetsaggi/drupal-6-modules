@@ -1,0 +1,13 @@
+; $Id: community_tasks.info,v 1.1 2009/07/18 02:11:47 matslats Exp $
+name = Community Tasks
+description = Users sign up to volunteer task requests and are credited when they are completed
+version = $Name: DRUPAL-6--1-0-BETA1 $
+package = Complementary Currencies
+core = "6.x"
+
+; Information added by drupal.org packaging script on 2009-07-29
+version = "6.x-1.0-beta1"
+core = "6.x"
+project = "community_tasks"
+datestamp = "1248896776"
+

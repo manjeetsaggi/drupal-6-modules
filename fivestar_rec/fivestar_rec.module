@@ -1,0 +1,165 @@
+<?php
+// $Id: fivestar_rec.module,v 1.2 2009/07/21 19:53:03 danithaca Exp $
+
+/**
+ * @see http://drupal.org/project/fivestar_rec
+ */
+
+/**
+ * Implementation of hook_help().
+ */
+function fivestar_rec_help($path, $args) {
+  $output = '';
+  switch ($path) {
+    case "admin/help#fivestar_rec":
+      $output = '<p>'.  t("This module generates node recommendations based on fivestar voting") .'</p>';
+      break;
+  }
+  return $output;
+}
+
+
+/**
+ * Implementation of hook_perm().
+ */
+function fivestar_rec_perm() {
+  $perm = array(
+    "administer recommender",
+  );
+  return $perm;
+}
+
+
+/**
+ * Implementation of hook_menu().
+ */
+function fivestar_rec_menu() {
+  $items = array();
+  $items['admin/settings/fivestar_rec'] = array(
+    'title' => t('Fivestar recommender'),
+    'description' => 'Configuration and adjusts of recommender based on fivestar voting',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('fivestar_rec_settings_form'),
+    'access arguments' => array('administer recommender'),
+    'file' => 'fivestar_rec.admin.inc',
+   );
+  return $items;
+}
+
+
+/**
+ * Implementation of hook_block()
+ */
+function fivestar_rec_block($op='list', $delta=0) {
+  if ($op == 'list') {
+    if (variable_get('fivestar_rec_enable_user2user', 1)) {
+      $block[0]['info'] = t('Fivestar recommender: similar users');
+      $block[1]['info'] = t('Fivestar recommender: suggestions from similar users');
+    }
+    if (variable_get('fivestar_rec_enable_item2item', 1)) {
+      $block[2]['info'] = t('Fivestar recommender: similar items by votes');
+      $block[3]['info'] = t('Fivestar recommender: suggestions from voting history');
+    }
+    return $block;
+  }
+  else if ($op == 'view') {
+    $block = array();
+    $display_num = variable_get('fivestar_rec_display_num', 5);
+    $same_type = variable_get('fivestar_rec_same_type', 1);
+
+    // similar users block
+    if ($delta == 0) {
+      global $user;
+      if ($user->uid == 0) return;  // we don't display stuff for anonymous users
+      $user_list = recommender_top_similarity('fivestar_rec_user2user', $user->uid, $display_num);
+      if (!empty($user_list)) {
+        foreach ($user_list as $a_user) {
+          $display[] = theme('username', user_load($a_user['id']));
+        }
+        $block['subject'] = t('Users who voted similarly as you');
+        $block['content'] = theme('item_list', $display);
+      }
+    }
+    // suggestions from similar users
+    elseif ($delta == 1) {
+      global $user;
+      if ($user->uid == 0) return;  // we don't display stuff for anonymous users
+      $item_list = recommender_top_prediction('fivestar_rec_user2user', $user->uid, $display_num, '_fivestar_rec_enforce_same_type');
+      if (!empty($item_list)) {
+        foreach ($item_list as $item) {
+          $node = node_load($item['id']);
+          $display[] = l($node->title, "/node/{$node->nid}");
+        }
+        $block['subject'] = t('Recommended nodes from users who voted similarly as you');
+        $block['content'] = theme('item_list', $display);
+      }
+    }
+    // similar items by votes
+    elseif ($delta == 2) {
+      if ($current_node = menu_get_object() && variable_get("fivestar_{$current_node->type}", 0)) {
+        $item_list = recommender_top_prediction('fivestar_rec_item2item', $current_node->nid, $display_num, '_fivestar_rec_enforce_same_type');
+        if (!empty($item_list)) {
+          foreach ($item_list as $item) {
+            $node = node_load($item['id']);
+            $display[] = l($node->title, "/node/{$node->nid}");
+          }
+          $block['subject'] = t('Other nodes voted similar to this one');
+          $block['content'] = theme('item_list', $display);
+        }
+      }
+    }
+    // suggestions from voting history
+    elseif ($delta == 3) {
+      global $user;
+      if ($user->uid == 0) return;  // we don't display stuff for anonymous users
+      $item_list = recommender_top_prediction('fivestar_rec_item2item', $user->uid, $display_num, '_fivestar_rec_enforce_same_type');
+      if (!empty($item_list)) {
+        foreach ($item_list as $item) {
+          $node = node_load($item['id']);
+          $display[] = l($node->title, "/node/{$node->nid}");
+        }
+        $block['subject'] = t('You might also interest in these nodes based on your previous votes');
+        $block['content'] = theme('item_list', $display);
+      }
+    }
+
+    return $block;
+  }
+}
+
+
+// the callback function about enforcing the same type.
+function _fivestar_rec_enforce_same_type($item) {
+  if ($current_node = menu_get_object()) {
+    $suggest_node = node_load($item['id']);
+    if ($suggest_node->status != 1) return FALSE; // the suggested node has to be published.
+    if (variable_get('fivestar_rec_same_type', 1)) { // if enforce same type
+      return $suggest_node->type == $current_node->type;
+    } else {
+      return TRUE;
+    }
+  } else {
+    return FALSE;
+  }
+}
+
+
+/**
+ * Implementation of hook_run_recommender() for RecAPI
+ */
+function fivestar_rec_run_recommender() {
+  $sql = "SELECT uid, content_id, value FROM {votingapi_vote} WHERE content_type='node' AND value_type='percent' AND tag='vote' AND uid<>0";
+
+  if (variable_get('fivestar_rec_enable_user2user', 1)) {
+    watchdog('fivestar_rec', "Computing recommendation for user2user algorithm");
+    // run recommender
+    recommender_user2user('fivestar_rec_user2user', $sql, 'uid', 'content_id', 'value', array(
+          'missing'=>'none', 'performance' => 'memory', 'duplicate' => 'remove', 'lowerbound' => 0, 'knn' => 10));
+  }
+  if (variable_get('fivestar_rec_enable_item2item', 1)) {
+    watchdog('fivestar_rec', "Computing recommendation for item2item algorithm");
+    // run recommender
+    recommender_item2item('fivestar_rec_item2item', $sql, 'uid', 'content_id', 'value', array(
+          'missing'=>'none', 'performance' => 'memory', 'duplicate' => 'remove', 'lowerbound' => 0, 'knn' => 10));
+  }
+}

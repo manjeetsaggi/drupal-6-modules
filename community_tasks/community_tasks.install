@@ -1,0 +1,48 @@
+<?php
+// $Id: community_tasks.install,v 1.1 2009/07/18 02:11:47 matslats Exp $
+
+/**
+ * Implementation of hook_install().
+ */
+function community_tasks_install() {
+  //this does not seek out and incorporate existing nodes of type 'requack'
+  drupal_install_schema('community_tasks');
+  variable_set('community_tasks_terminology', array(
+    'tasks'=>t('Tasks'), 
+    'commitments' => t('Commitments'), 
+    'acknowledgements' => t('Acknowledgements')
+  ));
+}
+
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function community_tasks_uninstall () {
+  //this does not delete any nodes of type 'requack'
+  drupal_uninstall_schema('community_tasks');
+  variable_del('community_tasks_terminology');
+}
+
+/**
+ * Implementation of hook_schema)().
+ * http://api.drupal.org/api/function/hook_schema/6
+ */
+function community_tasks_schema () {
+  $schema['community_task_count'] = array (
+  'description'=>"User's totals of community tasks accomplished",
+    'fields'=> array(
+      'uid'=> array (
+        'description' => t('the user ID'),
+        'type' => 'int',
+        'size' => 'normal',
+      ),
+      'tasks'=> array(
+        'description' => t('Number of community tasks completed'),
+        'type' => 'int',
+        'size' => 'normal',
+      ),
+    )
+  );
+  return $schema;
+}

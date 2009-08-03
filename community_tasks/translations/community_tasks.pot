@@ -1,0 +1,195 @@
+# $Id$
+#
+# LANGUAGE translation of Drupal (general)
+# Copyright YEAR NAME <EMAIL@ADDRESS>
+# Generated from files:
+#  community_tasks.views.inc: n/a
+#  community_tasks.module: n/a
+#  community_tasks.install,v 1.1 2009/07/18 02:11:47 matslats
+#  community_tasks.info,v 1.1 2009/07/18 02:11:47 matslats
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"POT-Creation-Date: 2009-07-29 06:21+0000\n"
+"PO-Revision-Date: YYYY-mm-DD HH:MM+ZZZZ\n"
+"Last-Translator: NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <EMAIL@ADDRESS>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: community_tasks.views.inc:18
+msgid "Number of @acknowledgements"
+msgstr ""
+
+#: community_tasks.views.inc:27
+msgid "Total"
+msgstr ""
+
+#: community_tasks.views.inc:29
+msgid "The total number of @acknowledgements received by the user"
+msgstr ""
+
+#: community_tasks.views.inc:64
+msgid "@tasks and @commitments"
+msgstr ""
+
+#: community_tasks.views.inc:124
+msgid "Completer"
+msgstr ""
+
+#: community_tasks.views.inc:209;214
+msgid "@tasks yet to be completed"
+msgstr ""
+
+#: community_tasks.views.inc:260;269
+msgid "Completed @tasks"
+msgstr ""
+
+#: community_tasks.views.inc:261;447
+msgid "No @tasks have been completed"
+msgstr ""
+
+#: community_tasks.views.inc:317
+msgid "Completed community tasks, or @community_tasks_completed"
+msgstr ""
+
+#: community_tasks.views.inc:369
+msgid "@community_tasks_completed by %1"
+msgstr ""
+
+#: community_tasks.views.inc:446
+msgid "community_tasks_completed"
+msgstr ""
+
+#: community_tasks.views.inc:465 community_tasks.module:77 community_tasks.install:11
+msgid "Tasks"
+msgstr ""
+
+#: community_tasks.module:9
+msgid "A contentType which tracks tasks needing doing, and who committed to, and completed them."
+msgstr ""
+
+#: community_tasks.module:22
+msgid "A contentType which when completed with a user id, becomes an acknowledgement for which each user has a total."
+msgstr ""
+
+#: community_tasks.module:24
+msgid "A need to be met by a user"
+msgstr ""
+
+#: community_tasks.module:74
+msgid "What should things be called?"
+msgstr ""
+
+#: community_tasks.module:77;85;93
+msgid "Your preferred name for @types"
+msgstr ""
+
+#: community_tasks.module:78
+msgid "Tasks which the community needs doing"
+msgstr ""
+
+#: community_tasks.module:85 community_tasks.install:12
+msgid "Commitments"
+msgstr ""
+
+#: community_tasks.module:86
+msgid "Tasks to which a user has committed"
+msgstr ""
+
+#: community_tasks.module:93 community_tasks.install:13
+msgid "Acknowledgements"
+msgstr ""
+
+#: community_tasks.module:94
+msgid "Tasks which has been completed and is now credited to the user"
+msgstr ""
+
+#: community_tasks.module:101
+msgid "Submit"
+msgstr ""
+
+#: community_tasks.module:125
+msgid "Edit @commitments"
+msgstr ""
+
+#: community_tasks.module:127
+msgid "Create @tasks"
+msgstr ""
+
+#: community_tasks.module:143
+msgid "Who has committed to this task?"
+msgstr ""
+
+#: community_tasks.module:147
+msgid "Uncommitted @tasks are set to @admin"
+msgstr ""
+
+#: community_tasks.module:163
+msgid "Is this completed?"
+msgstr ""
+
+#: community_tasks.module:176
+msgid "!user committed to this."
+msgstr ""
+
+#: community_tasks.module:254
+msgid "@user's @acknowledgements"
+msgstr ""
+
+#: community_tasks.module:261
+msgid "@num @tasks completed"
+msgstr ""
+
+#: community_tasks.module:276
+msgid "Commit to doing this"
+msgstr ""
+
+#: community_tasks.module:43
+msgid "view tasks"
+msgstr ""
+
+#: community_tasks.module:43
+msgid "edit tasks"
+msgstr ""
+
+#: community_tasks.module:43
+msgid "commit to tasks"
+msgstr ""
+
+#: community_tasks.module:62
+msgid "Community tasks"
+msgstr ""
+
+#: community_tasks.module:63
+msgid "options for community service module"
+msgstr ""
+
+#: community_tasks.module:0
+msgid "community_tasks"
+msgstr ""
+
+#: community_tasks.install:36
+msgid "the user ID"
+msgstr ""
+
+#: community_tasks.install:41
+msgid "Number of community tasks completed"
+msgstr ""
+
+#: community_tasks.info:0
+msgid "Community Tasks"
+msgstr ""
+
+#: community_tasks.info:0
+msgid "Users sign up to volunteer task requests and are credited when they are completed"
+msgstr ""
+
+#: community_tasks.info:0
+msgid "Complementary Currencies"
+msgstr ""
+
