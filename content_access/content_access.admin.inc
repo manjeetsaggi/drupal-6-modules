@@ -1,5 +1,5 @@
 <?php
-// $Id: content_access.admin.inc,v 1.1.2.21 2009/03/17 16:04:15 fago Exp $
+// $Id: content_access.admin.inc,v 1.1.2.23 2009/07/31 10:03:22 fago Exp $
 
 /**
  * @file Content access administration UI.
@@ -109,9 +109,9 @@ function content_access_admin_settings(&$form_state, $type) {
   // Per node:
   $form['node'] = array(
     '#type' => 'fieldset',
-    '#title' => t('Per content access control settings'),
+    '#title' => t('Per content node access control settings'),
     '#collapsible' => TRUE,
-    '#description' => t('Optionally you can enable per content access control settings. If enabled, a new tab for the content access settings appears when viewing content. You have to configure permission to access these settings at the !permissions page.', array('!permissions' => l(t('permissions'), 'admin/user/permissions'))),
+    '#description' => t('Optionally you can enable per content node access control settings. If enabled, a new tab for the content access settings appears when viewing content. You have to configure permission to access these settings at the !permissions page.', array('!permissions' => l(t('permissions'), 'admin/user/permissions'))),
   );
   $form['node']['per_node'] = array(
     '#type' => 'checkbox',
@@ -248,7 +248,7 @@ function content_access_role_based_form($defaults = array()) {
     $defaults += array($op => array());
   }
 
-  $roles = user_roles();
+  $roles = array_map('filter_xss_admin', user_roles());
   // Per type:
   $form['per_role'] = array(
     '#type' => 'fieldset',

@@ -1,4 +1,4 @@
-; $Id: README.txt,v 1.2.2.5 2009/02/22 12:26:23 hass Exp $
+; $Id: README.txt,v 1.2.2.6 2009/07/19 17:06:58 hass Exp $
 
 Link Checker
 ------------
@@ -8,9 +8,10 @@ Installation:
 1. Place the entire linkchecker folder into your modules directory.
 2. Go to Administer -> Site building -> Modules and enable the Link checker module.
 3. Go to Administer -> Site configuration -> Link checker and enable the node types to scan.
-4. Adjust the other parameters if the defaults don't suit your needs.
-5. Save configuration
-6. Wait for cron to check all your links... this may take some time! :-)
+4. Check all HTML tags that should be scanned.
+5. Adjust the other parameters if the defaults don't suit your needs.
+6. Save configuration
+7. Wait for cron to check all your links... this may take some time! :-)
 
 If links are broken they should appear after a while under this url:
 http://example.com/admin/reports/linkchecker
