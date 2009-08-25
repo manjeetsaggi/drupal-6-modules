@@ -1,5 +1,5 @@
 <?php
-// $Id: vote_up_down.test,v 1.1.2.7 2009/02/07 19:28:44 lut4rp Exp $
+// $Id: vote_up_down.test,v 1.1.2.10 2009/08/06 08:50:11 ingo86 Exp $
 
 /**
  * @file
@@ -25,7 +25,7 @@
  */
 
 // Why is this required?  Sometimes?
-include_once drupal_get_path('module', 'simpletest') .  '/drupal_web_test_case.php';
+//include_once drupal_get_path('module', 'simpletest') .  '/drupal_web_test_case.php';
 
 class VoteUpDownTestCase extends DrupalWebTestCase {
   /**
@@ -42,14 +42,15 @@ class VoteUpDownTestCase extends DrupalWebTestCase {
   function setUp() {
     parent::setUp('votingapi', 'vote_up_down');
 
-    // Module permissions: array('view up/down votes', 'use vote up/down', 'access vote up/down statistics', 'administer vote up/down');
+    // Module permissions: array('view up/down votes', 'use vote up', 'use vote down', 'access vote up/down statistics', 'administer vote up/down');
 
     // Create users.
     $this->admin_user = $this->drupalCreateUser(
       array(
         'access vote up/down statistics',
         'administer vote up/down',
-        'use vote up/down',
+        'use vote up',
+        'use vote down',
         'view up/down votes',
         'administer permissions',
         'administer blocks',
@@ -59,7 +60,8 @@ class VoteUpDownTestCase extends DrupalWebTestCase {
     $this->web_user = $this->drupalCreateUser(
       array(
         'access vote up/down statistics',
-        'use vote up/down',
+        'use vote up',
+        'use vote down',
         'view up/down votes',
         'create story content',
         'create page content',
@@ -116,6 +118,11 @@ class VoteUpDownTestCase extends DrupalWebTestCase {
     $this->assertText('Who voted on this?', 'Vote Up/Down block is on node pages');
     $this->assertText('Voting details', 'Voting details tab is on node pages');
 
+    // Use the url to find the NID, and then check for the <span> tag that the
+    // JavaScript uses to update the points.
+    preg_match('#node/([0-9]*)$#', $node_url, $matches);
+    $nid = $matches[1];
+    $this->assertRaw('<span id="vote_points_' . $nid . '" class="vote-points">', 'Labeled SPAN tag found');
 
     // Create a PAGE node using the node/add page.
     // Check that the Vote Up/Down information does NOT show for this node type.
@@ -186,7 +193,8 @@ class VoteUpDownTestCase extends DrupalWebTestCase {
     $another_user = $this->drupalCreateUser(
       array(
         'access vote up/down statistics',
-        'use vote up/down',
+        'use vote up',
+        'use vote down',
         'view up/down votes',
       )
     );
@@ -231,19 +239,151 @@ class VoteUpDownTestCase extends DrupalWebTestCase {
     $this->assertNoRaw('<td>', 'Non-heading rows found in your-votes table');
     // $this->writeFile('your-votes.html');
 
-
-
     // Vote and check.
     $this->drupalGet($node_url);
     $this->castVote(FALSE); // if this fails, it may be because this users has already voted
     $this->assertText('-1 points');
     // $this->writeFile('alt-tag-vote.html');
 
-
-
     // TODO: Check anonymous user permissions
-    $this->drupalLogout();
   }
+
+
+  /**
+   * Check the permissions for voting only up
+   */
+  function testVoteUp() {
+
+    // Enable Vote Up/Down for Story node types. Everything else should be
+    // default settings.
+    $this->drupalLogin($this->admin_user);
+    $edit = array(
+      'vote_up_down_node_types[story]' => TRUE,
+    );
+    $this->drupalPost('admin/settings/voteupdown', $edit, 'Save configuration');
+    $this->assertText('The configuration options have been saved.');
+    $this->assertText('Vote Up/Down');
+
+    // Create another user to test the vote up only permission
+    $this->voteup_user = $this->drupalCreateUser(
+      array(
+        'access vote up/down statistics',
+        'use vote up',
+        'view up/down votes',
+        'create story content',
+      )
+    );
+
+    // Login
+    $this->drupalLogin($this->voteup_user);
+
+    //Create another story
+    $node = array(
+      'title' => $this->randomName(20, 'NODE_'),
+      'body' => $this->randomName(20, 'BODY_'),
+    );
+    $this->drupalPost('node/add/story', $node, 'Save');
+    $this->assertText("Story $node[title] has been created.");
+    file_put_contents('output.html', $this->drupalGetContent());
+
+    // Check the presence of the widget
+    $this->assertText('0 points');
+    $this->assertRaw('<div class="vote-up-down-widget">');
+    $node_url = $this->getUrl();
+    $this->assertText('Voting details', 'Voting details tab is on node pages');
+
+    // Use the url to find the NID, and then check for the <span> tag that the
+    // JavaScript uses to update the points.
+    preg_match('#node/([0-9]*)$#', $node_url, $matches);
+    $nid = $matches[1];
+    $this->assertRaw('<span id="vote_points_' . $nid . '" class="vote-points">', 'Labeled SPAN tag found');
+
+    // Check empty Voting details about this node.
+    $this->clickLink('Voting details'); // Bug #360139
+    $this->assertNoRaw('<td>', 'Voting Details Records found on new Story node');
+
+    // Back to the node page and check that the user can only vote up and cannot vote down
+    $this->drupalGet($node_url);
+    $this->assertNoRaw('<span title="You have no privileges to vote up." class="up-inact" id="vote_up_1"/>', t('Make sure the vote up is not disabled.'));
+    $this->assertRaw('<span id="vote_down_1" class="down-inact" title="You have no privileges to vote down."></span>', t('Make sure the vote down is disabled.'));
+    file_put_contents('output.html', $this->drupalGetContent());
+
+    // Cast a vote, and make sure the score was updated.
+    $this->drupalGet($node_url);
+    $this->castVote(TRUE);
+    $this->assertText('1 point');
+    $this->clickLink('Voting details');
+    $this->assertText($this->voteup_user->name);
+    $this->assertRaw('<td>1</td>');
+  }
+
+    /**
+   * Check the permissions for voting only down
+   */
+  function testVoteDown() {
+
+    // Enable Vote Up/Down for Story node types. Everything else should be
+    // default settings.
+    $this->drupalLogin($this->admin_user);
+    $edit = array(
+      'vote_up_down_node_types[story]' => TRUE,
+    );
+    $this->drupalPost('admin/settings/voteupdown', $edit, 'Save configuration');
+    $this->assertText('The configuration options have been saved.');
+    $this->assertText('Vote Up/Down');
+
+    // Create another user to test the vote up only permission
+    $this->votedown_user = $this->drupalCreateUser(
+      array(
+        'access vote up/down statistics',
+        'use vote down',
+        'view up/down votes',
+        'create story content',
+      )
+    );
+
+    // Login
+    $this->drupalLogin($this->votedown_user);
+
+    //Create another story
+    $node = array(
+      'title' => $this->randomName(20, 'NODE_'),
+      'body' => $this->randomName(20, 'BODY_'),
+    );
+    $this->drupalPost('node/add/story', $node, 'Save');
+    $this->assertText("Story $node[title] has been created.");
+    file_put_contents('output.html', $this->drupalGetContent());
+
+    // Check the presence of the widget
+    $this->assertText('0 points');
+    $this->assertRaw('<div class="vote-up-down-widget">');
+    $node_url = $this->getUrl();
+    $this->assertText('Voting details', 'Voting details tab is on node pages');
+
+    // Use the url to find the NID, and then check for the <span> tag that the
+    // JavaScript uses to update the points.
+    preg_match('#node/([0-9]*)$#', $node_url, $matches);
+    $nid = $matches[1];
+    $this->assertRaw('<span id="vote_points_' . $nid . '" class="vote-points">', 'Labeled SPAN tag found');
+
+    // Check empty Voting details about this node.
+    $this->clickLink('Voting details'); // Bug #360139
+    $this->assertNoRaw('<td>', 'Voting Details Records found on new Story node');
+
+    // Back to the node page and check that the user can only vote up and cannot vote down
+    $this->drupalGet($node_url);
+    $this->assertRaw('<span id="vote_up_1" class="up-inact" title="You have no privileges to vote up."></span>', t('Make sure the vote up is disabled.'));
+    $this->assertNoRaw('<span title="You have no privileges to vote down." class="down-inact" id="vote_down_1"/>', t('Make sure the vote down is not disabled.'));
+    file_put_contents('output.html', $this->drupalGetContent());
+
+    // Cast a vote, and make sure the score was updated.
+    $this->castVote(FALSE);
+    $this->assertText('-1 point');
+    $this->clickLink('Voting details');
+    $this->assertText($this->votedown_user->name);
+    $this->assertRaw('<td>-1</td>');
+  }
+
 
   /**
    * Execute a (non-AJAX) vote from the current node.

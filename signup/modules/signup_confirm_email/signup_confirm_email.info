@@ -4,9 +4,9 @@ description = "Adds a field to the signup form to confirm the user's e-mail addr
 core = 6.x
 dependencies[] = signup
 
-; Information added by drupal.org packaging script on 2009-07-27
-version = "6.x-1.0-rc4"
+; Information added by drupal.org packaging script on 2009-08-23
+version = "6.x-1.0-rc5"
 core = "6.x"
 project = "signup"
-datestamp = "1248729727"
+datestamp = "1251042955"
 

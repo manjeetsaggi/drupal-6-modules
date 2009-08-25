@@ -1,14 +1,14 @@
 <?php
-// $Id: vote_up_down.module,v 1.24.2.28 2009/03/25 20:15:23 lut4rp Exp $
+// $Id: vote_up_down.module,v 1.24.2.33 2009/08/09 00:14:41 ingo86 Exp $
 
 /**
  * @file
  * Allows adding an up/down voting widget to selected content types & comments.
  */
 
-// if (module_exists('views')) {
-//   module_load_include('inc', 'vote_up_down', 'vote_up_down_views');
-//  }
+ if (module_exists('views')) {
+  module_load_include('inc', 'vote_up_down', 'vote_up_down.views');
+  }
 
 // if (module_exists('actions')) {
 //   module_load_include('inc', 'vote_up_down', 'vote_up_down_actions');
@@ -29,7 +29,14 @@ function vote_up_down_help($path, $arg) {
  * Implementation of hook_perm().
  */
 function vote_up_down_perm() {
-  return array('view up/down votes', 'use vote up/down', 'access vote up/down statistics', 'administer vote up/down');
+  return array('view up/down votes', 'use vote up', 'use vote down', 'access vote up/down statistics', 'administer vote up/down');
+}
+
+/**
+ * Implementation of hook_access() for the voting page.
+ */
+function vote_up_down_access() {
+  return user_access('use vote up') || user_access('use vote down');
 }
 
 /**
@@ -114,7 +121,7 @@ function vote_up_down_admin_advanced_settings() {
     '#title' => t('Allow anonymous voting'),
     '#default_value' => variable_get('vote_up_down_anonymous_vote', 0),
     '#options' => array(0 => t('No'), 1 => t('Yes')),
-    '#description' => t('If yes, anonymous users may cast votes, restricted to one vote per day per IP address.<br />This will not work if "use vote up/down" & "view up/down votes" permissions are not given to anonymous users.'),
+    '#description' => t('If yes, anonymous users may cast votes, restricted to one vote per day per IP address.<br />This will not work if "use vote up" & "use vote down" & "view up/down votes" permissions are not given to anonymous users.'),
   );
   $form['vote_widget_settings_advanced']['vote_up_down_reset_vote'] = array(
     '#type' => 'radios',
@@ -167,7 +174,7 @@ function vote_up_down_menu() {
   $items['vote_up_down'] = array(
     'title' => 'Vote',
     'page callback' => 'vote_up_down_vote',
-    'access arguments' => array('use vote up/down'),
+    'access callback' => 'vote_up_down_access',
     'type' => MENU_CALLBACK,
   );
 
@@ -209,23 +216,12 @@ function vote_up_down_menu() {
 function vote_up_down_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
   switch ($op) {
     case 'view':
-      if (user_access('view up/down votes')) {
-        $node_type = in_array($node->type, variable_get('vote_up_down_node_types', array()), TRUE);
-        if ($node_type) {
-          $style = variable_get('vote_up_down_widget_style_node', 0) == 1 ? 'alt' : '';
-          if ($teaser && variable_get('vote_up_down_widget_node', 0) && variable_get('vote_up_down_widget_node', 0) != 2) {
+      $widget = vote_up_down_widget_form($node);
+      if (!empty($widget)) {
             $node->content['vote_up_down'] = array(
-              '#value' => theme("vote_up_down_widget$style", $node->nid, 'node'),
+              '#value' => $widget,
               '#weight' => -10,
             );
-          }
-          else if (!$teaser && variable_get('vote_up_down_widget_node', 0) > 1) {
-            $node->content['vote_up_down'] = array(
-              '#value' => theme("vote_up_down_widget$style", $node->nid, 'node'),
-              '#weight' => -10,
-            );
-          }
-        }
       }
       break;
   }
@@ -285,7 +281,7 @@ function vote_up_down_link($type, $node = NULL, $teaser = FALSE) {
       $node_type = in_array($node->type, variable_get('vote_up_down_node_types', array()), TRUE);
       $style = variable_get('vote_up_down_widget_style_node', 0) == 1 ? '_alt' : '';
       if ($node_type && user_access('view up/down votes')) {
-        if (variable_get('vote_up_down_reset_vote', 0) && user_access('use vote up/down')) {
+        if (variable_get('vote_up_down_reset_vote', 0) && ((user_access('use vote up')) || (user_access('use vote down')))) {
           $token = drupal_get_token("vote_up_down/$type/$node->nid/0");
           $links['vote_up_down_reset'] = array(
             'title' => t('Reset vote'),
@@ -296,20 +292,20 @@ function vote_up_down_link($type, $node = NULL, $teaser = FALSE) {
         }
         if ($teaser && variable_get('vote_up_down_link_node', 0) && variable_get('vote_up_down_link_node', 0) != 2 && $style != "_alt") {
           $links['vote_up_down_points'] = array(
-            'title' => theme('vote_up_down_points', $node->cid, $type),
+            'title' => theme('vote_up_down_points', $node->nid, $type),
             'html' => TRUE,
           );
         }
         else if (!$teaser && variable_get('vote_up_down_link_node', 0) > 1 && $style != "_alt") {
           $links['vote_up_down_points'] = array(
-            'title' => theme('vote_up_down_points', $node->cid, $type),
+            'title' => theme('vote_up_down_points', $node->nid, $type),
             'html' => TRUE,
           );
         }
       }
       break;
     case 'comment':
-      if (variable_get('vote_up_down_reset_vote', 0) && user_access('use vote up/down') && (variable_get('vote_up_down_widget_comment', 0) || variable_get('vote_up_down_link_comment', 0))) {
+      if (variable_get('vote_up_down_reset_vote', 0) && (user_access('use vote up') || user_access('use vote down')) && (variable_get('vote_up_down_widget_comment', 0) || variable_get('vote_up_down_link_comment', 0))) {
         $token = drupal_get_token("vote_up_down/$type/$node->cid/0");
         $links['vote_up_down_reset_c'] = array(
           'title' => t('Reset vote'),
@@ -597,7 +593,7 @@ function template_preprocess_vote_up_down_widget(&$variables) {
   drupal_add_js(drupal_get_path('module', 'vote_up_down') .'/ajax_vote_up_down.js');
 
   $variables['points'] = theme('vote_up_down_points', $cid, $type, $tag);
-  if (user_access('use vote up/down') && ($user->uid || variable_get('vote_up_down_anonymous_vote', 0))) {
+  if ((user_access('use vote up') || user_access('use vote down')) && $user->uid || variable_get('vote_up_down_anonymous_vote', 0)) {
     $criteria = array(
       'content_type' => $type,
       'content_id' => $cid,
@@ -619,9 +615,11 @@ function template_preprocess_vote_up_down_widget(&$variables) {
       $variables['class2'] = 'vote-down-inact';
     }
 
-    $token = drupal_get_token("vote_up_down/$type/$cid/1");
-    $variables['title1'] = url("vote_up_down/$type/$cid/1/$tag/1", array('query' => 'token='. $token));
-    $variables['link1'] = l('', "vote_up_down/$type/$cid/1/$tag", array(
+    // Voting up cases
+    if (user_access('use vote up')) {
+      $token = drupal_get_token("vote_up_down/$type/$cid/1");
+      $variables['title1'] = url("vote_up_down/$type/$cid/1/$tag/1", array('query' => 'token='. $token));
+      $variables['link1'] = l('', "vote_up_down/$type/$cid/1/$tag", array(
                                                'attributes' => array(
                                                  'class' => $variables['class1'],
                                                  'title' => t('Vote up')
@@ -629,10 +627,17 @@ function template_preprocess_vote_up_down_widget(&$variables) {
                                                'query' => drupal_get_destination() .'&token='. $token,
                                               )
                                             );
+    }
+    else {
+      $variables['class1'] = 'up-inact';
+      $variables['title1'] = t('You have no privileges to vote up.');
+    }
 
-    $token = drupal_get_token("vote_up_down/$type/$cid/-1");
-    $variables['title2'] = url("vote_up_down/$type/$cid/-1/$tag/1", array('query' => 'token='. $token));
-    $variables['link2'] =  l('', "vote_up_down/$type/$cid/-1/$tag", array(
+    // Voting down cases
+    if (user_access('use vote down')) {
+      $token = drupal_get_token("vote_up_down/$type/$cid/-1");
+      $variables['title2'] = url("vote_up_down/$type/$cid/-1/$tag/-1", array('query' => 'token='. $token));
+      $variables['link2'] =  l('', "vote_up_down/$type/$cid/-1/$tag", array(
                                                 'attributes' => array(
                                                   'class' => $variables['class2'],
                                                   'title' => t('Vote down')
@@ -640,6 +645,11 @@ function template_preprocess_vote_up_down_widget(&$variables) {
                                                 'query' => drupal_get_destination() .'&token='. $token,
                                                )
                                              );
+    }
+    else {
+      $variables['class2'] = 'down-inact';
+      $variables['title2'] = t('You have no privileges to vote down.');
+    }
   }
   else {
     $variables['class1'] = 'up-inact';
@@ -662,7 +672,7 @@ function template_preprocess_vote_up_down_widget_alt(&$variables) {
   drupal_add_js(drupal_get_path('module', 'vote_up_down') .'/ajax_vote_up_down.js');
 
   $variables['points'] = theme('vote_up_down_points', $cid, $type, $tag, 'alt');
-  if (user_access('use vote up/down') && ($user->uid || variable_get('vote_up_down_anonymous_vote', 0))) {
+  if ((user_access('use vote up') || user_access('use vote down')) && ($user->uid || variable_get('vote_up_down_anonymous_vote', 0))) {
     $criteria = array(
       'content_type' => $type,
       'content_id' => $cid,
@@ -823,4 +833,41 @@ function vote_up_down_node_access($node, $perm = 'access vote up/down statistics
     return in_array($node->type, variable_get('vote_up_down_node_types', array()), TRUE);
   }
   return FALSE;
+}
+
+
+/**
+ * Implementation of the widget function.
+ * Takes a node as input and output the widget to vote upon it.
+ *
+ * @param $node
+ *   A node object.
+ * @return
+ */
+function vote_up_down_widget_form($node) {
+  $return = '';
+  if (user_access('view up/down votes')) {
+    $node_type = in_array($node->type, variable_get('vote_up_down_node_types', array()), TRUE);
+    if ($node_type) {
+      $style = variable_get('vote_up_down_widget_style_node', 0) == 1 ? 'alt' : '';
+      if ($teaser && variable_get('vote_up_down_widget_node', 0) && variable_get('vote_up_down_widget_node', 0) != 2) {
+        $return = theme("vote_up_down_widget$style", $node->nid, 'node');
+      }
+      else if (!$teaser && variable_get('vote_up_down_widget_node', 0) > 1) {
+        $return = theme("vote_up_down_widget$style", $node->nid, 'node');
+      }
+    }
+  }
+  return $return;
+}
+
+/**
+ * Function to enable the integration with views API 2
+ * @return
+ */
+function vote_up_down_views_api() {
+  return array(
+    'api' => 2,
+    'path' => drupal_get_path('module', 'vote_up_down') . '/views',
+  );
 }

@@ -4,9 +4,9 @@ description = Provides an XMLRPC server.
 package = Services - servers
 dependencies[] = services
 core = 6.x
-; Information added by drupal.org packaging script on 2009-06-29
+; Information added by drupal.org packaging script on 2009-08-09
 version = "6.x-2.x-dev"
 core = "6.x"
 project = "services"
-datestamp = "1246234987"
+datestamp = "1249777371"
 

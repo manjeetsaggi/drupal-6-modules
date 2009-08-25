@@ -1,5 +1,5 @@
 <?php
-// $Id: flickr_attach_id.inc,v 1.1 2009/06/09 21:15:36 jbomb Exp $
+// $Id: flickr_attach_id.inc,v 1.2 2009/08/13 18:02:24 jbomb Exp $
 /**
  * Field handler to present a link to the node.
  */
@@ -49,6 +49,10 @@ class flickr_attach_id extends views_handler_field {
     // We only provide the flickr id for albums
     if ($this->table == 'node_flickr_albums' OR $this->options['display'] == 'id') {
       return $data['id'];
+    }
+    // Return null if no image is attached
+    if (empty($data['id'])) {
+      return NULL;
     }
     // review settings for flickr images
     $images = flickr_photo_get_sizes($data['id']);

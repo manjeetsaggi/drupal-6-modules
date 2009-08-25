@@ -1,5 +1,5 @@
 <?php
-// $Id: adsense_cse.module,v 1.1.2.8 2009/02/10 01:35:20 jcnventura Exp $
+// $Id: adsense_cse.module,v 1.1.2.9 2009/07/03 12:05:50 jcnventura Exp $
 
 /**
  * @file
@@ -54,6 +54,8 @@ function adsense_cse_menu() {
  * Implementation of hook_block().
  */
 function adsense_cse_block($op = 'list', $delta = 0, $edit = array()) {
+  $block = NULL;
+
   switch ($op) {
     case 'list':
       $max = variable_get('adsense_cse_number_blocks', ADSENSE_CSE_NUMBER_BLOCKS_DEFAULT);

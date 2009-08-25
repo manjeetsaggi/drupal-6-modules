@@ -1,4 +1,5 @@
 <?php 
+// $Id: flickr_attach.module,v 1.5 2009/08/14 16:29:56 jbomb Exp $
 define('PATH_FLICKR_ATTACH_CALLBACK', 'flickr_attach/pickr_callback');
 define('DOM_ID_FLICKR_PICKR_WRAPPER', 'flickr-pickr-wrappr');
 define('NUM_FLICKR_PICKR_ELEMENTS_PER_PAGE', 5);
@@ -27,7 +28,7 @@ function flickr_attach_menu() {
 
 function flickr_attach_initimages(&$node) {
 	$node->flickr_attach = array('album' => array(), 'image' => array());
-	$result = db_query("SELECT * FROM {node_flickr} WHERE nid = %d", $node->nid);
+	$result = db_query("SELECT * FROM {node_flickr} WHERE vid = %d", $node->vid);
 	while($row = db_fetch_array($result)) {
 		$row['data'] = unserialize($row['data']);
 		$node->flickr_attach[$row['type']] = $row;
@@ -45,24 +46,30 @@ function flickr_attach_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
 			$uid = $user->uid;
 			$nid = $node->nid;
 			flickr_attach_initimages($node);
-			
-			if($node->photos != 'existing' 
+			// Support revisions
+			if (isset($node->old_vid) AND !empty($node->revision_uid)) {
+			  $sql = 'INSERT INTO {node_flickr} (nid, vid, uid, type, data)
+			            SELECT nid, %d, %d, type, data FROM {node_flickr} WHERE vid = %d';
+			  db_query($sql, $node->vid, $node->vid, $node->old_vid);
+			}
+			elseif ($node->photos != 'existing' 
 			&& ($node->photos || $node->flickr_attach['image']['data']['id'] != $node->photos)) {
 				if($node->photos == 'none') {
-					$sql = 'DELETE FROM {node_flickr} WHERE nid = %d AND type = "image"';
-					$args = $node->nid;
+					$sql = 'DELETE FROM {node_flickr} WHERE vid = %d AND type = "image"';
+					$args = $node->vid;
 				} else {
 					$pid = $node->photos;
 					$p = flickr_photo_get_info($pid);
 					if($p) {
 						$type = 'image';
 						$data = serialize($p);
-						$args = array($uid, $nid, $type, $data);
-						if(is_numeric($node->flickr_attach['image']['faid'])) {
-							$sql = 'REPLACE INTO {node_flickr} (faid, uid, nid, type, data) VALUES (%d, %d, %d, "%s", "%s")';
+						$args = array($uid, $nid, $node->vid, $type, $data);
+						$image = $node->flickr_attach['image'];
+						if(is_numeric($image['faid']) AND $image['vid'] == $node->vid) {
+						  $sql = 'REPLACE INTO {node_flickr} (faid, uid, nid, vid, type, data) VALUES (%d, %d, %d, %s, "%s", "%s")';
 							array_unshift($args, $node->flickr_attach['image']['faid']);
 						} else {
-							$sql = 'INSERT INTO {node_flickr} (uid, nid, type, data) VALUES (%d, %d, "%s", "%s")';
+							$sql = 'INSERT INTO {node_flickr} (uid, nid, vid, type, data) VALUES (%d, %d, %d, "%s", "%s")';
 						}
 					}
 				}
@@ -71,10 +78,11 @@ function flickr_attach_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
 					drupal_set_message(t(FLICKR_ATTACH_DEFAULT_UNAVAILABLE));
 				}
 			}
+			// Handle albums.
 			if($node->sets || $node->flickr_attach['album']['data']['id'] != $node->sets) {
 				if($node->sets == 'none') {
-					$args = $node->nid;
-					$sql = 'DELETE FROM {node_flickr} WHERE nid = %d AND type = "album"';
+					$args = $node->vid;
+					$sql = 'DELETE FROM {node_flickr} WHERE vid = %d AND type = "album"';
 				} else {
 					$sid = $node->sets;
 					$albums = flickr_photoset_get_list(variable_get('flickr_default_userid', ''));
@@ -88,12 +96,12 @@ function flickr_attach_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
 					if($found) {
 						$type = 'album';
 						$data = serialize($set);
-						$args = array($uid, $nid, $type, $data);
+						$args = array($uid, $nid, $node->vid, $type, $data);
 						if(is_numeric($node->flickr_attach['album']['faid'])) {
-							$sql = 'REPLACE INTO {node_flickr} (faid, uid, nid, type, data) VALUES (%d, %d, %d, "%s", "%s")';
+							$sql = 'REPLACE INTO {node_flickr} (faid, uid, nid, vid, type, data) VALUES (%d, %d, %d, &d, "%s", "%s")';
 							array_unshift($args, $node->flickr_attach['album']['faid']);
 						} else {
-							$sql = 'INSERT INTO {node_flickr} (uid, nid, type, data) VALUES (%d, %d, "%s", "%s")';
+							$sql = 'INSERT INTO {node_flickr} (uid, nid, vid, type, data) VALUES (%d, %d, %d, "%s", "%s")';
 						}
 					}
 				}

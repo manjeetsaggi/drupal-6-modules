@@ -1,5 +1,5 @@
 <?php
-// $Id: adsense.module,v 1.68.2.18 2009/03/31 14:41:01 jcnventura Exp $
+// $Id: adsense.module,v 1.68.2.20 2009/06/04 22:01:50 jcnventura Exp $
 
 /**
  * @file
@@ -398,11 +398,16 @@ function adsense_display() {
     $ad = '<!--adsense: page not in match list-->';
   }
   elseif (!_adsense_check_if_enabled()) {
+    global $user;
+
     // Ads are disabled
-    if (variable_get('adsense_placeholder', ADSENSE_PLACEHOLDER_DEFAULT)) {
+    if (variable_get('adsense_placeholder', ADSENSE_PLACEHOLDER_DEFAULT) || ($user->uid == 1)) {
       $width = array_key_exists('width', $ad) ? $ad['width'] : 0;
       $height = array_key_exists('height', $ad) ? $ad['height'] : 0;
       $text = variable_get('adsense_placeholder_text', ADSENSE_PLACEHOLDER_TEXT_DEFAULT) ." ${ad['desc']}";
+      if ($user->uid == 1) {
+        $text = 'Ads disabled for site admin<br />'. $text;
+      }
 
       $ad = "<!--adsense: placeholder-->\n". _adsense_format_box($text, $width, $height);
     }
@@ -553,7 +558,8 @@ function _adsense_page_match() {
   // and it also prevents warnings about mixed-content
   // Thanks to Brad Konia http://drupal.org/node/29585
   // Should be restricted when running on Apache only
-  if (function_exists('apache_get_version') && isset($_SERVER['HTTPS']) && ($_SERVER['HTTPS'] == 'on')) {
+  if (isset($_SERVER['SERVER_SOFTWARE']) && (stripos($_SERVER['SERVER_SOFTWARE'], 'Apache') !== FALSE) && 
+      isset($_SERVER['HTTPS']) && ($_SERVER['HTTPS'] == 'on')) {
     return FALSE;
   }
 

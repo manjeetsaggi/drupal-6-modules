@@ -1,5 +1,5 @@
 <?php
-// $Id: user_relationships_ui.admin.inc,v 1.1.2.13 2009/07/06 20:22:33 alexk Exp $
+// $Id: user_relationships_ui.admin.inc,v 1.1.2.16 2009/08/14 20:08:47 alexk Exp $
 
 /**
  * @file
@@ -31,12 +31,12 @@ function user_relationships_ui_settings() {
   $form['general']['user_relationships_show_user_pictures'] = array(
     '#type'           => 'checkbox',
     '#title'          => t('Show user pictures in relationship pages'),
-    '#description'    => t('This will show relationships next to the user name on My relationships pages.'),
+    '#description'    => t("This will show user's picture next to the user name on My relationships pages."),
     '#default_value'  => variable_get('user_relationships_show_user_pictures', 0),
   );
   $form['general']['user_relationships_allow_auto_approve'] = array(
     '#type'           => 'checkbox',
-    '#title'          => t("Allow users to auto approve"),
+    '#title'          => t('Allow users to auto approve'),
     '#description'    => t('This will provide an option for users to set an "auto-approve" option to automatically approve to all requested relationships.'),
     '#default_value'  => variable_get('user_relationships_allow_auto_approve', 0),
   );
@@ -50,6 +50,30 @@ function user_relationships_ui_settings() {
       'is_numeric' => array('msg' => t('The relationships per page setting is not an integer'))
     )))
   );
+  if (module_exists('privatemsg')) {
+      $form['privatemsg'] = array(
+        '#type'   => 'fieldset',
+        '#title'  => t('Private messages'),
+        '#weight' => -10,
+      );
+      $form['privatemsg']['user_relationships_restrict_privatemsg'] = array(
+        '#type'           => 'radios',
+        '#title'          => t('Restrict Private Messaging to only related users'),
+        '#description'    => t('Allow Privatemsg to work only between related users'),
+        '#default_value'  => variable_get('user_relationships_restrict_privatemsg', 'all'),
+        '#options' => array(
+          'all' => t('Allow sending messages to all users'),
+          'all_overridable' => t('Allow sending messages to all users, users have option to accept messages only from their confirmed relationships'),
+          'relationships' => t('Allow sending messages only to confirmed relationships (You probably should enable "Suggest only relationships" below)'),
+        ),
+      );
+      $form['privatemsg']['user_relationships_privatemsg_autocomplete_alter'] = array(
+        '#type'           => 'checkbox',
+        '#title'          => t('Suggest only relationships in To: field'),
+        '#description'    => t("Show only user's relationships when autocompleting the To: field."),
+        '#default_value'  => variable_get('user_relationships_privatemsg_autocomplete_alter', 0),
+      );
+  }
   $form['positioning'] = array(
     '#type'   => 'fieldset',
     '#title'  => t('AJAX Popup Positioning'),
@@ -203,7 +227,7 @@ function user_relationships_ui_type_delete(&$form_state, $relationship_type = NU
     );
   }
   else {
-    drupal_set_message(user_relationships_ui_get_message('non_existant_type'));
+    drupal_set_message(user_relationships_ui_get_message('non_existent_type'));
     drupal_goto('admin/user/relationships');
   }
 }

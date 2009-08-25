@@ -1,5 +1,5 @@
 <?php
-// $Id: adsense_managed.module,v 1.1.2.7 2009/03/31 14:41:02 jcnventura Exp $
+// $Id: adsense_managed.module,v 1.1.2.8 2009/07/03 12:05:50 jcnventura Exp $
 
 /**
  * @file
@@ -35,6 +35,8 @@ function adsense_managed_menu() {
  * Implementation of hook_block().
  */
 function adsense_managed_block($op = 'list', $delta = 0, $edit = array()) {
+  $block = NULL;
+
   switch ($op) {
     case 'list':
       $max = variable_get('adsense_managed_number_blocks', ADSENSE_MANAGED_NUMBER_BLOCKS_DEFAULT);

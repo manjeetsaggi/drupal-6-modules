@@ -1,5 +1,5 @@
 <?php
-// $Id: autoassignrole.install,v 1.7.2.1 2008/09/03 23:12:30 cyberswat Exp $
+// $Id: autoassignrole.install,v 1.7.2.8 2009/08/13 13:29:03 cyberswat Exp $
 
 /**
  * @file
@@ -48,6 +48,9 @@ function autoassignrole_install() {
   db_query("INSERT into {autoassignrole} (arid,value) VALUES ('%s', '%s')",
     'user_selection', 2
   );
+  db_query("INSERT into {autoassignrole} (arid,value) VALUES ('%s', '%s')",
+    'page_active', 0
+  );
 }
 
 /**
@@ -62,8 +65,7 @@ function autoassignrole_uninstall() {
  */
 function autoassignrole_schema() {
   $schema['autoassignrole'] = array(
-    'description' => t('Stores challenge-specific information for challenge
-      nodes.'),
+    'description' => t('Stores autoassignrole variables.'),
     'fields' => array(
       'arid'     => array(
         'type' => 'varchar',
@@ -75,11 +77,64 @@ function autoassignrole_schema() {
       'value' => array(
         'type' => 'text',
         'not null' => FALSE,
-        'default' => '',
         'description' => t('The value for this setting.'),
       ),
     ),
     'primary key' => array('arid'),
+  );
+  $schema['autoassignrole_page'] = array(
+    'description' => t('Stores autoassignrole page information.'),
+    'fields' => array(
+      'rid'     => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'description' => t('The rid for this page.'),
+      ),
+      'display' => array(
+        'type' => 'text',
+        'not null' => TRUE,
+        'default' => '',
+        'description' => t('How to display the navigation to this page.'),
+      ),
+      'path' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'description' => t('The path for this page.'),
+      ),
+      'menu' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'description' => t('The default parent menu for this menu item.'),
+      ),
+      'title' => array(
+        'type' => 'text',
+        'not null' => TRUE,
+        'default' => '',
+        'description' => t('The title for this page.'),
+      ),
+      'description' => array(
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => FALSE,
+        'description' => t('The description for this page.'),
+      ),
+      'format' => array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => FALSE,
+        'description' => t('The filter format to use on the description.'),
+      ),
+      'weight' => array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => FALSE,
+        'default' => 0,
+        'description' => t('The weight of this item.'),
+      ),
+    ),
+    'primary key' => array('rid'),
   );
   return $schema;
 }
@@ -94,4 +149,10 @@ function autoassignrole_update_6000() {
   
   autoassignrole_install();
   return $items;
+}
+
+function autoassignrole_update_6001() {
+  $ret = array();
+  $ret[] = update_sql('ALTER TABLE {autoassignrole_page} ADD menu VARCHAR(255)');
+  return $ret;
 }

@@ -1,5 +1,5 @@
 <?php
-// $Id: adsense.help.inc,v 1.1.2.7 2009/03/31 14:41:02 jcnventura Exp $
+// $Id: adsense.help.inc,v 1.1.2.8 2009/06/04 22:01:56 jcnventura Exp $
 // Copyright 2005-2008 Khalid Baheyeldin - http://2bits.com
 // Copyright 2008 Joao Ventura - http://www.venturas.org
 
@@ -93,7 +93,7 @@ an array containing the following fields:</p>
 and enclose it in PHP tags.</p>
 
 <pre>
-print adsense_display(array('format' => '468x60', 'slot' => 0123456789));
+print adsense_display(array('format' => '468x60', 'slot' => '0123456789'));
 </pre>
 
 <p> If you want to make sure that you do not get errors if the AdSense module
@@ -101,7 +101,7 @@ is accidentally disabled or deleted, then use the longer form:</p>
 
 <pre>
 if (module_exists('adsense')) {
-  print adsense_display(array('format' => '468x60', 'slot' => 0123456789));
+  print adsense_display(array('format' => '468x60', 'slot' => '0123456789'));
 }
 </pre>
 
@@ -111,7 +111,7 @@ theme. This requires some familiarity with PHP. Edit the appropriate
 <strong>.tpl.php</strong> file in your theme directory, and add:</p>
 
 <pre>
-print adsense_display(array('format' => '468x60', slot => 0123456789));
+print adsense_display(array('format' => '468x60', slot => '0123456789'));
 </pre>
 
 <p>Make sure you enclose it in PHP tags.</p>
@@ -120,7 +120,7 @@ disabling the module:</p>
 
 <pre>
 if (module_exists('adsense')) {
-  print adsense_display(array('format' => '468x60', 'slot' => 0123456789));
+  print adsense_display(array('format' => '468x60', 'slot' => '0123456789'));
 }
 </pre>
 

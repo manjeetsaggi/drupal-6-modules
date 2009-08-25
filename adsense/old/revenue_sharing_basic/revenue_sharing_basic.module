@@ -1,5 +1,5 @@
 <?php
-// $Id: revenue_sharing_basic.module,v 1.4.2.11 2009/05/13 00:04:20 jcnventura Exp $
+// $Id: revenue_sharing_basic.module,v 1.4.2.12 2009/05/19 21:25:49 jcnventura Exp $
 
 /**
  * @file
@@ -51,7 +51,7 @@ function revenue_sharing_basic_requirements($phase) {
   switch ($phase) {
     // At runtime, make sure that we have a publisher ID
     case 'runtime':
-      if (variable_get('cache', 0)) {
+      if (variable_get('cache', 0) && (variable_get('adsense_id_module', ADSENSE_ID_MODULE_DEFAULT) == 'revenue_sharing_basic_adsense')) {
         $requirements['revenue_sharing_nocache'] = array(
           'title' => $t('Revenue Sharing'),
           'value' => $t('Drupal page cache is enabled.'),

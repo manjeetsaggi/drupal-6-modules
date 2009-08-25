@@ -1,4 +1,4 @@
-// $Id: ajax_vote_up_down.js,v 1.6.2.5 2009/01/29 19:44:05 lut4rp Exp $
+// $Id: ajax_vote_up_down.js,v 1.6.2.6 2009/08/06 08:47:00 ingo86 Exp $
 
 /**
  * Pre-processing for the vote database object creation.
@@ -40,13 +40,15 @@ Drupal.VDB = function (elt, uri) {
         var pid = 'vote_points_' + cid;
         // Update the voting arrows
         $('#' + db.id + '.vote-' + db.dir1 + '-inact').removeClass('vote-' + db.dir1 + '-inact').addClass('vote-' + db.dir1 + '-act');
-        $('#' + 'vote_' + db.dir2 + '_' + cid).removeClass('vote-' + db.dir2 + '-act').addClass('vote-' + db.dir2 + '-inact');
+        if (!$('#' + 'vote_' + db.dir2 + '_' + cid).hasClass(db.dir2.'-inact')) {
+          $('#' + 'vote_' + db.dir2 + '_' + cid).removeClass('vote-' + db.dir2 + '-act').addClass('vote-' + db.dir2 + '-inact');
+        }
         // Update the points
         $('#' + pid).html(data);
       },
       error: function (xmlhttp) {
         alert('An HTTP '+ xmlhttp.status +' error occured. Your vote was not submitted!\n');
-      }
+    }
     });
   });
 }

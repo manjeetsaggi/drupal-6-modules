@@ -1,5 +1,5 @@
 <?php
-// $Id: node_output.inc,v 1.1.2.9 2009/07/25 21:28:40 dww Exp $
+// $Id: node_output.inc,v 1.1.2.11 2009/08/23 15:44:54 dww Exp $
 
 
 /**
@@ -90,7 +90,7 @@ function _signup_current_user_signup($node, $type = 'node') {
       // An authenticated user.
 
       // See if the user is already signed up for this node.
-      $signup = db_fetch_object(db_query("SELECT sl.*, n.title, u.name FROM {signup_log} sl INNER JOIN {node} n ON sl.nid = n.nid INNER JOIN {users} u ON sl.uid = u.uid WHERE sl.uid = %d AND sl.nid = %d", $user->uid, $node->nid));
+      $signup = db_fetch_object(db_query("SELECT sl.*, n.title, u.name, u.mail FROM {signup_log} sl INNER JOIN {node} n ON sl.nid = n.nid INNER JOIN {users} u ON sl.uid = u.uid WHERE sl.uid = %d AND sl.nid = %d", $user->uid, $node->nid));
       if (empty($signup)) {
         // Not yet signed up
         if (user_access('sign up for content')) {
@@ -184,6 +184,9 @@ function _signup_render_signup_edit_form($signup, $type) {
   }
   drupal_add_js("$path/js/signup_edit_form.js");
   module_load_include('inc', 'signup', 'includes/signup_edit_form');
-  return drupal_get_form('signup_edit_form', $signup, $type);
+  $form = drupal_get_form('signup_edit_form', $signup, $type);
+  $form_errors = form_get_errors() ? TRUE : FALSE;
+  drupal_add_js(array('signupEditFormErrors' => $form_errors), 'setting');
+  return $form;
 }
 

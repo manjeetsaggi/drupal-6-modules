@@ -1,5 +1,5 @@
 <?php
-// $Id: flickr_attach.views.inc,v 1.1 2009/06/25 13:37:46 jbomb Exp $
+// $Id: flickr_attach.views.inc,v 1.2 2009/08/14 21:53:01 jbomb Exp $
 
 /**
  * hook_views_data implementation
@@ -11,8 +11,8 @@ function flickr_attach_views_data() {
       'join' => array(
         'node' => array(
           'table' => 'node_flickr',
-          'left_field' => 'nid',
-          'field' => 'nid',
+          'left_field' => 'vid',
+          'field' => 'vid',
           'extra' => array(
             array(
               'field' => 'type',
@@ -38,8 +38,8 @@ function flickr_attach_views_data() {
       'join' => array(
         'node' => array(
           'table' => 'node_flickr',
-          'left_field' => 'nid',
-          'field' => 'nid',
+          'left_field' => 'vid',
+          'field' => 'vid',
           'extra' => array(
             array(
               'field' => 'type',

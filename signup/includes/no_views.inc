@@ -1,5 +1,5 @@
 <?php
-// $Id: no_views.inc,v 1.15.2.1 2009/01/24 04:24:35 dww Exp $
+// $Id: no_views.inc,v 1.15.2.2 2009/08/10 17:45:53 dww Exp $
 
 
 /**
@@ -114,7 +114,7 @@ function signup_user_schedule($account) {
   drupal_set_title(t('Signups for @user', array('@user' => $account->name)));
   $titles = signup_list_user_signups($account->uid);
   foreach ($titles as $nid => $title) {
-    $node = node_load(array('nid' => $nid));
+    $node = node_load($nid);
     $output .= theme('signup_user_schedule', $node);
   }
   return $output;

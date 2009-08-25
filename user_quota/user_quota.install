@@ -1,5 +1,5 @@
 <?php
-// $Id: user_quota.install,v 1.6 2008/12/19 23:28:40 greggles Exp $
+// $Id: user_quota.install,v 1.7 2009/05/06 14:21:31 greggles Exp $
 
 /**
  * @file
@@ -105,8 +105,8 @@ function user_quota_uninstall() {
  */
 function user_quota_update_1() {
   $ret = array();
-  db_add_field(&$ret, 'user_quota_history', 'message', array('type' => 'text', 'size' => 'big', 'not null' => TRUE, 'default' => ''));
-  db_add_field(&$ret, 'user_quota_history', 'altering_uid', array('type' => 'int'), array('uqh_uid'));
+  db_add_field($ret, 'user_quota_history', 'message', array('type' => 'text', 'size' => 'big', 'not null' => TRUE, 'default' => ''));
+  db_add_field($ret, 'user_quota_history', 'altering_uid', array('type' => 'int'), array('uqh_uid'));
 
   return $ret;
 }

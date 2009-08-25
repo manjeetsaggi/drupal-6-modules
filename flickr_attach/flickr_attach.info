@@ -12,9 +12,9 @@ project = "flickr_attach"
 datestamp = "1231881915"
 
 
-; Information added by drupal.org packaging script on 2009-06-26
-version = "6.x-1.4"
+; Information added by drupal.org packaging script on 2009-08-18
+version = "6.x-1.5"
 core = "6.x"
 project = "flickr_attach"
-datestamp = "1246047640"
+datestamp = "1250623884"
 

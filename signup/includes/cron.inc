@@ -1,5 +1,5 @@
 <?php
-// $Id: cron.inc,v 1.1.2.1 2008/12/20 04:28:56 dww Exp $
+// $Id: cron.inc,v 1.1.2.2 2009/08/14 23:26:10 dww Exp $
 
 
 /**
@@ -62,7 +62,7 @@ function _signup_cron_send_reminders() {
           'signup' => $signup,
         );
         if (module_exists('token')) {
-          $params['body'] = token_replace($params['body'], 'node', node_load($node->nid));
+          $params['body'] = token_replace_multiple($params['body'], array('node' => node_load($node->nid), 'signup' => $signup, 'global' => NULL));
         }
         $language = user_preferred_language($signup);
         drupal_mail('signup', 'signup_reminder_mail', $user_mail, $language, $params, $from);

@@ -1,5 +1,5 @@
 <?php
-// $Id: adsense_cse.results.inc,v 1.1.2.6 2009/03/31 14:41:01 jcnventura Exp $
+// $Id: adsense_cse.results.inc,v 1.1.2.7 2009/08/05 21:08:10 jcnventura Exp $
 
 /**
  * @file
@@ -36,6 +36,7 @@ function _adsense_cse_results() {
   var googleSearchFrameWidth = $width;
   var googleSearchDomain = "$country";
   var googleSearchPath = "/cse";
+  var googleSearchQueryString = "as_q";
 $secret
 </script>
 <script type="text/javascript" src="http://www.google.com/afsonline/show_afs_search.js"></script>
