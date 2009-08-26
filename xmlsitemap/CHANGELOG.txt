@@ -1,4 +1,8 @@
-$Id: CHANGELOG.txt,v 1.1.4.288 2009/08/24 13:23:53 earnie Exp $
+$Id: CHANGELOG.txt,v 1.1.4.289 2009/08/25 16:52:52 earnie Exp $
+
+XML sitemap 6.x-1, 2009-08-24
+-----------------------------------
+#558358 Failure to submit sitemaps.
 
 XML sitemap 6.x-1, 2009-08-24
 -----------------------------------

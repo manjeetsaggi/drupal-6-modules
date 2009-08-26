@@ -1,5 +1,5 @@
 <?php
-// $Id: autoassignrole-admin.inc,v 1.1.2.10 2009/08/12 17:35:28 cyberswat Exp $
+// $Id: autoassignrole-admin.inc,v 1.1.2.14 2009/08/25 13:04:43 cyberswat Exp $
 
 /**
  * @file
@@ -29,7 +29,6 @@ function autoassignrole_admin_form() {
       Enabled to allow this functionality or Disabled to not allow.'),
     '#options' => array(1 => t('Enabled'), 0 => t('Disabled')),
   );
-/*
    $form['autoassignrole_settings_auto']['auto_admin_active'] = array(
     '#type' => 'radios',
     '#title' => t('Automatic role assignment for admin created accounts'),
@@ -38,7 +37,6 @@ function autoassignrole_admin_form() {
       created by an administrator.'),
     '#options' => array(1 => t('Enabled'), 0 => t('Disabled')),
   );
-*/
   $roles = user_roles(TRUE);
   unset($roles[DRUPAL_AUTHENTICATED_RID]);
   if ($roles) {
@@ -62,7 +60,21 @@ function autoassignrole_admin_form() {
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
   );
-  $result = db_query("SELECT rid, display, path, title, description, format, weight, menu FROM {autoassignrole_page}");
+  $default = '';
+  if ($nid = _autoassignrole_get_settings('node_user_register')) {
+    $node = db_fetch_object(db_query("SELECT nid, title FROM {node} WHERE nid = %d", $nid));
+    $default = check_plain($node->title) ." [nid:$node->nid]";
+  }
+  $form['autoassignrole_settings_page']['node_user_register'] = array(
+    '#type' => 'textfield',
+    '#title' => t('User Register Node'),
+    '#description' => t('This is a node that you want to use to replace the default user/register landing page.  A common use would be to populate this node with a description and links to each of the other paths you define below.  '),
+    '#maxlength' => 60,
+    '#autocomplete_path' => 'admin/user/autoassignrole/autocomplete/node',
+    '#default_value' => $default,
+    '#weight' => -1,
+  );
+  $result = db_query("SELECT rid, display, path, title, description, format, weight, menu, registration FROM {autoassignrole_page}");
   $defaults = array();
   while ($setting = db_fetch_object($result)) {
     $defaults[$setting->rid] = array(
@@ -72,7 +84,8 @@ function autoassignrole_admin_form() {
       'description' => $setting->description,
       'format' => $setting->format,
       'weight' => $setting->weight,
-      'menu' => $setting->menu
+      'menu' => $setting->menu,
+      'registration' => $setting->registration,
     );
   }
   foreach ($roles as $k => $v) {
@@ -90,11 +103,18 @@ function autoassignrole_admin_form() {
       '#description' => t('Enable or disable this role for path based role assignment'),
       '#options' => array(1 => t('Enabled'), 0 => t('Disabled')),
     );
+    $form['autoassignrole_settings_page'][$k]["path_registration_$k"] = array(
+      '#type' => 'radios',
+      '#title' => t('Default Registration Page'),
+      '#default_value' => ($defaults[$k]['registration'] ? 1 : 0),
+      '#description' => t('Should this path replace the default user/register path?'),
+      '#options' => array(1 => t('Yes'), 0 => t('No')),
+    );
   $form['autoassignrole_settings_page'][$k]["path_display_$k"] = array(
     '#type' => 'radios',
     '#title' => t('Display Method'),
     '#default_value' => (isset($defaults[$k]['display']) ? $defaults[$k]['display'] : 0),
-    '#description' => t('Menu Items are displayed as normal menu items.  Tabs on registration pages display on the standard user/* pages.  Pages with no navigation do not display in the menu and rely on you to provide a method for end users to reach them.'),
+    '#description' => t('Menu Items are displayed as normal menu items.  Tabs on registration pages display on the standard user/* pages.  Pages with no navigation do not display in the menu and rely on you to provide a method for end users to reach them.  For example, if you set this path as the default registration page and select Pages with no navigation, the default login block will have a link to your registration page but it will not show up in any menu.'),
     '#options' => array(0 => t('Menu Items'), 1 => t('Tabs on registration page'), 2 => 'Pages with no navigation'),
   );
   $form['autoassignrole_settings_page'][$k]["path_menu_$k"] = array(
@@ -233,18 +253,29 @@ function autoassignrole_admin_form() {
   $form['submit'] = array('#type' => 'submit', '#value' => t('Save'));
   return $form;
 }
-function autoassignrole_admin_form_validate($form_id, $form_values) {
+function autoassignrole_admin_form_validate($form_id, &$form_state) {
 
   // path based role validation
   $roles = user_roles(TRUE);
   unset($roles[DRUPAL_AUTHENTICATED_RID]);
+  // Create a registration array and store all paths that are set to replace
+  // the default user/register page
+  $registration = array();
   foreach ($roles as $rid => $role) {
-    if ($form_values['values']["path_active_$rid"]) {
-      $format = $form_values['values']["path_format_$rid"];
-      $path = $form_values['values']["path_$rid"];
-      $title = $form_values['values']["path_title_$rid"];
-      $description = $form_values['values']["path_description_$rid"];
-      $display = $form_values['values']["path_display_$rid"];
+    if ($form_state['values']["path_active_$rid"]) {
+      $format = $form_state['values']["path_format_$rid"];
+      $path = $form_state['values']["path_$rid"];
+      $title = $form_state['values']["path_title_$rid"];
+      $description = $form_state['values']["path_description_$rid"];
+      $display = $form_state['values']["path_display_$rid"];
+      if ($form_state['values']["path_registration_$rid"]) {
+        $registration[] = $rid;
+        // If this is going to function as the default user registration page it
+        // can not have a Display Method of Tabs on registration page
+        if ($display == 1) {
+          form_set_error("path_display_$rid", t('If a path serves as the default user registration page it can not have a Display Method of Tabs on registration page'));
+        }
+      }
       
       // Check that a display option is set
       if ($display == '') {
@@ -290,35 +321,42 @@ function autoassignrole_admin_form_validate($form_id, $form_values) {
       }
     }
   }
-
+  
+  // If the registration array has more than one item in it throw an error
+  if (count($registration) > 1) {
+    form_set_error(NULL, t('Only one path can can serve as the default user register page'));
+  }
+  if (count($registration) > 0 && !empty($form_state['values']['node_user_register'])) {
+    form_set_error('node_user_register', t('You can not replace the user register page with a node if a path has been designated as the user register page.'));
+  }
   // User chooses their own role validation
-  if ($form_values['values']['user_active'] == 1) {
-    if ($form_values['values']['user_multiple'] == 0 &&
-        $form_values['values']['user_selection'] == 2) {
-      form_set_error('user_selection', t('If a user can only select a single role you need to set the selection method as Radio Buttons or Selection Box.'));
-    }
-    if ($form_values['values']['user_multiple'] == 1 &&
-        $form_values['values']['user_selection'] == 0) {
+  if ($form_state['values']['user_active'] == 1) {
+    if ($form_state['values']['user_multiple'] == 1 &&
+        $form_state['values']['user_selection'] == 0) {
       form_set_error('user_selection', t('If a user can select multiple roles they can not use Radio Buttons as the selection method.'));
     }
-    if (strlen(trim($form_values['values']['user_title'])) == 0) {
+    if (strlen(trim($form_state['values']['user_title'])) == 0) {
       form_set_error('user_title', t('Enter the title of the form fields the user will be presented with.'));
     }
   }
 }
-function autoassignrole_admin_form_submit($form_id, $form_values) {
+function autoassignrole_admin_form_submit($form_id, &$form_state) {
   $sql = "UPDATE {autoassignrole} set value = '%s' where arid = '%s'";
-  db_query($sql, $form_values['values']['auto_active'], 'auto_active');
-  db_query($sql, serialize($form_values['values']['auto_roles']), 'auto_roles');
-  db_query($sql, $form_values['values']['user_active'], 'user_active');
-  db_query($sql, serialize($form_values['values']['user_roles']), 'user_roles');
-  db_query($sql, $form_values['values']['user_multiple'], 'user_multiple');
-  db_query($sql, $form_values['values']['user_title'], 'user_title');
-  db_query($sql, $form_values['values']['user_fieldset_title'], 'user_fieldset_title');
-  db_query($sql, $form_values['values']['user_required'], 'user_required');
-  db_query($sql, $form_values['values']['user_sort'], 'user_sort');
-  db_query($sql, $form_values['values']['user_description'], 'user_description');
-  db_query($sql, $form_values['values']['user_selection'], 'user_selection');
+  db_query($sql, $form_state['values']['auto_active'], 'auto_active');
+  db_query($sql, serialize($form_state['values']['auto_roles']), 'auto_roles');
+  db_query($sql, $form_state['values']['user_active'], 'user_active');
+  db_query($sql, serialize($form_state['values']['user_roles']), 'user_roles');
+  db_query($sql, $form_state['values']['user_multiple'], 'user_multiple');
+  db_query($sql, $form_state['values']['user_title'], 'user_title');
+  db_query($sql, $form_state['values']['user_fieldset_title'], 'user_fieldset_title');
+  db_query($sql, $form_state['values']['user_required'], 'user_required');
+  db_query($sql, $form_state['values']['user_sort'], 'user_sort');
+  db_query($sql, $form_state['values']['user_description'], 'user_description');
+  db_query($sql, $form_state['values']['user_selection'], 'user_selection');
+  db_query($sql, $form_state['values']['auto_admin_active'], 'auto_admin_active');
+  preg_match('/\[nid:(\d+)\]/', $form_state['values']['node_user_register'], $matches);
+  db_query($sql, $matches[1], 'node_user_register');
+  
 
 
   // Role assignment based on path
@@ -326,18 +364,36 @@ function autoassignrole_admin_form_submit($form_id, $form_values) {
   $roles = user_roles(TRUE);
   unset($roles[DRUPAL_AUTHENTICATED_RID]);
   foreach ($roles as $k => $v) {
-    if ($form_values['values']["path_active_$k"]) {
-      $path = $form_values['values']["path_$k"];
-      $title = $form_values['values']["path_title_$k"];
-      $description = $form_values['values']["path_description_$k"];
-      $display = $form_values['values']["path_display_$k"];
-      $format = $form_values['values']["path_format_$k"];
-      $weight = $form_values['values']["path_weight_$k"];
-      $menu = $form_values['values']["path_menu_$k"];
-      db_query("INSERT INTO {autoassignrole_page} (rid, display, path, title, description, format, weight, menu) VALUES(%d, '%s', '%s', '%s', '%s', %d, %d, '%s')", $k, $display, $path, $title, $description, $format, $weight, $menu);
+    if ($form_state['values']["path_active_$k"]) {
+      $path = $form_state['values']["path_$k"];
+      $title = $form_state['values']["path_title_$k"];
+      $description = $form_state['values']["path_description_$k"];
+      $display = $form_state['values']["path_display_$k"];
+      $format = $form_state['values']["path_format_$k"];
+      $weight = $form_state['values']["path_weight_$k"];
+      $menu = $form_state['values']["path_menu_$k"];
+      $registration = $form_state['values']["path_registration_$k"];
+      db_query("INSERT INTO {autoassignrole_page} (rid, display, path, title, description, format, weight, menu, registration) VALUES(%d, '%s', '%s', '%s', '%s', %d, %d, '%s', %d)", $k, $display, $path, $title, $description, $format, $weight, $menu, $registration);
     }
   }
   // rebuild the menu
   menu_rebuild();
   drupal_set_message(t('The changes have been saved.'));
+}
+
+
+/**
+ * Menu callback; Retrieve a JSON object containing autocomplete suggestions for existing nodes.
+ */
+function autoassignrole_autocomplete_node($string = '') {
+  $matches = array();
+  if ($string) {
+    $result = db_query_range("SELECT nid, title FROM {node} WHERE LOWER(title) LIKE LOWER('%s%%') OR nid = '%d'", $string, $string, 0, 10);
+    while ($node= db_fetch_object($result)) {
+    // Add a class wrapper for a few required CSS overrides.
+      $matches[check_plain($node->title) ." [nid:$node->nid]"] = "<div class=\"reference-autocomplete\">". check_plain($node->title) ." [nid:$node->nid]</div>";
+    }
+  }
+
+  drupal_json($matches);
 }

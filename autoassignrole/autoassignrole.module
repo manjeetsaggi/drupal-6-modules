@@ -1,5 +1,5 @@
 <?php
-// $Id: autoassignrole.module,v 1.9.2.23 2009/08/13 18:57:01 cyberswat Exp $
+// $Id: autoassignrole.module,v 1.9.2.27 2009/08/25 13:04:44 cyberswat Exp $
 
 /**
  * @file
@@ -17,6 +17,14 @@
  */
 function autoassignrole_menu() {
   $items = array();
+    $items['admin/user/autoassignrole/autocomplete/node'] = array(
+      'title' => 'Node autocomplete',
+      'page callback' => 'autoassignrole_autocomplete_node',
+      'access callback' => 'user_access',
+      'access arguments' => array('administer autoassignrole'),
+      'type' => MENU_CALLBACK,
+      'file' => 'autoassignrole-admin.inc',
+    );
     $items['admin/user/autoassignrole'] = array(
       'title' => t('Auto assign role'),
       'description' => t('Designate a role to assign all new users to.'),
@@ -145,6 +153,11 @@ function autoassignrole_perm() {
 function autoassignrole_user($op, &$edit, &$account, $category = NULL) {
   switch ($op) {
     case 'insert':
+      // If this is an administrator creating the account only use auto_assign if
+      // allowed by auto_admin_active
+      if (arg(0) == 'admin' && _autoassignrole_get_settings('auto_admin_active') == 0) {
+        return;
+      }
       $rolenames = user_roles();
       if (_autoassignrole_get_settings('user_active') == 1) {
         $roles = array();
@@ -403,7 +416,7 @@ function _autoassignrole_array_desc($a, $b) {
   if ($a == $b) {
     return 0;
   }
-  return ($a < $b) ? -1 : 1;
+  return ($a > $b) ? -1 : 1;
 }
 
 /**
@@ -416,7 +429,7 @@ function _autoassignrole_array_asc($a, $b) {
   if ($a == $b) {
     return 0;
   }
-  return ($a > $b) ? -1 : 1;
+  return ($a < $b) ? -1 : 1;
 }
 
 /**
@@ -544,4 +557,31 @@ function autoassignrole_get_roles($op = 'all', $path = array()) {
   }
   
   return $roles;
+}
+
+/**
+ * Implementation of hook_menu_alter()
+ * 
+ * Redirect the default user register page to a path that has been designated as
+ * the replacement registration path.
+ */ 
+function autoassignrole_menu_alter(&$items) {
+  $row = db_fetch_object(db_query("SELECT rid, path, display, title, weight, menu, registration FROM {autoassignrole_page} WHERE registration = 1"));
+  if ($row->registration) {
+    $path = $row->path;
+  }
+  else {
+    $row = db_fetch_object(db_query("SELECT arid, value FROM {autoassignrole} WHERE arid = '%s'", 'node_user_register'));
+    if (!empty($row->value)) {
+      $path = 'node/'. $row->value;
+    }
+  }
+  if ($path) {
+    $items['user/register'] = array(
+      'page arguments' => array($path),
+      'page callback' => 'drupal_goto',
+      'access callback' => 'user_register_access',
+      'type' => MENU_LOCAL_TASK,
+    );
+  }
 }

@@ -3,9 +3,9 @@ name = "Auto Assign Role"
 description = "Designate a role to assign all new users to."
 core = 6.x
 
-; Information added by drupal.org packaging script on 2009-08-13
-version = "6.x-1.0-beta4"
+; Information added by drupal.org packaging script on 2009-08-25
+version = "6.x-1.0-rc1"
 core = "6.x"
 project = "autoassignrole"
-datestamp = "1250190305"
+datestamp = "1251206115"
 

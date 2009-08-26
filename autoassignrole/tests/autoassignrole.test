@@ -1,5 +1,5 @@
 <?php
-// $Id: autoassignrole.test,v 1.1.2.5 2009/08/13 18:55:53 cyberswat Exp $
+// $Id: autoassignrole.test,v 1.1.2.8 2009/08/19 18:28:34 cyberswat Exp $
 
 /**
  * @file
@@ -88,7 +88,49 @@ class AAR extends DrupalWebTestCase {
    
    return $new_user;
   }
-
+  
+  /**
+   * Helper function to determine sort order
+   * @param array $data An array of values to check
+   * @return string ASC, DESC or MIXED
+   */
+  function getSortOrder($data) {
+    $asc = array();
+    $desc = array();
+    foreach ($data as $key => $option) {
+      if ($option) {
+        if (!$previous) {
+          $previous = $option;
+        }
+        else {
+          if ($previous < $option) {
+            if (count($asc) == 0) {
+              $asc[] = $previous;
+            }
+            $previous = $option;
+            $asc[] = $option;
+          }
+          else {
+            if (count($desc) == 0) {
+              $desc[] = $previous;
+            }
+            $previous = $option;
+            $desc[] = $option;
+          }
+        }
+      }
+      else {
+        unset($data[$key]);
+      }
+    }
+    if (count($data) == count($asc)) {
+      return "ASC";
+    }
+    if (count($data) == count($desc)) {
+      return "DESC";
+    }
+    return "MIXED";
+  }
 
 }
 
@@ -224,13 +266,6 @@ class AutoassignroleAdminAllowUserChoiceTestCase extends AAR {
     
     $edit = $this->getEditValues('user_choice');
 
-    // can not enable if User Role Selection is Single Role and Selection Method
-    // is Check Boxes
-    $edit['user_multiple'] = 0;
-    $edit['user_selection'] = 2;
-    $this->drupalPost('admin/user/autoassignrole', $edit, t('Save'));
-    $this->assertNotEqual($edit['user_active'], _autoassignrole_get_settings('user_active'), 'Allow User to Choose: user_active failed validation correctly if User Role Selection is Single Role and Selection Method is Check Boxes');
-
     // if User role Selection is set to Multiple Roles then Selection Method can
     // not be Radio Buttons
     $edit['user_multiple'] = 1;
@@ -271,8 +306,6 @@ class AutoassignroleUserAutoRoleTestCase extends AAR {
     $this->drupalLogin($new_user);
     // check the user after login to make sure they have been assigned the appropriate
     // roles
-    //$this->assertRaw('beepola', '<pre>'. print_r('hai', true) .'</pre>');
-
     foreach ($this->roles as $rid => $role) {
      $this->assertTrue(array_key_exists($rid, $this->loggedInUser->roles), "New User has been assigned the role $role");
     }
@@ -437,7 +470,6 @@ class AutoassignroleUserChoiceTestCase extends AAR {
     $this->drupalLogin($this->admin_user);
     $edit['user_required'] = 1;
     $this->drupalPost('admin/user/autoassignrole', $edit, t('Save'));
-    $this->assertRaw('beepola', '<pre>'. print_r($this->drupalGet('admin/user/autoassignrole'), true) .'</pre>');
     $this->drupalLogout();
    
     // verify a new user does not get created when submitting the registration
@@ -448,24 +480,51 @@ class AutoassignroleUserChoiceTestCase extends AAR {
     $this->assertTrue(empty($user->uid), 'The user '. $new_user['name'] .' was not created');
     
     // verify that the roles displayed to the user are in ascending order
-    
+   preg_match_all('/\<option value="\d+"\>([A-Za-z0-9_]+)/', $user_register_page, $matches);
+   $this->assertEqual($this->getSortOrder($matches[1]), 'ASC', 'The roles presented to the user are in Ascending order');
+   
+   // Switch roles to descending order and verify they get displayed to the user
+   // in the correct order
+    // use the admin form to set the role selection as required
+    $this->drupalLogin($this->admin_user);
+    $edit['user_sort'] = 'SORT_DESC';
+    $this->drupalPost('admin/user/autoassignrole', $edit, t('Save'));
+    $this->drupalLogout();
+    $user_register_page = $this->drupalGet('user/register');
+    // verify that the roles displayed to the user are in ascending order
+   preg_match_all('/\<option value="\d+"\>([A-Za-z0-9_]+)/', $user_register_page, $matches);
+   $this->assertEqual($this->getSortOrder($matches[1]), 'DESC', 'The roles presented to the user are in Descending order');
+   
+   // Switch to check boxes and verify they appear correct order
+    $this->drupalLogin($this->admin_user);
+    $edit['user_selection'] = 2;
+    $this->drupalPost('admin/user/autoassignrole', $edit, t('Save'));
+    $this->drupalLogout();
+    $user_register_page = $this->drupalGet('user/register');
+    preg_match_all('/\<input type="checkbox".+\\/> ([A-Za-z0-9_]+)<\/label\>/', $user_register_page, $matches);
+    $this->assertEqual($this->getSortOrder($matches[1]), 'DESC', 'The roles presented to the user are checkboxes in Descending order');
 
-
-//     $this->assertRaw('beepola', '<pre>'. print_r($this->beep(), true) .'</pre>');
-     $this->assertRaw('beepola', '<pre>'. print_r($user_register_page, true) .'</pre>');
-     $this->assertRaw('beepola', '<pre>'. print_r($user, true) .'</pre>');
+   // Switch to single selection radio buttons and verify they appear correct order
+    $this->drupalLogin($this->admin_user);
+    $edit['user_multiple'] = 0;
+    $edit['user_selection'] = 0;
+    $this->drupalPost('admin/user/autoassignrole', $edit, t('Save'));
+    $this->drupalLogout();
+    $user_register_page = $this->drupalGet('user/register');
+    preg_match_all('/\<input type="radio".+\\/> ([A-Za-z0-9_]+)<\/label\>/', $user_register_page, $matches);
+    $this->assertEqual($this->getSortOrder($matches[1]), 'DESC', 'The roles presented to the user are radio buttons in Descending order');
   }
-  
-//    $this->assertRaw('beepola', '<pre>'. print_r($this->drupalGet('admin/user/autoassignrole'), true) .'</pre>');
-//    $this->assertRaw('beepola', '<pre>'. print_r($this->loggedInUser, true) .'</pre>');
-
-  
 }
 
+class AutoassignroleContentProfileTestCase extends AAR { 
+  public static function getInfo() {
+    return array(
+      'name' => t('Content Profile Integration'),
+      'description' => t('Verify integration between AAR and Content Profile functions as expected.'),
+      'group' => t('Autoassignrole'),
+    );
+  }
 
-
-
-
-
-
-
+  function testIntegration() {
+  }
+}
