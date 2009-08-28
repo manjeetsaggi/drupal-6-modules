@@ -1,5 +1,5 @@
 <?php
-// $Id: rsvp_dateconnector.module,v 1.2.2.8 2009/03/10 17:53:55 ulf1 Exp $
+// $Id: rsvp_dateconnector.module,v 1.2.2.9 2009/06/17 19:10:25 ulf1 Exp $
 
 
 class RsvpDateConnectorImpl extends RsvpConnectorImpl {
@@ -116,8 +116,11 @@ class RsvpDateConnectorImpl extends RsvpConnectorImpl {
     return db_tz;
   }
   
-  function format_date($node, $field, $pos, $include_to_date = FALSE) {
-  
+  function format_date($node, $field, $pos, $include_to_date = FALSE)
+  {
+    //get default format (set in "Default Display" in the global section of the "Managing Field")
+    $format = date_formatter_format('default', $field['field_name']);
+    
     // Figure out the timezone handling for this date.
     if ($field['tz_handling'] == 'date') {
       $tz = $node->{$field['field_name']}[$pos]['timezone'];
@@ -139,7 +142,7 @@ class RsvpDateConnectorImpl extends RsvpConnectorImpl {
     if ($db_tz != $display_tz) {
       date_timezone_set($date, timezone_open($display_tz));
     }
-    $date_out = date_format($date, date_type_format($field['type']));
+    $date_out = date_format_date($date, 'custom', $format);
     
     if ($include_to_date) {
       if (isset($node->{$field['field_name']})) {
@@ -154,7 +157,7 @@ class RsvpDateConnectorImpl extends RsvpConnectorImpl {
       }
 
       if ($date_value) {
-        $date_out .= t(' to ') . date_format($date, date_type_format($field['type']));
+        $date_out .= t(' to ') . date_format_date($date, 'custom', $format);
       }
     }
     return $date_out;

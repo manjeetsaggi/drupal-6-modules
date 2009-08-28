@@ -1,3 +1,24 @@
+8/22/09: fixed by ulf1- [#523980] Schema reports errors in table setup
+                        Uninstall and reinstall of rsvp module will apply the fix (loss of data).
+8/22/09: fixed by ulf1- [#555270] "Trying to get property of non-object" errors when enabling RSVP.
+
+                        
+8/14/09: fixed by ulf1- Rsvp reply box showed incorrect available open seats.
+
+8/14/09: fixed by ulf1- [#548468] Rsvp guest toolbox did not show "Add Guest link"
+
+7/29/09: fixed by ulf1- [#528194] pass-on input variables so that other template_preprocess functions have still access to the raw data.
+
+7/28/09: fixed by ulf1- [#531042] Access Denied Error when affirming open invite "yes - attending" because of issue with closed signups.
+
+7/8/09: fixed by ulf1- Invitation page header showed event subject and not the invitation subject. (User X has invited you to Y). 
+                       "No invitation sent [Send invitation]" block in guestlist always visible (not just for maintainer).
+
+6/23/09: fixed by ulf1- [#499372] Disable option block in content type if no date field available.
+
+06/17/09: fixed by ulf1- [#493586] Date connector: Date format in invitations was not based on date settings. Now it uses the "Default Display" 
+                          setting of the field.
+
 05/26/09: fixed by ulf1- plaxo js is always been loaded. Load only when we want to use it while adding guests to invitation.
                        - [464270] cleaned up wrong output mappings for title, invitation body, emails and some links
 

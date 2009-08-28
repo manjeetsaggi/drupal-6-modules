@@ -1,5 +1,5 @@
 <?php
-// $Id: rsvp-invitation.tpl.php,v 1.2.2.1 2009/05/26 18:37:09 ulf1 Exp $
+// $Id: rsvp-invitation.tpl.php,v 1.2.2.2 2009/07/08 18:55:52 ulf1 Exp $
 
 /**
  * @file rsvp-invitation.tpl.php
@@ -43,7 +43,7 @@
       <?php endif; ?>
     </div>
     <div class="rsvp_invitation_introduction">
-      <?php print $organizer_link . t(' has invited you to \'!event\'', array('!event' => $event_subject)). '<br />' ?>
+      <?php print $organizer_link . t(' has invited you to \'!invitation_subject\'', array('!invitation_subject' => $invitation_subject)). '<br />' ?>
     </div>
     <div class="rsvp_invitation_header">
       <?php if ($is_openinvitation): ?>

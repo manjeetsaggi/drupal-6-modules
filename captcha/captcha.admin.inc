@@ -1,5 +1,5 @@
 <?php
-// $Id: captcha.admin.inc,v 1.28 2009/07/02 23:45:05 soxofaan Exp $
+// $Id: captcha.admin.inc,v 1.30 2009/08/10 22:33:34 soxofaan Exp $
 
 /**
  * Return an array with the available CAPTCHA types, for use as options array
@@ -98,7 +98,7 @@ function captcha_admin_settings() {
   // Select widget for CAPTCHA type.
   $form['captcha_form_protection']['captcha_form_id_overview']['captcha_new_captcha_point']['captcha_type'] = array(
     '#type' => 'select',
-    '#default_value' => "{$captcha_point->module}/{$captcha_point->type}",
+    '#default_value' => 'none',
     '#options' => $captcha_type_options,
   );
 
@@ -107,7 +107,7 @@ function captcha_admin_settings() {
     '#type' => 'checkbox',
     '#title' => t('Add CAPTCHA administration links to forms'),
     '#default_value' => variable_get('captcha_administration_mode', FALSE),
-    '#description' => t('This option makes it easy to manage CAPTCHA settings on forms. When enabled, users with the "%admincaptcha" permission will see a fieldsset with CAPTCHA administration links on all forms, except on administrative pages.', array('%admincaptcha' => t('administer CAPTCHA settings'))),
+    '#description' => t('This option makes it easy to manage CAPTCHA settings on forms. When enabled, users with the "%admincaptcha" permission will see a fieldset with CAPTCHA administration links on all forms, except on administrative pages.', array('%admincaptcha' => t('administer CAPTCHA settings'))),
   );
   // Field for the CAPTCHAs on admin pages.
   $form['captcha_form_protection']['captcha_allow_on_admin_pages'] = array(

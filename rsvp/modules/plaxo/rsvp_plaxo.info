@@ -5,9 +5,9 @@ package = RSVP
 dependencies[] = rsvp
 core = 6.x
 
-; Information added by drupal.org packaging script on 2009-06-02
-version = "6.x-2.0-rc2"
+; Information added by drupal.org packaging script on 2009-08-27
+version = "6.x-2.0-rc3"
 core = "6.x"
 project = "rsvp"
-datestamp = "1243960343"
+datestamp = "1251386202"
 

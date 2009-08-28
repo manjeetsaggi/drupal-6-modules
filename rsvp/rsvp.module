@@ -1,5 +1,5 @@
 <?php
-// $Id: rsvp.module,v 1.22.2.31 2009/06/01 18:28:02 ulf1 Exp $
+// $Id: rsvp.module,v 1.22.2.38 2009/08/23 05:53:51 ulf1 Exp $
 
 /**
  * @module rsvp
@@ -419,7 +419,7 @@ function rsvp_menu() {
   $items['rsvp/js/stylesheet'] = array(
     'page callback' => 'rsvp_stylesheet_options_update',
     'access callback' => 'rsvp_function_invitation_by_invite_access',
-    'access arguments' => array($connector, 1, NULL, NULL, RSVP_ACCESS_EDIT),
+    'access arguments' => array($connector, NULL, NULL, NULL, RSVP_ACCESS_EDIT),
     'type' => MENU_CALLBACK,
     'file' => 'rsvp.form.inc',
   );
@@ -597,10 +597,6 @@ function rsvp_nodeapi(&$node, $op, $teaser, $page) {
 /**
  * Implementation of hook_user().
  *
- * Checks whether an email address is subscribed to the newsletter when a new
- * user signs up. If so, changes uid from 0 to the new uid in
- * simplenews_subscriptions so that the user's subscription status is known when
- * he logs in.
  */
 function rsvp_user($op, &$edit, &$account, $category = NULL) {
   switch ($op) {
@@ -916,7 +912,7 @@ function rsvp_overview_created_form_access($connector, $node, $usr) {
   if (is_null($node)) {
     if (is_null($usr)) {
       //if usr and node is null we assume that we are a moderator. Lets check it here.
-      $perm_maintain = rsvp_function_invitation_by_invite_access($connector, $rsvp, NULL, NULL, RSVP_ACCESS_MAINTAIN, NULL);
+      $perm_maintain = rsvp_function_invitation_by_invite_access($connector, NULL, NULL, NULL, RSVP_ACCESS_MAINTAIN, NULL);
       if ($perm_maintain == false)
         return false;
     }
@@ -1819,7 +1815,7 @@ function rsvp_show_guestlist($rsvp, $invite_target, $is_block = false, $extended
         }        
           
         if ($are_responses_visible == true) {
-          if (!$attendee->invited) {
+          if ($is_moderator && !$attendee->invited) {
             $guestlist[RSVP_ATT_NOTSEND]['guests'][] = $guest; 
             $guestlist[RSVP_ATT_NOTSEND]['count'] += $attendee->totalguests;
             $total_lineitems++;
@@ -2248,7 +2244,7 @@ function rsvp_add_guests_form_submit($form, &$form_state) {
   $statusarray = rsvp_function_add_guests($rsvp, $invite_target, $guestsarray, $send_immediatly);
   
   if($send_immediatly == true) {
-    drupal_set_message(t('New Guests have been added. Do not forget to send the invitation.'));
+    drupal_set_message(t('New guests have been added. Do not forget to send the invitation.'));
   }
   
   $content .= theme('rsvp_status', $statusarray);
@@ -2775,21 +2771,17 @@ function rsvp_reply_form(&$form_state, $rsvp, $invite_target) {
   $disabled = ($reply_permitted == false && $is_own_invitation == true);
   
   //calculate how many seats are open.  
-  $max_guests_exceeded = false;
   $open_seats = 0;
   $open_seats_text = '';
   if ($rsvp->max_guests > 0) {
     $attend_yes = (int) db_result(rsvp_function_load_guests($rsvp->rid, RSVP_ATT_YES, TRUE));
-    $open_seats = $rsvp->max_guests - $attend_yes;
-    if($invite_target->response == RSVP_ATT_YES) $open_seats += $invite_target->totalguests;
+    $open_seats = ($rsvp->max_guests - $attend_yes);
     
-    if ($open_seats <= 0) {
-      $max_guests_exceeded = true;
+    if ($open_seats < 0) {
       $open_seats = 0; // less then 0 should not be printed in the screen.
     }
-    else {
-      $open_seats_text = t('There are currently !openseats open seats left for this event.', array('!openseats' => '<b>' . $open_seats . '</b>')); 
-    }
+    
+    $open_seats_text = t('There are currently !openseats open seats left for this event.', array('!openseats' => '<b>' . $open_seats . '</b>')); 
   }
   
   $form = array();
@@ -2913,21 +2905,19 @@ function rsvp_reply_form_validate($form, &$form_state) {
 	$open_seats = (int) $form_state['values']['open_seats'];
   $reply_totalguests = $form_state['values']['reply_totalguests'];
   $reply_invite_reply = $form_state['values']['reply_invite_reply'];
+  $invite_target = $form_state['values']['invite_target'];
   
   if (!is_numeric($reply_totalguests))
-    form_set_error('', t('Please enter a number into the \'Total Guests\' field.'));      
+    form_set_error('reply_totalguests', t('Please enter a number into the \'Total Guests\' field.'));      
   
   if (($reply_invite_reply == RSVP_ATT_YES) && ($max_guests > 0)) {
-  	if ($reply_totalguests == 0) {
-      form_set_error('', t('Please enter at least 1 for the total number of guests you will bring to the event.'));      
+  	if ($reply_totalguests <= 0) {
+      form_set_error('reply_totalguests', t('Please enter at least 1 for the total number of guests you will bring to the event.'));      
   	}
-    if ($open_seats == 0) {
-      form_set_error('', t('There are no open seats left for this invitation.'));      
-    }
-    else {  	
-      if (($open_seats - (int)$reply_totalguests) < 0) {
-        form_set_error('', t('There are only %open_seats open seats left for this invitation. Please adjust the number of guests you will bring to the event to a number between 1 and %open_seats.', array('%open_seats' => $open_seats)));      
-      }
+  	$remaining_seats = ($open_seats + $invite_target->totalguests - $reply_totalguests);
+  	
+    if ($remaining_seats < 0) {
+      form_set_error('reply_totalguests', t('There are only %open_seats open seats left for this event. Please adjust the number of guests you will bring to the event to a number between 1 and %avail_seats.', array('%open_seats' => $open_seats, '%avail_seats' => $open_seats + $invite_target->totalguests)));      
     }    	
   }
 }
@@ -2961,10 +2951,10 @@ function rsvp_reply_form_submit($form, &$form_state) {
       $body .= rsvp_function_guest_status($rsvp, $invite_target);
       rsvp_function_send_message_moderator($rsvp, 'notification_moderator', $subject, $body, $invite_target);
     }
-  	
-  	
   }
 
+  $form_state['redirect'] = rsvp_function_session_parent(NULL, false);
+  
 }
 
 /**
@@ -4205,16 +4195,25 @@ function template_preprocess_rsvp_invitation(&$variables) {
   
   $variables['show_openseats'] = ($max_attend > 0);
   $variables['are_openseats_available'] = ($max_attend > $attend_yes);
-  if ($attend_maybe > 0) 
-    $variables['openseats_count_maybe'] = '(' . ($max_attend - $attend_yes - $attend_maybe) . ')';
-  
-  $variables['openseats_count_yes'] = ($max_attend - $attend_yes);
-  
-  unset($variables['rsvp']);
-  unset($variables['invite_target']);
-  unset($variables['connection']);
-  unset($variables['params']);
-  
+
+  $val_yes = ($max_attend - $attend_yes);
+  if ($val_yes <= 0)
+  {
+    $variables['openseats_count_yes'] = "0";
+    $variables['openseats_count_maybe'] = "";
+  }
+  else // open seats available  
+  {  
+    $variables['openseats_count_yes'] = $val_yes;
+    
+    if ($attend_maybe > 0) {
+      $val_maybe = ($max_attend - $attend_yes - $attend_maybe);
+      if ($val_maybe <= 0)
+        $val_maybe = 0;
+      $variables['openseats_count_maybe'] = '(' . $val_maybe . ')';
+    }
+  }
+
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -4313,12 +4312,6 @@ function template_preprocess_rsvp_guestlist(&$variables) {
   //make sure guestlistarray is clean to pass through.
   $variables['guestlistarray'] = $params['guestlistarray'];
   
-  
-
-  unset($variables['rsvp']);
-  unset($variables['invite_target']);
-  unset($variables['connection']);
-  unset($variables['params']);
 } 
 
 function template_preprocess_rsvp_guestlist_block(&$variables) {
@@ -4377,11 +4370,6 @@ function template_preprocess_rsvp_reply(&$variables) {
   $variables['reply_totalguests']     = $params['reply_totalguests'];
   $variables['reply_fieldset_end']    = $params['reply_fieldset_end'];
   
-
-  unset($variables['rsvp']);
-  unset($variables['invite_target']);
-  unset($variables['connection']);
-  unset($variables['params']);
 } 
 
 
@@ -4437,10 +4425,6 @@ function template_preprocess_rsvp_invitation_page(&$variables) {
   $rsvptitle = check_plain($rsvp->name);
   $variables['image'] = theme('image', rsvp_function_getImage($rsvp->image), $rsvptitle, $rsvptitle, NULL, true);
   
-  unset($variables['rsvp']);
-  unset($variables['invite_target']);
-  unset($variables['connection']);
-  unset($variables['params']);
 } 
     
     

@@ -1,5 +1,5 @@
 <?php
-// $Id: rsvp.install,v 1.10.2.3 2009/03/16 18:17:31 ulf1 Exp $ 
+// $Id: rsvp.install,v 1.10.2.4 2009/08/23 04:13:46 ulf1 Exp $ 
 
 function rsvp_install() {
   drupal_install_schema('rsvp');
@@ -21,14 +21,14 @@ function rsvp_schema() {
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
       ),
       'uid' => array(
         'description' => ('The {user}.uid identifier'),
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
       ),
       'name' => array(
         'description' => ('The RSVP title'),
@@ -45,7 +45,7 @@ function rsvp_schema() {
         'type' => 'int',
         'size' => 'tiny',
         'unsigned' => TRUE,
-        'default' => '0'
+        'default' => 0
       ),
       'response_blind' => array(
         'description' => ('Defines whether responses (result) of rsvp is visible or not, and when it becomes visible.'),
@@ -53,7 +53,7 @@ function rsvp_schema() {
         'size' => 'tiny',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
       ),
       'attendees_visible' => array(
         'description' => ('Defines whether attendees are visible to other users or not, and when they become visible'),
@@ -61,7 +61,7 @@ function rsvp_schema() {
         'size' => 'tiny',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
       ),
       'list_email' => array(
         'description' => ('Defines who is allowed to send messages (none, invitee, respondent, attendee)'),
@@ -69,7 +69,7 @@ function rsvp_schema() {
         'size' => 'tiny',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
       ),
       'allow_invite' => array(
         'description' => ('Defines who is allowed to invite other people (none, invitee, respondent, attendee)'),
@@ -77,14 +77,14 @@ function rsvp_schema() {
         'size' => 'tiny',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
       ),
       'timestamp' => array(
         'description' => ('Records the last update time'),
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
       ),
       'startdate' => array(
         'description' => ('The startdate related to this invitation'),
@@ -132,7 +132,7 @@ function rsvp_schema() {
         'description' => ('The {user}.uid identifier of a possible moderator'),
         'type' => 'int',
         'unsigned' => TRUE,
-        'default' => '0'
+        'default' => 0
       ),
       'response_blind_node' => array(
         'description' => ('Defines whether responses (result) of rsvp is visible on the event(node) or not, and when it becomes visible.'),
@@ -140,7 +140,7 @@ function rsvp_schema() {
         'size' => 'tiny',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
       ),
       'reply_blind_node' => array(
         'description' => ('Defines whether the replybox of rsvp can be seen below the event(node).'),
@@ -148,7 +148,7 @@ function rsvp_schema() {
         'size' => 'tiny',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
       ),
       'send_conf_owner' => array(
         'description' => ('Send confirmation emails to owner when guest replies'),
@@ -156,7 +156,7 @@ function rsvp_schema() {
         'size' => 'tiny',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
       ),
       'send_conf_guest' => array(
         'description' => ('Send confirmation emails to guest when he replies'),
@@ -164,7 +164,7 @@ function rsvp_schema() {
         'size' => 'tiny',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
       ),
       'send_privatemsg' => array(
         'description' => ('Send emails by privatemsg for registered users'),
@@ -172,7 +172,7 @@ function rsvp_schema() {
         'size' => 'tiny',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
       ),
       'disable_maybe' => array(
         'description' => ('Allow maybe as answer or not.'),
@@ -180,21 +180,21 @@ function rsvp_schema() {
         'size' => 'tiny',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
       ),
       'reply_startdate' => array(
         'description' => ('Determines when guests can start replying'),
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
       ),
       'reply_enddate' => array(
         'description' => ('Determines when guests can not reply anymore'),
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
       ),
       'open_invitation' => array(
         'description' => ('Can other registered users signup to the invitation'),
@@ -202,14 +202,14 @@ function rsvp_schema() {
         'size' => 'tiny',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
       ),
       'max_guests' => array(
         'description' => ('The maximum number of guests allowed to attend'),
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
       ),
       'theme' => array(
         'description' => ('The theme that is being used for the invitation'),
@@ -260,19 +260,20 @@ function rsvp_schema() {
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
       ),
       'uid' => array(
         'description' => ('The {user}.uid identifier'),
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
       ),
       'email' => array(
         'description' => ('Guests e-mail'),
         'type' => 'varchar',
         'length' => 128,
+        'not null' => TRUE,
         'default' => ''
       ),
       'hash' => array(
@@ -287,7 +288,7 @@ function rsvp_schema() {
         'size' => 'tiny',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
       ),
       'received' => array(
         'description' => ('Whether the invitee has received the invitation(1) or not(0)'),
@@ -295,14 +296,14 @@ function rsvp_schema() {
         'size' => 'tiny',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
       ),
       'timestamp' => array(
         'description' => ('Records the last update time'),
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
       ),
       'comment' => array(
         'description' => ('Response Comment'),
@@ -320,7 +321,7 @@ function rsvp_schema() {
         'size' => 'tiny',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '1'
+        'default' => 1
       ),
     ),
     'primary key' => array('rid', 'email', 'uid'),
@@ -333,6 +334,7 @@ function rsvp_schema() {
         'description' => ('Guests e-mail'),
         'type' => 'varchar',
         'length' => 128,
+        'not null' => TRUE,
         'default' => ''
       ),
       'realname' => array(
@@ -389,7 +391,7 @@ function rsvp_update_6000() {
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
       )
   );
 
@@ -398,7 +400,7 @@ function rsvp_update_6000() {
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
       )
   );
 
@@ -408,7 +410,7 @@ function rsvp_update_6000() {
         'size' => 'tiny',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
       )
   );
   
@@ -418,7 +420,7 @@ function rsvp_update_6000() {
         'size' => 'tiny',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
       )
   );
   
@@ -428,7 +430,7 @@ function rsvp_update_6000() {
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
       )
       
   );
@@ -488,7 +490,7 @@ function rsvp_update_6001() {
         'size' => 'tiny',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '1'
+        'default' => 1
       )
   );
   
@@ -511,7 +513,7 @@ function rsvp_update_6002() {
         'description' => ('The {user}.uid identifier of a possible moderator'),
         'type' => 'int',
         'unsigned' => TRUE,
-        'default' => '0'
+        'default' => 0
       )
   );
 
@@ -521,7 +523,7 @@ function rsvp_update_6002() {
         'size' => 'tiny',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
       )
   );
   db_add_field($ret, 'rsvp', 'reply_blind_node', array(
@@ -530,7 +532,7 @@ function rsvp_update_6002() {
         'size' => 'tiny',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
       )
   );
   
@@ -564,7 +566,7 @@ function rsvp_update_6200() {
         'size' => 'tiny',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
         )
   );
 
@@ -574,7 +576,7 @@ function rsvp_update_6200() {
         'size' => 'tiny',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
         )
   );
   db_add_field($ret, 'rsvp', 'send_privatemsg', array(
@@ -583,7 +585,7 @@ function rsvp_update_6200() {
         'size' => 'tiny',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
         )
   );
   
@@ -593,7 +595,7 @@ function rsvp_update_6200() {
         'size' => 'tiny',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
         )
   );
 
@@ -602,7 +604,7 @@ function rsvp_update_6200() {
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
         )
   );
   db_add_field($ret, 'rsvp', 'reply_enddate', array(
@@ -610,7 +612,7 @@ function rsvp_update_6200() {
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
         )
   );
   db_add_field($ret, 'rsvp', 'open_invitation', array(
@@ -619,7 +621,7 @@ function rsvp_update_6200() {
         'size' => 'tiny',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
         )
   );
   db_add_field($ret, 'rsvp', 'max_guests', array(
@@ -627,7 +629,7 @@ function rsvp_update_6200() {
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '0'
+        'default' => 0
         )
   );
   db_add_field($ret, 'rsvp', 'theme', array(
@@ -657,7 +659,7 @@ function rsvp_update_6200() {
         'type' => 'int',
         'size' => 'tiny',
         'unsigned' => TRUE,
-        'default' => '0'
+        'default' => 0
         )
   );
   
@@ -684,6 +686,7 @@ function rsvp_update_6200() {
         'description' => ('Guests e-mail'),
         'type' => 'varchar',
         'length' => 128,
+        'not null' => TRUE,
         'default' => ''
       ),
       'realname' => array(

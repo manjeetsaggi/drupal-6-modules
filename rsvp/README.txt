@@ -185,48 +185,85 @@ Terminology:
 
 
    
-TODO/Features for following releases:
---------------------------------------
-- Tighter Integration to event nodes. Why do we need an extra Invitation page at all?? (LOW PRIO)
-
-- more options about who can send messages to whom: checkboxes per group (invitee, respondent, attendees) (LOW PRIO)
-
-- http://drupal.org/node/180153 : Add invitations to "MyCalendar" 
-- http://drupal.org/node/219555 : Include links to reply directly from e-mail?
+Possible Features for following releases:
+-----------------------------------------
+This is a list with all the improvements that the community suggested during the time I wrote the current rsvp 
+implementation. If you like to see one of the following features requests implemented earlier then later,
+please consider donating. A reference to my paypal account can be found in the project page: http://drupal.org/node/350019
 
 
+1. General architectural improvements that would make rsvp faster, more versatile and easier to use.
+--------
 
-- Integration with CiviCRM 
+1.1) Tighter Integration to event nodes. Why do we need an extra Invitation page at all??
+-http://drupal.org/node/530428
+Is it possible to create an RSVP invitation from the Body of content so that the invitation is not redundant. 
+When a person creates a date event, the body of invitation must be filled out to describe the event but this 
+must be repeated when an RSVP invitation is created which makes it redundant. 
+Is it possible to use the information from the Body as a template for the invitation.
+=> Global option, and then remove invitation body completely if enabled.
+
+1.2) Own contenttype: http://drupal.org/node/231019. 
+1.3) Allow parallel usage of event connector and date connector.
+1.4) preview option when writing an rsvp.
+1.5) automatic update of invitations startdate when startdate in node changes.
+
+1.6) Support for multiple ckk fields per content type (select one during invitation creation). http://drupal.org/comment/reply/485694
+
+1.7) offer open registration for anonymous users.
+
+1.8) optimization of RSVP queries (links, permission queries) (http://www.lullabot.com/articles/a_beginners_guide_to_caching_data, http://drupal.org/node/145279)
+
+1.9) Can not delete Invitation if the event startdate is expired. (startdate field is empty).
+
+1.10) Cleanup tpl files. Remove all images from tpl files into preprocess files and invent new div to set the image size.
+
+
+2. Configuration/Options
+---------
+2.1) more options about who can send messages to whom: checkboxes per group (invitee, respondent, attendees).
+
+2.2) http://drupal.org/node/397888 : Configure, which options are listed on the basic screen and which are extended.
+
+2.3) http://drupal.org/node/490166: Adding RSVP option (default option) for initial response
+
+2.4) http://drupal.org/node/548468 : configure how much dependents a user can bring maximum.
+
+
+3. User Interaction - Input/Output/Emails
+-----------
+3.1) http://drupal.org/node/180153 : Add invitations to "MyCalendar" 
+3.2) http://drupal.org/node/219555 : Include links to reply directly through e-mail?
+
+3.3) http://drupal.org/node/499372
+Maybe my expectations but I thought this was going to enable the recipient to 'reply' via email, 
+and something like MailHandler would flick it in as an RSVP - provided of course the recipient did the right thing, 
+by typing Yes, No or Maybe 'above the line'.
+
+
+3.4) Email: http://drupal.org/node/84918: Send emails via privatemsg instead by email (send_privatemsg).
+3.5) Guest List: Add icon for regular invitees to view status.
+3.6) Add red reply button instead of link like the event manager module has(-http://em-demo.mind-sky.com/?q=node/3).
+3.7) provide a reply box that has all the same features like evite. http://drupal.org/node/64208 
+
+3.8) http://drupal.org/node/397888 : For guests, Invitation tab can forward to the invitation if only one invitation is available.
+
+3.9) allow parameters for views.
+
+3.10) Send automatic notification email before the event starts (cron or manual) See Signup module.
+3.11) Send automatic invitation email (cron)
+3.12) Send emails using batch processing (http://api.drupal.org/api/group/batch)
+3.13) Support for html in emails (http://drupal.org/node/516360)
+
+
+4. Integrations
+------------
+4.1) Integration with CiviCRM 
 -http://drupal.org/node/38918, http://drupal.org/node/30522: CiviCRM integration (in all the obvious ways: Personal information being added to Contacts, direct registration, events being added to "Activities")
 
-- Email: http://drupal.org/node/84918: Send emails via privatemsg instead by email.
-(send_privatemsg)
+4.2) http://drupal.org/node/461720 : Implement uebercart integration instead of reply box .
 
-- Guest List: Add icon for regular invitees to view status (LOW PRIO).
-- Add red reply button instead of link like the event manager module has(-http://em-demo.mind-sky.com/?q=node/3). (LOW PRIO)
-
-- preview option when writing an rsvp
-- automatic update of invitations startdate when startdate in node changes. (MORE COMPLICATED)
-
-- Allow parallel usage of event connector and date connector
-- allow parameters for views
-
-- http://drupal.org/node/64208 evite reply box
-
-
-- offer open registration for anonymous users.
-- http://drupal.org/node/397888 : For guests, Invitation tab can forward to the invitation if only one invitation is available.
-- http://drupal.org/node/397888 : Configure, which options are listed on the basic screen and which are extended.
-
-
-- Send automatic notification email before the event starts (cron or manual).
-- Send automatic invitation email (cron)
-
-- http://drupal.org/node/461720 : Implement uebercart integration instead of reply box .
-
-- optimization of RSVP queries (links, permission queries)
-
-
+4.3) for signup integration: Global option: If user selects not to attend, the signup integration should remove the user also from the signup.
 
 
 

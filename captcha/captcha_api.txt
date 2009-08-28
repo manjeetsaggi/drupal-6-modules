@@ -1,4 +1,4 @@
-// $Id: captcha_api.txt,v 1.9 2009/07/02 23:45:05 soxofaan Exp $
+// $Id: captcha_api.txt,v 1.12 2009/08/27 21:27:03 soxofaan Exp $
 
 This documentation is for developers that want to implement their own
 challenge type and integrate it with the base CAPTCHA module.
@@ -19,6 +19,9 @@ Functionality depends on the first argument $op:
     $captcha['form']: an array of the form elements you want to add to the form.
       There should be a key 'captcha_response' in this array, which points to
       the form element where the user enters his answer.
+    An optional additional argument $captcha_sid with the captcha session ID is
+    available for more advanced challenges (e.g. the image CAPTCHA uses this
+    argument, see image_captcha_captcha()).
 
 Let's give a simple example to make this more clear.
 We create the challenge 'Foo CAPTCHA', which requires the user to
@@ -66,7 +69,7 @@ file foo_captcha.info:
 name = "Foo CAPTCHA"
 description = "The foo CAPTCHA requires the user to enter the word 'foo'."
 package = "Spam control"
-dependencies = captcha
+dependencies[] = captcha
 core = 6.x
 """
 
@@ -161,4 +164,16 @@ function foo_captcha_custom_validation($solution, $response) {
   return $response == "foo" || $response == "bar";
 }
 """
+
+Previous example shows the basic usage for custom validation with only a $solution
+and $response argument, which should be sufficient for most CAPTCHA modules.
+More advanced CAPTCHA modules can also use extra provided arguments $element
+and $form_state:
+"""
+function foo_captcha_custom_validation($solution, $response, $element, $form_state) {
+  return $form_state['foo']['#bar'] = 'baz';
+}
+"""
+These extra arguments are the $element and $form_state arguments of the validation function
+of the #captcha element. See captcha_validate() in captcha.module for more info about this.
 

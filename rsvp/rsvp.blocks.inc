@@ -1,5 +1,5 @@
 <?php
-// $Id: rsvp.blocks.inc,v 1.2.2.3 2009/03/07 22:00:26 ulf1 Exp $
+// $Id: rsvp.blocks.inc,v 1.2.2.4 2009/08/14 22:02:54 ulf1 Exp $
 
 /**
  * @module rsvp_blocks
@@ -141,7 +141,7 @@ function rsvp_block_toolbox_guest() {
     {
       $perm_export = rsvp_csv_hash_form_access($connector, $rsvp, $invite_target);
       $perm_sendmessage = rsvp_hash_sendmessage_access($connector, $invite_target);
-      $perm_addguests = rsvp_attendee_form_access($connector, $rsvp, $invite_target);
+      $perm_addguests = rsvp_attendee_hash_form_access ($connector, $invite_target);
 
       if ($perm_sendmessage == true)
         $links[] = l(t('Send a message to guests'), 'rsvp/email/'. $invite_target->hash .'/message', array('attributes' => array('title' => t('Send message to guests that you invited.'))));

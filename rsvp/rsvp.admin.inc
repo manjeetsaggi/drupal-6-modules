@@ -1,6 +1,6 @@
 <?php
 
-// $Id: rsvp.admin.inc,v 1.3.2.6 2009/05/28 18:23:42 ulf1 Exp $
+// $Id: rsvp.admin.inc,v 1.3.2.7 2009/06/23 19:52:55 ulf1 Exp $
 
 /**
  * @module rsvp_admin
@@ -394,18 +394,6 @@ function _rsvp_get_date_field_options($type, $field) {
  */
 function rsvp_form_node_type_form_alter(&$form, &$form_state) {
 
-  $form['rsvp'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('RSVP settings'),
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
-  );
-  
-  $form['rsvp']['connector'] = array(
-    '#type' => 'item',
-    '#title' => t('Selected connector'),
-    '#value' => t(variable_get(RSVP_VAR_CONNECTOR, NULL)),
-  );
   
   // Determine if the logged-in user 
   //1) has admin permissions and 
@@ -420,9 +408,27 @@ function rsvp_form_node_type_form_alter(&$form, &$form_state) {
   
   $field = $connector->get_event_field($type);
   
-  $form['rsvp']['rsvp_node_datefields'] = _rsvp_date_field_element($type, $field);
-  $form['#submit'][] = '_rsvp_date_field_form_submit';
+  $fieldcount = count(_rsvp_field_names($type));  
+
+  //do not show option block if no date fields are available.
+  if ($fieldcount > 0 || !empty($field)) {
+    
+    $form['rsvp'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('RSVP settings'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+    );
   
+    $form['rsvp']['connector'] = array(
+      '#type' => 'item',
+      '#title' => t('Selected connector'),
+      '#value' => t(variable_get(RSVP_VAR_CONNECTOR, NULL)),
+    );
+  
+    $form['rsvp']['rsvp_node_datefields'] = _rsvp_date_field_element($type, $field);
+    $form['#submit'][] = '_rsvp_date_field_form_submit';
+  }
 }
 
 /**
@@ -432,21 +438,8 @@ function rsvp_form_node_type_form_alter(&$form, &$form_state) {
  * field as the RSVP date field.
  *
  */
-function rsvp_form_content_field_edit_form_alter(&$form, &$form_state) {
+function rsvp_form_nodecontent_field_edit_form_alter(&$form, &$form_state) {
 
-  $form['rsvp'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('RSVP settings'),
-    '#collapsible' => TRUE,
-    '#weight' => 1,
-  );
-
-  $form['rsvp']['connector'] = array(
-    '#type' => 'item',
-    '#title' => t('Selected connector'),
-    '#value' => t(variable_get(RSVP_VAR_CONNECTOR, NULL)),
-  );
-  
   // Determine if the logged-in user 
   //1) has admin permissions and 
   //2) the current connector supports content-type associations or not
@@ -458,16 +451,34 @@ function rsvp_form_content_field_edit_form_alter(&$form, &$form_state) {
   
   $type = $form['type_name']['#value'];
 
-  if (in_array($form['#field']['type'], array('date', 'datestamp', 'datetime'))) {
+  $field = $connector->get_event_field($type);
+  
+  $fieldcount = count(_rsvp_field_names($type));  
+  
+  //do not show option block if no date fields are available.
+  if ($fieldcount > 0 || !empty($field)) {
+  
+    $form['rsvp'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('RSVP settings'),
+      '#collapsible' => TRUE,
+      '#weight' => 1,
+    );
 
-    $field = $connector->get_event_field($type);
+    $form['rsvp']['connector'] = array(
+      '#type' => 'item',
+      '#title' => t('Selected connector'),
+      '#value' => t(variable_get(RSVP_VAR_CONNECTOR, NULL)),
+    );
     
     $form['rsvp']['rsvp_node_datefields'] = _rsvp_date_field_element($type, $field);
     $form['#submit'][] = '_rsvp_date_field_form_submit';
     // Make sure the submit button comes after the rsvp settings fieldset.
     $form['submit']['#weight'] = 50;
   }
+  
 }
+
 
 /**
  * Custom submit handler for the CCK date field editing form.

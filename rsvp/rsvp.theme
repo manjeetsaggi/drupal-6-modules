@@ -1,6 +1,6 @@
 <?php
 /**
- * $Id: rsvp.theme,v 1.9 2009/02/05 02:25:44 ulf1 Exp $
+ * $Id: rsvp.theme,v 1.9.2.1 2009/08/14 22:02:55 ulf1 Exp $
  
  * @addtogroup themeable
  *
@@ -11,7 +11,7 @@ function theme_rsvp_status($status = NULL) {
     $content .= '<div class="title">'. t('No guests found.') .'</div>';
   }
   if(count($status['invalid'])) {
-    $content .= '<div class="title">'. t('The following guests are invalid:') .'</div>';
+    $content .= '<div class="title">'. t('The following guests could not be added, because they are no registered users or have invalid email-adresses:') .'</div>';
     $content .= theme('item_list', $status['invalid']);
   }
   if(count($status['existing'])) {

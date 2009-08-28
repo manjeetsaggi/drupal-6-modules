@@ -1,5 +1,5 @@
 <?php
-// $Id: captcha.inc,v 1.10 2009/06/19 13:04:00 soxofaan Exp $
+// $Id: captcha.inc,v 1.11 2009/08/27 22:21:56 soxofaan Exp $
 
 /**
  * Helper function for adding/updating a CAPTCHA point.
@@ -111,7 +111,8 @@ function _captcha_update_captcha_session($captcha_sid, $solution) {
 function _captcha_required_for_user($captcha_sid, $form_id) {
   $captcha_session_status = db_result(db_query("SELECT status FROM {captcha_sessions} WHERE csid = %d", $captcha_sid));
 
-  $captcha_success_form_ids = (array)($_SESSION['captcha_success_form_ids']);
+  $captcha_success_form_ids = isset($_SESSION['captcha_success_form_ids']) ? (array)($_SESSION['captcha_success_form_ids']) : array();
+
   switch (variable_get('captcha_persistence', CAPTCHA_PERSISTENCE_SHOW_ALWAYS)) {
     case CAPTCHA_PERSISTENCE_SKIP_ONCE_SUCCESSFUL:
       $captcha_persistence_status = (count($captcha_success_form_ids) > 0);

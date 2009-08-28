@@ -1,5 +1,5 @@
 <?php
-// $Id: rsvp-guestlist.tpl.php,v 1.2.2.4 2009/03/16 18:17:32 ulf1 Exp $
+// $Id: rsvp-guestlist.tpl.php,v 1.2.2.5 2009/07/31 23:43:55 ulf1 Exp $
 
 /**
  * @file rsvp-guestlist.tpl.php
@@ -130,12 +130,11 @@
                     <?php print l(theme('image', $icon_path . 'delete.gif', 'remove', '', array('width' => 17, 'height' => 17)), 'rsvp/' . $rid . '/attendees/remove/'. $guest['userhash'], array('html' => true, 'attributes' => array('title' => t('Remove attendee from invitation list')))) ?>
                     <?php print l(theme('image', $icon_path . 'message.gif', 'send message', '', array('width' => 17, 'height' => 17)), 'rsvp/' . $rid . '/message/'. $guest['userhash'], array('html' => true, 'attributes' => array('title' => t('Send message to guest')))) ?>
                     <?php print l(theme('image', $icon_path . 'invitation.gif', 'send invitation', '', array('width' => 17, 'height' => 17)), 'rsvp/' . $rid . '/attendees/send/'. $guest['userhash'], array('html' => true, 'attributes' => array('title' => t('Send invitation message to guest')))) ?>
-                    <?php print $guest['lastaccess'] ?><br />
-              
+                    <?php print $guest['lastaccess'] ?>              
                   <?php endif; ?>
                           
                   <?php if ($typearray['show_comment']) : ?>
-                    <?php print $guest['usercomment'] ?>
+                    <br /><?php print $guest['usercomment'] ?>
                   <?php endif; ?>
 
                 </li>

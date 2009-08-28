@@ -1,6 +1,6 @@
 <?php
 
-// $Id: rsvp.form.inc,v 1.3.2.5 2009/03/11 18:29:23 ulf1 Exp $
+// $Id: rsvp.form.inc,v 1.3.2.6 2009/08/14 22:02:54 ulf1 Exp $
 
 /**
  * @module rsvp_form
@@ -594,7 +594,7 @@ function rsvp_form_element_reply_startdate($rsvp, $field_attr = array()) {
     '#type' => 'date',
     '#title' => t('Reply start date'),
     '#default_value' => array('year' => (int) date('Y',$date_local ), 'month' => (int) date('m',$date_local ), 'day' => (int) date('d',$date_local ) ),
-    '#description' => t('Specify the start date of a time window guests can replying to the invitation.'),
+    '#description' => t('Specify the start date of a time window guests can reply to the invitation.'),
 /*    '#description' => ' <br /> sd1:' . $rsvp->reply_startdate 
                        . ' <br /> sd2:' . date('r', $rsvp->reply_startdate)
 	                     . ' <br /> sd3:' . format_date($rsvp->reply_startdate, 'custom', 'U')
@@ -627,7 +627,7 @@ function rsvp_form_element_reply_enddate($rsvp, $field_attr = array()) {
     '#type' => 'date',
     '#title' => t('Reply end date'),
     '#default_value' => array('year' => (int) date('Y', $date_local ), 'month' => (int) date('m', $date_local ), 'day' => (int) date('d', $date_local )),
-    '#description' => t('Specify the end date of a time window guests can replying to the invitation.'),
+    '#description' => t('Specify the end date of a time window guests can reply to the invitation.'),
     '#required' => FALSE
     ));  
     

@@ -1,6 +1,6 @@
 <?php
 
-// $Id: rsvp.functions.inc,v 1.3.2.12 2009/06/01 18:28:02 ulf1 Exp $
+// $Id: rsvp.functions.inc,v 1.3.2.14 2009/07/08 18:55:52 ulf1 Exp $
 
 /**
  * @module rsvp_functions
@@ -413,7 +413,7 @@ function rsvp_function_load_guests($rid, $status = RSVP_ATT_ALL, $count = FALSE,
 }
 
 /**
-* Return totals for each type (RSVP_ATT_ALL,...) for an invitation
+* Return totals for each type (RSVP_ATT_NONE, RSVP_ATT_YES, RSVP_ATT_NO, RSVP_ATT_MAYBE, RSVP_ATT_ALL) for an invitation
 *
 * @ingroup rsvp_functions
 * @param $rid The rid of the rsvp instance.
@@ -677,7 +677,7 @@ function _rsvp_function_add_guests($rsvp, $invite_caller, $guestsarray) {
               // if this e-mail is not in the attendee list,
               // add it
               $hash = md5($rid . $string . time());
-              if (db_query('INSERT INTO {rsvp_invite} (rid, inviteehash, email, hash, timestamp, response, comment, totalguests) VALUES (%d, \'%s\', \'%s\', \'%s\', %d, \'%s\', \'%s\', %d)', $rid, $owner_hash, $string, $hash, time(), 'none', '', 1)) {
+              if (db_query('INSERT INTO {rsvp_invite} (rid, inviteehash, email, hash, timestamp, response, comment, totalguests) VALUES (%d, \'%s\', \'%s\', \'%s\', %d, \'%s\', \'%s\', %d)', $rid, $owner_hash, $string, $hash, time(), RSVP_ATT_NONE, '', 1)) {
                 $invite_hash = $hash;
                 $list_key = 'success_add';
               }
@@ -702,7 +702,7 @@ function _rsvp_function_add_guests($rsvp, $invite_caller, $guestsarray) {
         $invite_target = rsvp_function_exists_guest_uid($rid, $usr->uid);
         if (!$invite_target) {
           $hash = md5($rid . $string . time());
-          if (db_query('INSERT INTO {rsvp_invite} (rid, uid, inviteehash, email, hash, timestamp, response, comment, totalguests) VALUES (%d, %d, \'%s\', \'%s\', \'%s\', %d, \'%s\', \'%s\', %d)', $rid, $usr->uid, $owner_hash, $usr->mail, $hash, time(), 'none', '', 1)) {
+          if (db_query('INSERT INTO {rsvp_invite} (rid, uid, inviteehash, email, hash, timestamp, response, comment, totalguests) VALUES (%d, %d, \'%s\', \'%s\', \'%s\', %d, \'%s\', \'%s\', %d)', $rid, $usr->uid, $owner_hash, $usr->mail, $hash, time(), RSVP_ATT_NONE, '', 1)) {
             $invite_hash = $hash;
             $list_key = 'success_add';
           }          

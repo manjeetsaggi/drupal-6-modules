@@ -1,5 +1,5 @@
 <?php
-// $Id: rsvp_signup.module,v 1.1.2.1 2009/03/11 06:18:47 ulf1 Exp $
+// $Id: rsvp_signup.module,v 1.1.2.2 2009/07/28 19:04:04 ulf1 Exp $
 
 /**
  * @module rsvp_signup
@@ -45,6 +45,15 @@ function rsvp_signup_form_submit($form, &$form_state) {
   // for this event, sign him/her up for it.
   if ($reply == RSVP_ATT_YES && module_exists('signup')) {
     include_once('./'. drupal_get_path('module', 'signup') . '/includes/no_views.inc');
+    
+    // check first if the signup status is set to open. 
+    // Otherwise we get a access denied error from signup_list_user_signups, which we do not expect. 
+    $node = node_load($rsvp->nid);
+    if (!$node->signup_status) {
+      drupal_set_message(t('Signup to !title denied. Signup is already closed', array('!title' => l($node->title, "node/$node->nid"))));
+      return;
+    }
+    
   	if ( $invite_target->uid > 0 ) {
 
       // Sign up the registered user.
