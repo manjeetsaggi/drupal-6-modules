@@ -1,5 +1,5 @@
 <?php
-// $Id: syntaxhighlighter.install,v 1.7 2009/07/29 06:48:52 mattyoung Exp $
+// $Id: syntaxhighlighter.install,v 1.13 2009/08/24 17:45:10 mattyoung Exp $
 
 /**
  * @file
@@ -23,14 +23,15 @@ function syntaxhighlighter_uninstall() {
 function syntaxhighlighter_requirements($phase) {
   $t = get_t();
   require_once('syntaxhighlighter.module');
-  $syntaxhighlighter_js_location = _syntaxhighlighter_get_js_location();
+  $lib_location = _syntaxhighlighter_get_lib_location();
   $requirements['syntaxhighlighter']['title'] = $t('Syntax highlighter js library');
-  $requirements['syntaxhighlighter']['value'] = $syntaxhighlighter_js_location != NULL ? $t('Installed') : $t('Not installed');
-  
+  $requirements['syntaxhighlighter']['value'] = $lib_location != NULL ? $t('Installed') : $t('Not installed');
+
   // Raise warning if the syntaxhighlighter script file is not install
-  if ($syntaxhighlighter_js_location == NULL) {
+  if ($lib_location == NULL) {
     $requirements['syntaxhighlighter']['severity'] = REQUIREMENT_ERROR;
-    $requirements['syntaxhighlighter']['description'] = $t('The required Syntax highlighter javascript library is not installed.  Please see the Syntaxhighlighter module README.txt.');
+    $requirements['syntaxhighlighter']['description'] = $t('The required Syntax highlighter javascript library is not installed. See <a href="!link">the Syntaxhighlighter module README.txt file</a> for instructions.',
+                                                            array('!link' => url(drupal_get_path('module', 'syntaxhighlighter') .'/README.txt')));
   }
 
   return $requirements;
@@ -38,19 +39,31 @@ function syntaxhighlighter_requirements($phase) {
 
 
 function syntaxhighlighter_install() {
-  // Enable the filter for the help text to show up automatically
-  db_query("INSERT INTO {filters} (format, module, delta, weight) VALUES (2, 'syntaxhighlighter', 0, 10)");
   $t = get_t();
-  drupal_set_message($t('You can now <a href="!admin">configure the Syntax Highlighter module</a>.',
-    array('!admin' => url('admin/settings/syntaxhighlighter'))), 'status');
+  drupal_set_message($t('You must <a href="!link">turn on the Syntaxhighlighter filter</a> in an input format for syntax highlight code using that format.',
+    array('!link' => url('admin/settings/filters'))), 'status');
+  drupal_set_message($t('Then <a href="!link">configure the Syntax Highlighter module</a>.',
+    array('!link' => url('admin/settings/syntaxhighlighter'))), 'status');
+  drupal_set_message($t('See <a href="!link">the Syntaxhighlighter module README.txt file</a> for instructions.',
+                         array('!link' => url(drupal_get_path('module', 'syntaxhighlighter') .'/README.txt'))));
 }
+
 
 function syntaxhighlighter_update_6100() {
   $items = array();
-  
+
     // Enable the filter for the help text to show up automatically
   $items[] = update_sql("DELETE FROM {filters} where module='syntaxhighlighter'");
   $items[] = update_sql("INSERT INTO {filters} (format, module, delta, weight) VALUES (2, 'syntaxhighlighter', 0, 10)");
 
   return $items;
+}
+
+
+function syntaxhighlighter_update_6101() {
+  $t = get_t();
+  drupal_set_message($t('Go to <a href="!link">filters settings</a> to enable the Syntaxhighlighter filter in the appropriate input format. It\'s not necessary to use Full HTML format anymore.',
+    array('!link' => url('admin/settings/filters'))), 'warning');
+
+  return array();
 }

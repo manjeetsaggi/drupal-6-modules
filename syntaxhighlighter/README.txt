@@ -1,22 +1,64 @@
-REQUIREMENTS
+INSTALLATION
 -------------
 
-Download the latest Syntax highlighter javascript library from http://alexgorbatchev.com/wiki/SyntaxHighlighter,
-extract the content and place it inside any of the following directories or sub-directory of any name therein(*):
+Step 1) Download the latest Syntax highlighter javascript library from
+http://alexgorbatchev.com/wiki/SyntaxHighlighter, extract the content and place
+that inside any of the following directories.
 
-  -  sites/all/libraries      (multisite install can share the same library install here)
-  -  site-file-directory-path (usually sites/<site_domain>/files but can be changed through 'admin/settings/file-system'
-  -  inside the syntaxhighlighter module directory
-  
-Examples:
+  -  Inside the syntaxhighlighter module directory
+       This is not recommended. It's only for backward compability.
+  -  Site-file-directory-path
+       usually sites/<site_domain>/files. This location is not recommended.
+       Only use this if you for some reason need to run different versions of
+       the syntaxhighlighter library for different sites in you multi-site install.
+  -  sites/all/libraries
+       Recommended. This is Drupal's standard third party library install location.
+
+Library directory can be nested in any sub-directory of any name **except 'src'**.
+Do not use the 'src' directory name to store the library.
+
+Example:
 
 sites/all/libraries/js/syntaxhighlighter_2.0.320
-site-file-directory-path
 
-(*) The directory name 'src' is not allowed. Do not place syntaxhighlighter library inside there.
+Step 2) Enable the syntaxhighlighter module
 
 
-NOTES
+SETUP
 -----
 
-You must use the Full HTML format because the HTML filter modifies the class attribute.
+Enable the Syntaxhighlighter filter in an input format where you want to
+syntaxhighlight code.
+
+IMPORTANT: the Syntaxhighlighter filter must be *after* the
+HTML filter and must allow the <pre> tag.  The default Filter HTML setting
+do not have the <pre> tag. You must add <pre> to the allow list.
+
+
+CONFIGURATION
+-------------
+
+Go to admin/settings/syntaxhighlighter to configure.
+
+
+USAGE
+-----
+
+Syntax highlight code in node or comment with:
+
+{syntaxhighlighter OPTIONS}
+  any program code verbatim
+  ...
+{/syntaxhighlighter}
+
+where OPTIONS is a Syntaxhighlighter options string. Visit
+http://alexgorbatchev.com/wiki/SyntaxHighlighter to get details.
+
+NOTE: it's not necessary to escape '<' and '>' in program code. The filter does
+that. So you can leave your code totally unchanged.
+
+GET HELP
+--------
+
+Go to admin/help/syntaxhighlighter or filter/tips to get help
+

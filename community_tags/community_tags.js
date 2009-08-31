@@ -1,4 +1,4 @@
-// $Id: community_tags.js,v 1.4.2.1 2008/07/19 17:13:54 herc Exp $
+// $Id: community_tags.js,v 1.4.2.4 2009/08/30 05:29:50 entrigan Exp $
 
 Drupal.communityTags = {};
 
@@ -30,10 +30,12 @@ Drupal.behaviors.communityTags = function(context) {
   // Note: all tag fields are autocompleted, and have already been initialized at this point.
   $('input.form-tags', context).each(function () {
       // Hide submit buttons.
-      $('input[@type=submit]', this.form).hide();
+      $('input[type=submit]', this.form).hide();
 
       // Fetch settings.
-      var o = Drupal.settings.communityTags;
+      var nid = $('input[@name=nid]', this.form).val();
+      var o = Drupal.settings.communityTags['n_' + nid];
+
       var sequence = 0;
 
       // Show the textfield and empty its value.

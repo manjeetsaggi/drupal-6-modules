@@ -1,5 +1,5 @@
 <?php
-// $Id: syntaxhighlighter.admin.inc,v 1.7 2009/07/27 23:16:29 mattyoung Exp $
+// $Id: syntaxhighlighter.admin.inc,v 1.8 2009/08/24 02:37:52 mattyoung Exp $
 
 /**
  * @file
@@ -12,8 +12,8 @@
  * An admin form to specify which language to support for highlighting
  */
 function syntaxhighlighter_settings_form() {
-  $path = _syntaxhighlighter_get_js_location();
-  
+  $path = _syntaxhighlighter_get_lib_location();
+
   $files = file_scan_directory($path .'/scripts', 'shBrush.*\.js');
   foreach ($files as $file) {
     $lang_options[$file->basename] = substr($file->name, 7);
@@ -25,14 +25,15 @@ function syntaxhighlighter_settings_form() {
     '#options' => $lang_options,
     '#default_value' => variable_get('syntaxhighlighter_enabled_languages', array('shBrushPhp.js')),
     '#description' => t('Only the selected languages will be enabled and its corresponding required Javascript files loaded.  You may only want to choose the languages you actual display on your site to lower the amount of Javascript files loaded. For details please see <a href="http://alexgorbatchev.com/wiki/SyntaxHighlighter:Brushes">the Syntax Highlighter Javascript Library Page</a>.'),
-    '#multicolumn' => array('width' => 4),
+    '#multicolumn' => array('width' => 3),
   );
-  
-  $files = file_scan_directory($path .'/styles', 'shTheme.*\.css');
+
+  $files = file_scan_directory($path .'/styles', 'shTheme.*\.css', array('.', '..', 'CVS', 'shThemeDefault.css'));
   foreach ($files as $file) {
     $theme_options[$file->basename] = substr($file->name, 7);
   }
   ksort($theme_options);
+  $theme_options = array_merge(array('shThemeDefault.css' => 'Default'), $theme_options);
   $form['syntaxhighlighter_theme'] = array(
     '#type' => 'radios',
     '#title' => t('Theme'),
@@ -41,7 +42,7 @@ function syntaxhighlighter_settings_form() {
     '#default_value' => variable_get('syntaxhighlighter_theme', 'shThemeDefault.css'),
     '#multicolumn' => array('width' => 2),
   );
-  
+
   $form['syntaxhighlighter_tagname'] = array(
     '#type' => 'textfield',
     '#title' => t('Tag name'),
@@ -56,7 +57,7 @@ function syntaxhighlighter_settings_form() {
     '#options' => array(t('Disabled'), t('Enabled')),
     '#default_value' => variable_get('syntaxhighlighter_legacy_mode', 0),
   );
-  
+
     // Fix a javascript compability issue with imce reported by gmark
     // Don't inject syntax highlighter javascript on "off pages"
   $form['syntaxhighlighter_off_pages'] = array(
@@ -72,7 +73,7 @@ function syntaxhighlighter_settings_form() {
     '#default_value' => variable_get('syntaxhighlighter_default_expressions', ''),
     '#description' => t("Enter syntaxhihglighter default settings javascript expressions, e.g. !example", array('!example' => 'SyntaxHighlighter.defaults[\'auto-links\'] = true;SyntaxHighlighter.defaults[\'gutter\'] = false;')),
   );
-  
+
   return system_settings_form($form);
 }
 

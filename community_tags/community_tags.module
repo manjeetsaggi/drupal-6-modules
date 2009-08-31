@@ -1,5 +1,5 @@
 <?php
-// $Id: community_tags.module,v 1.37.2.3 2008/07/19 20:10:18 herc Exp $
+// $Id: community_tags.module,v 1.37.2.8 2009/08/29 17:32:45 entrigan Exp $
 
 /**
  * @file
@@ -279,7 +279,7 @@ function community_tags_taxonomy_node_save($node, $terms, $is_owner, $uid) {
     unset($terms['tags']);
 
     foreach ($typed_input as $vid => $vid_value) {
-      $typed_terms = is_array($vid_value) ? $vid_value : taxonomy_explode_tags($vid_value);
+      $typed_terms = is_array($vid_value) ? $vid_value : drupal_explode_tags($vid_value);
       foreach ($typed_terms as $typed_term) {
         // See if the term exists in the chosen vocabulary
         // and return the tid, otherwise, add a new record.
@@ -367,7 +367,9 @@ function community_tags_taxonomy_node_save($node, $terms, $is_owner, $uid) {
   // Match real tags to community tags, if necessary (e.g. after quick tagging).
   if (!$is_owner) {
     $placeholders = implode(',', array_fill(0, count($community_tagged), '%d'));
-    $result = db_query('SELECT n.tid, n.nid FROM {term_node} n LEFT JOIN {community_tags} c ON n.tid = c.tid AND n.nid = c.nid INNER JOIN {term_data} d ON n.tid = d.tid WHERE n.nid = %d AND c.nid IS NULL AND d.vid IN ('. $placeholders .')', $nid, $community_tagged);
+    $args = $community_tagged;
+    array_unshift($args, $nid);
+    $result = db_query('SELECT n.tid, n.nid FROM {term_node} n LEFT JOIN {community_tags} c ON n.tid = c.tid AND n.nid = c.nid INNER JOIN {term_data} d ON n.tid = d.tid WHERE n.nid = %d AND c.nid IS NULL AND d.vid IN ('. $placeholders .')', $args);
     while ($tag = db_fetch_object($result)) {
       db_query('DELETE FROM {term_node} WHERE nid = %d AND tid = %d', $tag->nid, $tag->tid);
     }
@@ -474,10 +476,10 @@ function community_tags_node_view($node, $inline = TRUE) {
   }
   else {
     // Sorry, no more adding tags for you!
-    $output .= '<p>'. t('You have already tagged this post. Your tags: ') . theme('community_tags', 'user_node', NULL, $user->uid, $node->nid) .'</p>';
+    $output .= '<p>'. t('You have already tagged this post. Your tags: ') . theme('community_tags', $tags) .'</p>';
   }
 
-  drupal_add_js(array('communityTags' => array('tags' => $names, 'url' => url('community-tags/js/'. $node->nid), 'add' => t('Add'))), 'setting');
+  drupal_add_js(array('communityTags' => array('n_'. $node->nid => array('tags' => $names, 'url' => url('community-tags/js/'. $node->nid), 'add' => t('Add')))), 'setting');
 
   return $output;
 }
@@ -500,34 +502,6 @@ function community_tags_display($type = 'global', $limit = NULL, $arg1 = NULL, $
  */
 function theme_community_tags($tags) {
   return '<div class="cloud">'. (count($tags) ? theme('tagadelic_weighted', $tags) : t('None')) .'</div>';
-}
-
-// Patch for Drupal 5.x. Remove for 6.x.
-if (!function_exists('taxonomy_explode_tags')) {
-
-  /**
-   * Explode a string of given tags into an array.
-   */
-  function taxonomy_explode_tags($tags) {
-    // This regexp allows the following types of user input:
-    // this, "somecompany, llc", "and ""this"" w,o.rks", foo bar
-    $regexp = '%(?:^|,\ *)("(?>[^"]*)(?>""[^"]* )*"|(?: [^",]*))%x';
-    preg_match_all($regexp, $tags, $matches);
-    $typed_tags = array_unique($matches[1]);
-
-    $tags = array();
-    foreach ($typed_tags as $tag) {
-      // If a user has escaped a term (to demonstrate that it is a group,
-      // or includes a comma or quote character), we remove the escape
-      // formatting so to save the term into the database as the user intends.
-      $tag = trim(str_replace('""', '"', preg_replace('/^"(.*)"$/', '\1', $tag)));
-      if ($tag != "") {
-        $tags[] = $tag;
-      }
-    }
-
-    return $tags;
-  }
 }
 
 /**
@@ -556,4 +530,15 @@ function community_tags_flatten($tags) {
     $names[] = $tag->name;
   }
   return $names;
+}
+
+/**
+ * Implementation of hook_views_api
+ * See community_tags.views.inc for the actual views integration
+ */
+function community_tags_views_api()
+{
+  return array (
+  'api'=>2,
+  );
 }

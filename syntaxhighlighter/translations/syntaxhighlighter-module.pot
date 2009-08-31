@@ -1,18 +1,18 @@
-# $Id: syntaxhighlighter-module.pot,v 1.7 2009/07/27 22:43:02 mattyoung Exp $
+# $Id: syntaxhighlighter-module.pot,v 1.14 2009/08/24 17:53:42 mattyoung Exp $
 #
 # LANGUAGE translation of Drupal (general)
 # Copyright YEAR NAME <EMAIL@ADDRESS>
 # Generated from files:
-#  syntaxhighlighter.admin.inc,v 1.6 2009/07/27 01:43:07 mattyoung
-#  syntaxhighlighter.module,v 1.10 2009/07/27 01:45:13 mattyoung
+#  syntaxhighlighter.admin.inc,v 1.8 2009/08/24 02:37:52 mattyoung
+#  syntaxhighlighter.module,v 1.27 2009/08/24 17:45:10 mattyoung
 #  syntaxhighlighter.info,v 1.5 2009/02/11 18:20:30 mattyoung
-#  syntaxhighlighter.install,v 1.5 2009/07/16 20:51:06 mattyoung
+#  syntaxhighlighter.install,v 1.13 2009/08/24 17:45:10 mattyoung
 #
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
-"POT-Creation-Date: 2009-07-27 15:39-0700\n"
+"POT-Creation-Date: 2009-08-24 10:51-0700\n"
 "PO-Revision-Date: YYYY-mm-DD HH:MM+ZZZZ\n"
 "Last-Translator: NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <EMAIL@ADDRESS>\n"
@@ -29,115 +29,131 @@ msgstr ""
 msgid "Only the selected languages will be enabled and its corresponding required Javascript files loaded.  You may only want to choose the languages you actual display on your site to lower the amount of Javascript files loaded. For details please see <a href=\"http://alexgorbatchev.com/wiki/SyntaxHighlighter:Brushes\">the Syntax Highlighter Javascript Library Page</a>."
 msgstr ""
 
-#: syntaxhighlighter.admin.inc:38
+#: syntaxhighlighter.admin.inc:39
 msgid "Theme"
 msgstr ""
 
-#: syntaxhighlighter.admin.inc:39
+#: syntaxhighlighter.admin.inc:40
 msgid "Choose a syntax highlight theme."
 msgstr ""
 
-#: syntaxhighlighter.admin.inc:47
+#: syntaxhighlighter.admin.inc:48
 msgid "Tag name"
 msgstr ""
 
-#: syntaxhighlighter.admin.inc:48
+#: syntaxhighlighter.admin.inc:49
 msgid "Use different tag to markup code."
 msgstr ""
 
-#: syntaxhighlighter.admin.inc:54
+#: syntaxhighlighter.admin.inc:55
 msgid "Legacy mode"
 msgstr ""
 
-#: syntaxhighlighter.admin.inc:55
+#: syntaxhighlighter.admin.inc:56
 msgid "Enable pre-2.0 style markup support."
 msgstr ""
 
-#: syntaxhighlighter.admin.inc:56
+#: syntaxhighlighter.admin.inc:57
 msgid "Disabled"
 msgstr ""
 
-#: syntaxhighlighter.admin.inc:56
+#: syntaxhighlighter.admin.inc:57
 msgid "Enabled"
 msgstr ""
 
-#: syntaxhighlighter.admin.inc:64
+#: syntaxhighlighter.admin.inc:65
 msgid "Turn off Syntax Highlighter on these pages"
 msgstr ""
 
-#: syntaxhighlighter.admin.inc:66
+#: syntaxhighlighter.admin.inc:67
 msgid "Enter one page per line as Drupal paths. The '*' character is a wildcard. Example paths are %blog for the blog page and %blog-wildcard for every personal blog. %front is the front page."
 msgstr ""
 
-#: syntaxhighlighter.admin.inc:71
+#: syntaxhighlighter.admin.inc:72
 msgid "Default expressions"
 msgstr ""
 
-#: syntaxhighlighter.admin.inc:73
+#: syntaxhighlighter.admin.inc:74
 msgid "Enter syntaxhihglighter default settings javascript expressions, e.g. !example"
 msgstr ""
 
-#: syntaxhighlighter.module:78
+#: syntaxhighlighter.module:76
 msgid "+ expand source"
 msgstr ""
 
-#: syntaxhighlighter.module:79
+#: syntaxhighlighter.module:77
 msgid "view source"
 msgstr ""
 
-#: syntaxhighlighter.module:80
+#: syntaxhighlighter.module:78
 msgid "copy to clipboard"
 msgstr ""
 
-#: syntaxhighlighter.module:81
+#: syntaxhighlighter.module:79
 msgid "The code is in your clipboard now"
 msgstr ""
 
-#: syntaxhighlighter.module:82
+#: syntaxhighlighter.module:80
 msgid "print"
 msgstr ""
 
-#: syntaxhighlighter.module:83
+#: syntaxhighlighter.module:81
 msgid "?"
 msgstr ""
 
-#: syntaxhighlighter.module:84
+#: syntaxhighlighter.module:83
 msgid "SyntaxHighlighter\\n\\n"
 msgstr ""
 
-#: syntaxhighlighter.module:85
+#: syntaxhighlighter.module:84
 msgid "Can't find brush for: "
 msgstr ""
 
-#: syntaxhighlighter.module:86
+#: syntaxhighlighter.module:85
 msgid "Brush wasn't made for html-script option: "
 msgstr ""
 
 #: syntaxhighlighter.module:105
-msgid "Syntax highlight code surrounded by the <code>!ex0</code> tags, where LANG is a language alias, optionally followed by parameters separated by ';'."
+msgid "Syntax highlight code surrounded by the <code>!ex0</code> tags, where OPTIONS is a Syntaxhighlighter options string."
 msgstr ""
 
 #: syntaxhighlighter.module:107
-msgid "Example: <code>!ex1</code> syntax highlights PHP code, initially collapsed, start line number at 50."
+msgid "Example: <code>!ex1</code>"
 msgstr ""
 
 #: syntaxhighlighter.module:109
+msgid "This will syntax highlight PHP code, initially collapsed, start line number at 50, highlight lines 57, 81 and 101 and tag highlighted code with class names some_class and some_other_class."
+msgstr ""
+
+#: syntaxhighlighter.module:110
 msgid "See <a href=\"!url0\">usage</a>, <a href=\"!url1\">language aliases</a> and <a href=\"!url2\">options</a> for additional helps."
 msgstr ""
 
-#: syntaxhighlighter.module:113
-msgid "Syntax highlight code surrounded by the <code>!ex0</code> tags. See <a href=\"@filter_tips_path\">here</a> for details."
+#: syntaxhighlighter.module:114
+msgid "Note: instead of using the raw HTML <code>&lt;pre&gt;</code> tag markup from the original Syntaxhighlighter Javascript Library, you <a href=\"!filter_admin\">enable the Syntaxhighlighter filter</a> in an input format, and then use the <code>{syntaxhighlighter OPTIONS}...{/syntaxhighlighter}</code> markup using that input format. The <code>OPTIONS</code> string is whatever you would put inside the class string as in <code>&lt;pre class=\"OPTIONS\"&gt;...&lt;/pre&gt;</code> according to the original Javascript Library format. Secondly, you do not need to escape the \"<code>&lt;</code>\" and \"<code>&gt;</code>\" characters in your program code as required by the original Syntaxhighlighter Javascript Library. This is automatically taken care of so you can leave your program code completely unchanged. Thirdly, if you use the HTML filter, you must allow the <code>&lt;pre&gt;</code> tag."
 msgstr ""
 
-#: syntaxhighlighter.module:121
+#: syntaxhighlighter.module:120
+msgid "Syntax highlight code surrounded by the <code>!ex0</code> tags."
+msgstr ""
+
+#: syntaxhighlighter.module:133
 msgid "Syntax Highlighter"
 msgstr ""
 
-#: syntaxhighlighter.module:18 syntaxhighlighter.info:0
+#: syntaxhighlighter.module:212
+msgid "{syntaxhighlighter} tags are not balanced: open and close tags must match."
+msgstr ""
+
+#: syntaxhighlighter.module:218
+msgid "{syntaxhighlighter} tags cannot be nested. If you need to show the {syntaxhighlighter}/{/syntaxhighlighter} strings in syntax highlighted code, show them in escape form as <code>&amp;#123;syntaxhighlighter OPTIONS&amp;#125;</code> and <code>&amp;#123;/syntaxhighlighter&amp;#125;</code>"
+msgstr ""
+
+#: syntaxhighlighter.module:17 syntaxhighlighter.info:0
 msgid "Syntax highlighter"
 msgstr ""
 
-#: syntaxhighlighter.module:19
+#: syntaxhighlighter.module:18
 msgid "Configure syntax highlighter"
 msgstr ""
 
@@ -145,24 +161,36 @@ msgstr ""
 msgid "syntaxhighlighter"
 msgstr ""
 
-#: (duplicate) syntaxhighlighter.install:26 
+#: (duplicate) syntaxhighlighter.install:27 
 msgid "Syntax highlighter js library"
 msgstr ""
 
-#: (duplicate) syntaxhighlighter.install:27 
+#: (duplicate) syntaxhighlighter.install:28 
 msgid "Installed"
 msgstr ""
 
-#: (duplicate) syntaxhighlighter.install:27 
+#: (duplicate) syntaxhighlighter.install:28 
 msgid "Not installed"
 msgstr ""
 
-#: (duplicate) syntaxhighlighter.install:32 
-msgid "The required Syntax highlighter javascript library is not installed.  Please see the Syntaxhighlighter module README.txt."
+#: (duplicate) syntaxhighlighter.install:33 
+msgid "The required Syntax highlighter javascript library is not installed. See <a href=\"!link\">the Syntaxhighlighter module README.txt file</a> for instructions."
 msgstr ""
 
 #: (duplicate) syntaxhighlighter.install:43 
-msgid "You can now <a href=\"!admin\">configure the Syntax Highlighter module</a>."
+msgid "You must <a href=\"!link\">turn on the Syntaxhighlighter filter</a> in an input format for syntax highlight code using that format."
+msgstr ""
+
+#: (duplicate) syntaxhighlighter.install:45 
+msgid "Then <a href=\"!link\">configure the Syntax Highlighter module</a>."
+msgstr ""
+
+#: (duplicate) syntaxhighlighter.install:47 
+msgid "See <a href=\"!link\">the Syntaxhighlighter module README.txt file</a> for instructions."
+msgstr ""
+
+#: (duplicate) syntaxhighlighter.install:65 
+msgid "Go to <a href=\"!link\">filters settings</a> to enable the Syntaxhighlighter filter in the appropriate input format. It's not necessary to use Full HTML format anymore."
 msgstr ""
 
 #: syntaxhighlighter.info:0
