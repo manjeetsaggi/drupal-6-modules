@@ -1,12 +1,10 @@
 <?php
-// $Id: css_gzip.module,v 1.5 2009/06/22 00:32:22 mikeytown2 Exp $
+// $Id: css_gzip.module,v 1.5.2.1 2009/09/02 23:41:55 mikeytown2 Exp $
 
 /**
  * @file
  * Gzips aggregated CSS files if CSS Optimization is turned on.
  */
-
-define(CSS_GZIP_DIR, '/css/');
 
 /**
  * Implementation of hook_help().
@@ -36,25 +34,33 @@ function css_gzip_help($path, $arg) {
  */
 function css_gzip_form_alter(&$form, $form_state, $form_id) {
   if ($form_id == 'system_performance_settings') {
-    $form['bandwidth_optimizations']['css_aggregator_gzip'] = array(
+    $form['bandwidth_optimizations']['preprocess_css']['#weight'] = -10;
+    $form['bandwidth_optimizations']['css_gzip'] = array(
       '#type' => 'checkbox',
       '#title' => t('GZip CSS'),
       '#description' => t('Optionally <a href="@gzip">GZip</a> the aggregated CSS file to dramatically decrease its size.', array('@gzip' => 'http://en.wikipedia.org/wiki/Gzip')),
-      '#default_value' => variable_get('css_aggregator_gzip', FALSE),
-      '#weight' => 2,
+      '#default_value' => variable_get('css_gzip', FALSE),
+      '#weight' => -9,
     );
-    $form['bandwidth_optimizations']['css_aggregator_gzip_no_htaccess'] = array(
+    $form['bandwidth_optimizations']['css_gzip_no_htaccess'] = array(
       '#type' => 'checkbox',
       '#title' => t('GZip CSS: Do not generate .htaccess file'),
-      '#description' => t('Sometimes your host does not like mutiple .htaccess files. Enable this to bypass htaccess file generation. Follow directions in the README.txt if this is effecting you.'),
-      '#default_value' => variable_get('css_aggregator_gzip_no_htaccess', FALSE),
-      '#weight' => 3,
+      '#description' => t('Sometimes your host does not like multiple .htaccess files. Enable this to bypass htaccess file generation. Follow directions in the README.txt if this is effecting you.'),
+      '#default_value' => variable_get('css_gzip_no_htaccess', FALSE),
+      '#weight' => -8,
+    );
+    $form['bandwidth_optimizations']['css_gzip_exit'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('GZip CSS: Use hook exit as well.'),
+      '#description' => t('If your using a recolorable theme, you should probably use this.'),
+      '#default_value' => variable_get('css_gzip_exit', FALSE),
+      '#weight' => -7,
     );
   }
 }
 
 /**
- * Implementation of hook_preprocess_page() or template_preprocess_page().
+ * Implementation of template_preprocess_page().
  *
  * Does not modify the pages contents, only gets info. Could probably use
  * drupal_get_css() and a different hook, if needed.
@@ -63,22 +69,61 @@ function css_gzip_form_alter(&$form, $form_state, $form_id) {
  *   Array containing various page elements.
  */
 function css_gzip_preprocess_page(&$variables) {
-  $htaccess = file_directory_path() . CSS_GZIP_DIR . '.htaccess';
-  if (!variable_get('css_aggregator_gzip', FALSE) || variable_get('css_aggregator_gzip_no_htaccess', FALSE)) {
+  $htaccess = file_directory_path() . '/css/' . '.htaccess';
+  if (!variable_get('css_gzip', FALSE) || variable_get('css_gzip_no_htaccess', FALSE)) {
       css_gzip_remove_htaccess($htaccess);
     }
-  if (!empty($variables['styles']) && variable_get('preprocess_css', FALSE) && variable_get('css_aggregator_gzip', FALSE)) {
-    if (!variable_get('css_aggregator_gzip_no_htaccess', FALSE) && (file_exists($htaccess)==FALSE || variable_get('css_aggregator_gzip_htaccess_size', NULL)!=filesize($htaccess))) {
+  if (!empty($variables['styles']) && variable_get('preprocess_css', FALSE) && variable_get('css_gzip', FALSE)) {
+    if (!variable_get('css_gzip_no_htaccess', FALSE) && (file_exists($htaccess)==FALSE || variable_get('css_gzip_htaccess_size', NULL)!=filesize($htaccess))) {
       css_gzip_create_htaccess($htaccess);
     }
 
-    $css_files = css_gzip_file_list($variables);
+    $css_files = css_gzip_file_list($variables['styles']);
     // Create the GZip file if it doesn't already exist.
-    foreach ($css_files as $css_file) {
-      if (file_exists(file_directory_path() . CSS_GZIP_DIR . $css_file) && !file_exists(file_directory_path() . CSS_GZIP_DIR . $css_file .'.gz')) {
-        file_save_data(gzencode(file_get_contents(file_directory_path() . CSS_GZIP_DIR . $css_file), 9), file_directory_path() . CSS_GZIP_DIR . $css_file .'.gz', FILE_EXISTS_REPLACE);
-      }
+    css_gzip_copy_compress($css_files);
+  }
+}
+
+/**
+ * Implementation of hook_init().
+ *
+ * Start the output buffer.
+ */
+function css_gzip_init() {
+  if (   variable_get('css_gzip', FALSE)
+      && variable_get('css_gzip_exit', FALSE)
+      ) {
+      global $phases;
+      ob_start();
+  }
+}
+
+/**
+ * Implementation of hook_exit().
+ *
+ * Alt way of getting the css filenames
+ */
+function css_gzip_exit() {
+  // Ensure we are not serving a cached page; drupal_set_content is the first
+  // function in common.inc which is included in the full drupal bootstrap.
+  if (   variable_get('css_gzip', FALSE)
+      && variable_get('css_gzip_exit', FALSE)
+      && function_exists('drupal_set_content')
+      ) {
+    $buffer = ob_get_contents();
+
+    // Extract external css files from html document
+    $css = explode('<link type="text/css" rel="stylesheet" ', $buffer);
+    array_shift($css);
+    foreach ($css as $key => $value) {
+      // Only grab the first one, containing the css filename.
+      $css[$key] = array_shift(explode(' />', $value));
     }
+    $css = implode('',$css);
+
+    $css_files = css_gzip_file_list($css);
+    // Create the GZip file if it doesn't already exist.
+    css_gzip_copy_compress($css_files);
   }
 }
 
@@ -88,9 +133,9 @@ function css_gzip_preprocess_page(&$variables) {
  * @param &$variables
  *   Array containing various page elements.
  */
-function css_gzip_file_list($variables) {
-  $path = base_path() . file_directory_path() . CSS_GZIP_DIR;
-  $css_files=explode($path, $variables['styles']);
+function css_gzip_file_list($css) {
+  $path = base_path() . file_directory_path() . '/css/';
+  $css_files=explode($path, $css);
   array_shift($css_files);
   for ($i = 0; $i < count($css_files); $i++) {
     $css_files[$i]=array_shift(explode('.css', $css_files[$i])) . '.css';
@@ -109,7 +154,7 @@ function css_gzip_create_htaccess($htaccess) {
 # Requires mod_mime to be enabled.
 <IfModule mod_mime.c>
   # Send any files ending in .gz with x-gzip encoding in the header.
-  AddEncoding x-gzip .gz
+  AddEncoding gzip .gz
 </IfModule>
 # Gzip compressed css files are of the type 'text/css'.
 <FilesMatch "\.css\.gz$">
@@ -124,7 +169,7 @@ function css_gzip_create_htaccess($htaccess) {
 </IfModule>
 EOT;
   file_save_data($htaccess_contents, $htaccess, FILE_EXISTS_REPLACE);
-  variable_set('css_aggregator_gzip_htaccess_size', filesize($htaccess));
+  variable_set('css_gzip_htaccess_size', filesize($htaccess));
 }
 
 /**
@@ -136,5 +181,19 @@ EOT;
 function css_gzip_remove_htaccess($htaccess) {
   if (file_exists($htaccess)) {
     file_delete($htaccess);
+  }
+}
+
+/**
+ * Read and compress the css files.
+ *
+ * @param $css_files
+ *   Array of css filenames.
+ */
+function css_gzip_copy_compress($css_files) {
+  foreach ($css_files as $css_file) {
+    if (file_exists(file_directory_path() . '/css/' . $css_file) && !file_exists(file_directory_path() . '/css/' . $css_file .'.gz')) {
+      file_save_data(gzencode(file_get_contents(file_directory_path() . '/css/' . $css_file), 9), file_directory_path() . '/css/' . $css_file .'.gz', FILE_EXISTS_REPLACE);
+    }
   }
 }

@@ -1,5 +1,5 @@
 <?php
-// $Id: og_panel.inc,v 1.1 2009/08/10 19:15:38 weitzman Exp $
+// $Id: og_panel.inc,v 1.1.2.1 2009/09/05 17:11:51 joshk Exp $
 
 /**
  * @file
@@ -66,6 +66,7 @@ function og_panels_og_panel_page_manager_task_handlers() {
  */
 function og_panels_og_panel_render($handler, $base_contexts, $args, $test = TRUE) {
   $node = $base_contexts['argument_nid_1']->data;
+
   $tabs = og_panels_node_data($node->nid);
   if (is_array($tabs)) {
     foreach($tabs as $tab) {
@@ -84,9 +85,11 @@ function og_panels_og_panel_render($handler, $base_contexts, $args, $test = TRUE
 
 /**
  * Provide a nice little summary of this task handler.
+ *
+ * TODO: make this nicer for admins to understand.
  */
 function og_panels_og_panel_admin_summary($task, $subtaskd) {
-  $output = '<h4>Makes OG panels work.</h4>';
+  $output = '<h4>OG Panels Is Installed.</h4><p>This means that group nodes with defined "pages" will be handled correctly.</p>';
 
   return $output;
 }

@@ -1,5 +1,5 @@
 <?php
-// $Id: og_panels.install,v 1.2 2009/08/15 19:17:31 populist Exp $
+// $Id: og_panels.install,v 1.2.2.1 2009/09/05 17:11:51 joshk Exp $
 
 /**
  * Implementations of hook_install/uninstall
@@ -145,7 +145,7 @@ function og_panels_update_6000() {
   db_add_field($ret, 'og_panels', 'tab_num', $new_field, $keys_new);
  
   // Select all records in the table, order by nid, default_page and weight
-  $result = db_query("SELECT * from {og_panels} ORDER BY nid, default_page DESC, WEIGHT ASC");
+  $result = db_query("SELECT * from {og_panels} ORDER BY nid, default_page DESC, weight ASC");
   $old_nid = 0;
   $tab_num = 0;
   while ($row = db_fetch_object($result)) {
@@ -169,8 +169,33 @@ function og_panels_update_6000() {
 }
 
 /**
-* This will make sure that your page manager node_view is enabled. This should fire with hook_enable() but if you just copy over the new code Drupal will think the module is already installed.
+* This will make sure that your page manager node_view is enabled. This should 
+* fire with hook_enable() but if you just copy over the new code Drupal will 
+* think the module is already installed.
 */
-function og_panels_update_60001() {
+function og_panels_update_6001() {
+  $ret = array();
   variable_set('page_manager_node_view_disabled', FALSE);
+  return $ret;
+}
+
+
+/**
+* This is going to update our context names.
+*/
+function og_panels_update_6002() {
+  // Fix context names. When you do it like this it's sorta ugly.
+  // However, the alternative is to individually load every single pane. :\
+  $ret = array();
+  $result = db_query("SELECT * FROM {panels_pane} WHERE configuration LIKE '%%og_panels%%'");
+  while ($pane = db_fetch_object($result)) {
+    $configuration = unserialize($pane->configuration);
+    if ($configuration['context'] == 'og_panels') {
+      $configuration['context'] = 'relationship_og_1';
+      $serialized = serialize($configuration);
+      db_query("UPDATE {panels_pane} SET configuration = '%s' WHERE pid = %d", $serialized, $pane->pid);
+    }
+  }
+  
+  return $ret;
 }
