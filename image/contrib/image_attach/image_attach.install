@@ -1,5 +1,5 @@
 <?php
-// $Id: image_attach.install,v 1.21 2009/09/05 15:12:00 joachim Exp $
+// $Id: image_attach.install,v 1.22 2009/09/07 13:09:33 joachim Exp $
 
 /**
  * Implementation of hook_schema().
@@ -131,7 +131,7 @@ function image_attach_update_6100() {
  */
 function image_attach_update_6101() {
   $ret = array();
-  $ret[] = update_sql("DELETE FROM {blocks} WHERE module = 'image_attach' AND delta = 0");
+  $ret[] = update_sql("DELETE FROM {blocks} WHERE module = 'image_attach' AND delta = '0'");
 
   return $ret;  
 }

@@ -1,5 +1,5 @@
 <?php
-// $Id: image_gallery.install,v 1.19 2009/09/05 10:39:25 joachim Exp $
+// $Id: image_gallery.install,v 1.20 2009/09/07 13:01:41 joachim Exp $
 
 /**
  * Implementation of hook_install().
@@ -93,7 +93,8 @@ function image_gallery_update_6100() {
  */
 function image_gallery_update_6101() {
   $ret = array();  
-  drupal_load('module', 'views');
-  views_invalidate_cache();
+  if (drupal_load('module', 'views')) {
+    views_invalidate_cache();
+  }
   return $ret;  
 }

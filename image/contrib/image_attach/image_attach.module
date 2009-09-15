@@ -1,5 +1,5 @@
 <?php
-// $Id: image_attach.module,v 1.63 2009/09/05 16:41:20 joachim Exp $
+// $Id: image_attach.module,v 1.66 2009/09/08 13:14:49 joachim Exp $
 
 /**
  * @file image_attach.module
@@ -12,8 +12,6 @@ define('IMAGE_ATTACH_HIDDEN', 'hidden');
  */
 function image_attach_help($path, $arg) {
   switch ($path) {
-    case 'admin/settings/modules#description':
-      return t('Allows easy attaching of image nodes to other content types.');
   }
 }
 
@@ -369,7 +367,20 @@ function image_attach_nodeapi(&$node, $op, $teaser, $page) {
     case 'view':
       if (!empty($node->iids)) {
         $teaser_or_body = $teaser ? 'teaser' : 'body';
-        $node->content['image_attach'] = array('#weight' => variable_get("image_attach_weight_{$teaser_or_body}_{$node->type}", 0));
+        // Set weight, either from CCK or our own settings. Cribbed from signup!
+        if (module_exists('content')) {
+          // Due to a bug in CCK (http://drupal.org/node/363456), we need 
+          // to call this function twice to ensure we get the real value.
+          // The bug is present when you first enable the setting to
+          // display in the node instead of a separate tab, or when you
+          // first upgrade to the version that contains this code.
+          content_extra_field_weight($node->type, 'image_attach');
+          $weight = content_extra_field_weight($node->type, 'image_attach');
+        }
+        else {
+          $weight = variable_get("image_attach_weight_{$teaser_or_body}_{$node->type}", 0);
+        }        
+        $node->content['image_attach'] = array('#weight' => $weight);
         if ($teaser_or_body == 'teaser') {
           $node->content['image_attach'][$node->iids[0]]['#value'] = theme("image_attach_{$teaser_or_body}", $node, $node->iids[0]);
         }
@@ -543,7 +554,7 @@ function theme_image_attach_block_attached($nid, $image_nodes = array()) {
 function image_attach_content_extra_fields($type_name) {
   if (variable_get('image_attach_' . $type_name, 0)) {
     $extra['image_attach'] = array(
-      'label' => t('Attached image'),
+      'label' => t('Attached images'),
       'description' => t('Image Attach module form.'),
       'weight' => 0,
     );
