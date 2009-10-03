@@ -1,5 +1,5 @@
 <?php
-// $Id: browscap.module,v 1.6.2.3.2.4 2008/08/13 02:49:43 robloach Exp $
+// $Id: browscap.module,v 1.6.2.3.2.11 2009/09/30 17:16:40 greggles Exp $
 
 /**
  * @file
@@ -60,11 +60,10 @@ function browscap_menu() {
     'title' => t('Browscap Refresh'),
     'page callback' => 'browscap_refresh',
     'access arguments' => array('administer site configuration'),
-    'type' => MENU_CALLBACK
+    'type' => MENU_CALLBACK,
   );
-  $items['admin/reports/browscap/useragent/%browscap'] = array(
-    'title callback' => 'browscap_load',
-    'title arguments' => array(4),
+  $items['admin/reports/browscap/useragent/%browscap_useragent'] = array(
+    'title' => 'Useragent details',
     'page callback' => 'browscap_useragent_properties',
     'page arguments' => array(4),
     'access arguments' => array('access administration pages'),
@@ -72,10 +71,6 @@ function browscap_menu() {
     'type' => MENU_LOCAL_TASK
   );
   return $items;
-}
-
-function browscap_load($useragent) {
-  return $useragent;
 }
 
 /**
@@ -86,18 +81,19 @@ function browscap_load($useragent) {
 function browscap_exit() {
   // If monitoring is enabled, record the browser
   if (variable_get('browscap_monitor', FALSE)) {
-    $browser = browscap_get_browser();
-    $browserstring = substr(trim($browser['parent']), 0, 255);
-    if ($browserstring == '' or $browserstring == 'Default Browser') {
-      $browserstring = trim($_SERVER['HTTP_USER_AGENT']);
-    }
-    db_query("UPDATE {browscap_statistics} SET counter = counter + 1, is_crawler=%d ".
-      "WHERE parent='%s'", $browser['crawler'], $browserstring);
-    // If we affected 0 rows, this is the first time we've seen this browser
-    if (!db_affected_rows()) {
-      // We must create a new row to store counters for the new browser.
-      db_query('INSERT INTO {browscap_statistics} (parent,counter,is_crawler) '.
-        "VALUES('%s', 1, %d)", $browserstring, $browser['crawler']);
+    if ($browser = browscap_get_browser()) {
+      $browserstring = substr(trim($browser['parent']), 0, 255);
+      if ($browserstring == '' or $browserstring == 'Default Browser') {
+        $browserstring = trim($_SERVER['HTTP_USER_AGENT']);
+      }
+      db_query("UPDATE {browscap_statistics} SET counter = counter + 1, is_crawler=%d ".
+        "WHERE parent='%s'", $browser['crawler'], $browserstring);
+      // If we affected 0 rows, this is the first time we've seen this browser
+      if (!db_affected_rows()) {
+        // We must create a new row to store counters for the new browser.
+        db_query('INSERT INTO {browscap_statistics} (parent,counter,is_crawler) '.
+          "VALUES('%s', 1, %d)", $browserstring, $browser['crawler']);
+      }
     }
   }
 }
@@ -119,26 +115,36 @@ function browscap_cron() {
  */
 
 /**
- * Callback for settings form
- * Turn monitoring on or off
+ * Callback for settings form.
+ * Turn monitoring on or off and refresh the reference data.
  *
  * @return array
  */
 function browscap_settings() {
-  $form['browscap_monitor'] = array(
-    '#type' => 'checkbox',
-    '#prefix' => t('<p>Browscap data current as of %fileversion. [<a href="!refresh">Refresh now</a>]</p>',
+  $form['browscap_data_status'] = array(
+    '#value' => t('<p>Browscap data current as of %fileversion. [<a href="!refresh">Refresh now</a>]</p>',
                    array(
                      '%fileversion' => variable_get('browscap_version', t('Never fetched')),
                      '!refresh' => url('admin/settings/browscap/refresh'),
                    )),
+  );
+
+  $form['browscap_monitor'] = array(
+    '#type' => 'checkbox',
     '#title' => t('Monitor browsers'),
     '#default_value' => variable_get('browscap_monitor', FALSE),
-    '#description' => t('Monitor all user agents visiting the site.')
+    '#description' => t('Monitor all user agents visiting the site. View the reports in the <a href="!reports">Browscap reports</a> area.',
+                        array(
+                          '!reports' => url('admin/reports/browscap'),
+                        )),
   );
   return system_settings_form($form);
 }
 
+/**
+ * Simple page callback to manually refresh the data.
+ *
+ */
 function browscap_refresh() {
   _browscap_import(FALSE);
   drupal_goto('admin/settings/browscap');
@@ -193,26 +199,27 @@ function browscap_top_useragents($view = 'all') {
       array('data' => t('Percent'), 'field' => 'percent')
     );
   }
-  
+
   drupal_set_title($title);
 
   $query .= tablesort_sql($header);
 
   $result = pager_query($query, 50, 0, $query_cnt);
+  $rows = array();
 
   while ($useragent = db_fetch_object($result)) {
-    if (db_result(db_query_range('SELECT useragent FROM {browscap} WHERE useragent = "%s"', $useragent->parent, 0, 1))) {
+    if (db_result(db_query_range("SELECT useragent FROM {browscap} WHERE useragent = '%s'", $useragent->parent, 0, 1))) {
       $parent = l($useragent->parent, 'admin/reports/browscap/useragent/'. urlencode($useragent->parent));
     }
     else {
-      $parent = $useragent->parent;
+      $parent = check_plain($useragent->parent);
     }
     if ($view == 'all') {
       if ($useragent->is_crawler) {
-        $is_crawler = 'Yes';
+        $is_crawler = t('Yes');
       }
       else {
-        $is_crawler = 'No';
+        $is_crawler = t('No');
       }
       $rows[] = array($parent, $useragent->counter, $useragent->percent, $is_crawler);
     }
@@ -224,13 +231,23 @@ function browscap_top_useragents($view = 'all') {
     $rows[] = array(array('data' => $pager, 'colspan' => 2));
   }
 
+  $output = '';
+  if (empty($rows)) {
+    $output .= t('It appears that your site has not recorded any visits. If you want to record the visitors to your site you can enable "Monitor browsers" on the <a href="!settings_uri">Browscap settings screen</a>.', array('!settings_uri' => url('admin/settings/browscap')));
+  }
   $output .= theme('table', $header, $rows);
 
   print theme('page', $output, $title);
 }
 
-
-
+/**
+ * Provide data about the current browser or a known user agent string.
+ *
+ * @param string $useragent
+ *   Optional user agent string to test.  If empty use the value from the current request.
+ * @return array
+ *  An array of data about the user agent.
+ */
 function browscap_get_browser($useragent = NULL) {
   if (!$useragent) {
     $useragent = $_SERVER['HTTP_USER_AGENT'];
@@ -254,12 +271,24 @@ function browscap_get_browser($useragent = NULL) {
     //$browserinfo->tables = $browserinfo->htmltables;
     cache_set($cacheid, $browserinfo, 'cache_browscap');
   }
-  $info = unserialize($browserinfo->data);
-  $info['useragent'] = $useragent;
-  $info['browser_name_pattern'] = strtr($browserinfo->useragent, '%_', '*?');
-  return $info;
+  if (isset($browserinfo) && isset($browserinfo->data)) {
+    $info = unserialize($browserinfo->data);
+    $info['useragent'] = $useragent;
+    $info['browser_name_pattern'] = strtr($browserinfo->useragent, '%_', '*?');
+    return $info;
+  }
 }
 
+/**
+ * Determine whether the current visitor
+ *
+ * @param string $useragent
+ *   Optional user agent string.
+ */
+function browscap_is_crawler($useragent = NULL) {
+  $browser = browscap_get_browser($useragent);
+  return (bool)$browser['crawler'];
+}
 
 // A numeric interpretation of browscap.csv's TRUE/FALSE/default fields
 function _browscap_boolean($value) {
@@ -316,7 +345,7 @@ function _browscap_import($cron = TRUE) {
   $browscapfp = fopen($browscapfile, "w");
   fwrite($browscapfp, $browscap->data);
   fclose($browscapfp);
-  
+
   $a = parse_ini_file($browscapfile, TRUE);
   if ($a) {
     // the first entry in the array is the version info
@@ -332,9 +361,10 @@ function _browscap_import($cron = TRUE) {
       }
       $useragent = strtr($key, '*?', '%_');
       $e = array_change_key_case($e);
-      db_query("REPLACE INTO {browscap} (useragent, data) VALUES('%s','%s')", $useragent, serialize($e));
+      db_query("DELETE FROM {browscap} WHERE useragent = '%s'", $useragent);
+      db_query("INSERT INTO {browscap} (useragent, data) VALUES ('%s', '%s')", $useragent, serialize($e));
     }
-    
+
     cache_clear_all('*', 'cache_browscap', TRUE);
     variable_set('browscap_version', $browscapversion);
     watchdog('browscap', 'New version of browscap imported: '. $browscapversion);
@@ -368,21 +398,38 @@ function browscap_unmonitor() {
   }
 }
 
-function browscap_useragent_properties($useragent = NULL) {
-  if ($useragent == NULL) {
-    drupal_not_found();
-    return;
+/**
+ * Loads details about a given useragent. Also used as a menu object loader.
+ *
+ * @param $useragent
+ *   The name of the useragent to load.
+ * @return
+ *   The useragent array, FALSE otherwise.
+ */
+function browscap_useragent_load($useragent = NULL) {
+  if (empty($useragent)) {
+    return FALSE;
   }
   $row = db_fetch_object(db_query('SELECT * FROM {browscap} WHERE useragent = "%s"', $useragent));
   if (!$row) {
-    drupal_not_found();
-    return;
+    return FALSE;
   }
-  $data = unserialize($row->data);
-  $headers = array(t('property'), t('value'));
-  foreach ($data as $key => $val) {
-    $rows[] = array($key, $val);
+  return unserialize($row->data);
+}
+
+/**
+ * Page callback to show details about known useragents.
+ *
+ * @param $useragent
+ *   The useragent object, loaded from the database.
+ * @return string an HTMl blob representing the data about this useragent.
+ */
+function browscap_useragent_properties($useragent = NULL) {
+  drupal_set_title(check_plain($useragent['browser'] .' '. $useragent['version']));
+  $headers = array(t('Property'), t('Value'));
+  foreach ($useragent as $key => $val) {
+    $rows[] = array(check_plain($key), check_plain($val));
   }
-  $output = theme('table', $header, $rows);
+  $output = theme('table', $headers, $rows);
   return $output;
 }

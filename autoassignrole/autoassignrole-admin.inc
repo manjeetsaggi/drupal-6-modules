@@ -1,5 +1,5 @@
 <?php
-// $Id: autoassignrole-admin.inc,v 1.1.2.14 2009/08/25 13:04:43 cyberswat Exp $
+// $Id: autoassignrole-admin.inc,v 1.1.2.15 2009/09/23 13:55:01 cyberswat Exp $
 
 /**
  * @file
@@ -153,7 +153,7 @@ function autoassignrole_admin_form() {
       '#type' => 'textarea',
       '#title' => t('Description'),
       '#description' => t('The description displayed to the end user when they are
-        selecting thier role during registration.  This description is filtered
+        selecting their role during registration.  This description is filtered
         in a similar fashion to node body content.'),
       '#default_value' => (isset($defaults[$k]['description']) ? $defaults[$k]['description'] : ''),
       '#required' => FALSE,
@@ -245,7 +245,7 @@ function autoassignrole_admin_form() {
     '#type' => 'textarea',
     '#title' => t('User Role Description'),
     '#description' => t('The description displayed to the end user when they are
-      selecting thier role during registration.'),
+      selecting their role during registration.'),
     '#default_value' => _autoassignrole_get_settings('user_description'),
     '#required' => FALSE,
   );

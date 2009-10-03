@@ -1,5 +1,5 @@
 <?php
-// $Id: commentrss.pages.inc,v 1.1.2.3 2009/07/17 15:45:53 davereid Exp $
+// $Id: commentrss.pages.inc,v 1.1.2.4 2009/07/25 14:39:00 davereid Exp $
 
 /**
  * @file
@@ -157,20 +157,28 @@ function commentrss_format_feed($items, $channel = array(), $namespaces = array(
  * @return
  *   Formatted XML of RSS items generated.
  */
-function commentrss_format_items($nidselector, $joins = '', $where = '', $param = NULL, $include_node_title = TRUE) {
+function commentrss_format_items($nidselector = 'n.nid', $joins = '', $where = '', $params = array(), $include_node_title = TRUE) {
   global $base_url;
 
   $items = '';
 
+  $extra = array(
+    'pubDate' => array('key' => 'pubDate'),
+    'dc:creator' => array('key' => 'dc:creator'),
+    'guid' => array('key' => 'guid', 'attributes' => array('isPermaLink' => 'false')),
+  );
+
   // Build SQL query from the passed elements.
-  $SQL = 'SELECT '. $nidselector .', c.cid, c.subject, c.comment, c.timestamp, c.uid, c.name, c.format, u.name AS username, n.title FROM {node} n '. $joins .' INNER JOIN {comments} c ON c.nid = n.nid INNER JOIN {users} u ON c.uid = u.uid WHERE '. $where .' n.status = 1 AND c.status = %d ORDER BY c.timestamp DESC';
+  $sql = 'SELECT '. $nidselector .', c.cid, c.pid, c.subject, c.comment, c.timestamp, c.uid, c.name, c.format, u.name AS username, n.title FROM {node} n '. $joins .' INNER JOIN {comments} c ON c.nid = n.nid INNER JOIN {users} u ON c.uid = u.uid WHERE '. $where .' n.status = 1 AND c.status = %d ORDER BY c.timestamp DESC';
 
   // Add passed query parameter; plus we are looking for published comments.
-  $params = isset($param) ? array($param) : array();
+  if (!is_array($params)) {
+    $params = array($params);
+  }
   $params[] = COMMENT_PUBLISHED;
 
   // Use query rewriting for node level access permission support.
-  $comments = db_query_range(db_rewrite_sql($SQL), $params, COMMENT_PUBLISHED, 0, variable_get('feed_default_items', 10));
+  $comments = db_query_range(db_rewrite_sql($sql), $params, 0, variable_get('feed_default_items', 10));
   while ($comment = db_fetch_object($comments)) {
     if (!empty($comment->username)) {
       // Username takes precedence. The comment's name attribute should only
@@ -183,34 +191,24 @@ function commentrss_format_items($nidselector, $joins = '', $where = '', $param 
       $comment->name = variable_get('anonymous', 'Anonymous');
     }
 
-    $extra = array(
-      array(
-        'key' => 'pubDate',
-        'value' => date('r', $comment->timestamp)
-      ),
-      array(
-        'key' => 'dc:creator',
-        'value' => $comment->name
-      ),
-      array(
-        'key' => 'guid',
-        'value' => 'comment ' . $comment->cid . ' at ' . $base_url,
-        'attributes' => array('isPermaLink' => 'false')
-      )
-    );
-    $link = url('node/'. $comment->nid, array('fragment' => 'comment-'. $comment->cid, 'absolute' => TRUE));
-
     // Build up item content with node title if required.
     $content = '';
     if ($include_node_title) {
       $content = '<p>'. t('In reply to <a href="@url">@title</a>', array('@url' => url('node/'. $comment->nid, array('absolute' => TRUE)), '@title' => $comment->title)) .":</p>\n\n";
     }
-    $content .= check_markup($comment->comment, $comment->format, FALSE);
 
     // Format RSS item with input format used on comment. The format
     // was validated previously and the visitor might not have access to that,
     // so skip the format validation in check_markup() itself.
+    $content .= check_markup($comment->comment, $comment->format, FALSE);
+
+    $link = url('node/'. $comment->nid, array('fragment' => 'comment-'. $comment->cid, 'absolute' => TRUE));
+    $extra['pubDate']['value'] = date('r', $comment->timestamp);
+    $extra['dc:creator']['value'] = $comment->name;
+    $extra['guid']['value'] = 'comment ' . $comment->cid . ' at ' . $base_url;
+
     $items .= format_rss_item($comment->subject, $link, $content, $extra);
   }
+
   return $items;
 }

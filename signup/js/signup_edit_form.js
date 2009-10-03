@@ -1,4 +1,4 @@
-/* $Id: signup_edit_form.js,v 1.1.2.2 2009/08/03 19:57:42 dww Exp $ */
+/* $Id: signup_edit_form.js,v 1.1.2.3 2009/09/20 22:25:53 dww Exp $ */
 
 /**
  * On the signup edit form, add some bling to make users "confirm" the edit.
@@ -12,7 +12,7 @@ Drupal.behaviors.enableSignupEditForm = function(context) {
   if (!Drupal.settings.signupEditFormErrors) {
     var $button = $('#edit-save', context).click(enableSave);
     var $form = $button.parents('form:first');
-    var $form_elements = $form.find('input:not(:hidden), textarea, select');
+    var $form_elements = $form.find(':visible');
     var original_button_title = $button.val();
 
     $form_elements.attr('disabled', 'disabled');

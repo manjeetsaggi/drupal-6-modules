@@ -4,9 +4,9 @@ description = Provides RSS feeds for comments
 core = 6.x
 dependencies[] = comment
 
-; Information added by drupal.org packaging script on 2009-07-21
-version = "6.x-2.1"
+; Information added by drupal.org packaging script on 2009-09-16
+version = "6.x-2.2"
 core = "6.x"
 project = "commentrss"
-datestamp = "1248217819"
+datestamp = "1253120117"
 

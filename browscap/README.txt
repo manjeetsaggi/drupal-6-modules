@@ -10,19 +10,25 @@ Also, statistics on browsers visiting the site may be captured by
 enabling monitoring in the browscap settings.
 
 Installation
+------------
 
 1. Place the browscap folder in the modules directory of your 
 Drupal installation.
 
-2. Import the browscap.mysql file into your MySQL database (or the
-browscap.pgsql file into your PostgresSQL databse).
+2. Enable the browscap module in the administration tools.
 
-3. Enable the browscap module in the administration tools.
+3. Go to http://www.example.com/cron.php to perform the initial import
+of the browscap data or visit Administer > Site configuration > Browscap
+and click the "Refresh now" link.
 
-4. Go to http://www.example.com/cron.php to perform the initial import
-of the browscap data.
+4. On Administer > Site configuration > Browscap you can enable logging of 
+browser types for visitors to your site. 
+
+5. The report itself is visible at Administer > Reports > Browscap and 
+several other tabs in that area.
 
 API
+---
 
 Modules wishing to make use of browscap data may call
 browscap_get_browser() anywhere they would otherwise call get_browser()
@@ -31,7 +37,7 @@ browser_name_regex is not returned - otherwise, the results should be
 identical to calling get_browser().
 
 Credits
-
+-------
 Mike Ryan (drupal@virtuoso-performance.com) is the author and maintainer 
 of this module. 
 

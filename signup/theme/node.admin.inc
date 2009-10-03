@@ -1,5 +1,5 @@
 <?php
-// $Id: node.admin.inc,v 1.4.2.3 2009/01/07 00:55:05 dww Exp $
+// $Id: node.admin.inc,v 1.4.2.4 2009/09/21 05:23:09 dww Exp $
 
 
 /**
@@ -42,23 +42,36 @@ function theme_signup_node_admin_page($node, $signup_node_admin_summary_form, $s
  * Renders the HTML for the per-node signup summary administrative form.
  */
 function theme_signup_node_admin_summary_form($form) {
-  $row = array(
-    drupal_render($form['status']),
-    drupal_render($form['total']),
-    drupal_render($form['limit']),
-    drupal_render($form),
-  );
-  $header = array(
-    t('Status'),
-    t('Total'),
-    t('Limit'),
-    t('Operations'),
-  );
+  $output = '';
+  $output .= '<div class="container-inline">' . drupal_render($form['status']);
+  if (!empty($form['submit']) && $form['status']['#type'] == 'select') {
+    $output .= ' ' . drupal_render($form['submit']);
+  }
+  $output .= '</div>';
+  foreach (element_children($form) as $key) {
+    if (!in_array($key, array('status', 'submit', 'nid', 'form_build_id', 'form_token', 'form_id'))) {
+      $prefix = '<div class="container-inline">';
+      $suffix = '</div>';
+      if (empty($form[$key]['#prefix'])) {
+        $form[$key]['#prefix'] = $prefix;
+      }
+      else {
+        $form[$key]['#prefix'] .= $prefix;
+      }
+      if (empty($form[$key]['#suffix'])) {
+        $form[$key]['#suffix'] = $suffix;
+      }
+      else {
+        $form[$key]['#suffix'] .= $suffix;
+      }
+    }
+  }
+  $output .= drupal_render($form);
   $fieldset = array(
     '#title' => t('Signup summary'),
     '#collapsible' => TRUE,
     '#collapsed' => FALSE,
-    '#value' => theme('table', $header, array($row)),
+    '#value' => $output,
   );
   return theme('fieldset', $fieldset);
 }

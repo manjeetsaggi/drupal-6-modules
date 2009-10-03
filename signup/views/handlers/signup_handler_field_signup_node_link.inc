@@ -1,5 +1,5 @@
 <?php
-// $Id: signup_handler_field_signup_node_link.inc,v 1.1.2.1 2009/03/04 18:58:31 dww Exp $
+// $Id: signup_handler_field_signup_node_link.inc,v 1.1.2.3 2009/09/20 23:12:37 dww Exp $
 
 /**
  * Field handler to generate links to the various signup subtabs on a node.
@@ -20,6 +20,7 @@ class signup_handler_field_signup_node_link extends views_handler_field_node_lin
         'signup' => t('Signup current user form'),
         'list' => t('Signup user list'),
         'admin' => t('Administer signups'),
+        'settings' => t('Signup settings'),
         'add' => t('Form to sign up other users'),
         'broadcast' => t('Signup broadcast form'),
       ),
@@ -39,7 +40,7 @@ class signup_handler_field_signup_node_link extends views_handler_field_node_lin
     $node->nid = $values->{$this->aliases['nid']};
     $node->uid = $values->{$this->aliases['uid']};
     $node->signup_status = $values->{$this->aliases['signup_status']};
-    $node->signup = !empty($node->signup_status);
+    $node->signup = isset($values->{$this->aliases['signup_status']});
 
     // Ensure the current user can access this link for the given node.
     if (!$this->check_access($node, $tab)) {
@@ -66,6 +67,9 @@ class signup_handler_field_signup_node_link extends views_handler_field_node_lin
       case 'admin':
         return t('administer signups');
 
+      case 'settings':
+        return t('signup settings');
+
       case 'add':
         return t('signup other users');
 
@@ -89,6 +93,10 @@ class signup_handler_field_signup_node_link extends views_handler_field_node_lin
         $view_all = user_access('view all signups');
         $admin = _signup_menu_access($node, 'admin');
         return (($view_all || $admin) && _signup_needs_output($node));
+
+      case 'settings':
+        // There's no separate check for this, it just assumes 'admin' acces.
+        return _signup_menu_access($node, 'admin');
 
       default:
         // All the other tabs can just use _signup_menu_access() directly.

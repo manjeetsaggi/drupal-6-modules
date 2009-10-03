@@ -1,8 +1,46 @@
-$Id: CHANGELOG.txt,v 1.115.2.54 2009/08/23 15:52:33 dww Exp $
+$Id: CHANGELOG.txt,v 1.115.2.64 2009/09/24 06:45:26 dww Exp $
 
------------
-6.x-1.0-rc5
------------
+------------------------
+6.x-1.0-rc6 (2009-09-23)
+------------------------
+Bugs fixed since 6.x-1.0-rc5:
+= #439294 by dww: Fixed bug where %user_signup_info was not being
+  replaced with an empty string on sites that do not define any extra
+  fields on the signup form.
+= #539052 by dww: Fixed jQuery bug when users edited their signups that
+  was causing most of the form elements to be enabled before pressing
+  the 'Edit' button (all form elements should be disabled at first).
+= #582626 by dww: Fixed bug in the visibility logic for the "Signup:
+  Node: Signup link" views field handler which used to think that if
+  signups were closed on a node that the node wasn't signup-enabled.
+  This would cause the Signup link fields to only appear on nodes where
+  signups were open.
+= #578278 by neil.brown, dww: Fixed bug where the signup_confirm_email
+  field was shown to administrators editing another user's signup.
+
+API and schema changes since 6.x-1.0-rc5:
+= #581734 by dww: Improved the Signup API by adding some much needed hooks:
+  - hook_signup_data_alter() to modify a $signup object before it's saved
+  - hook_signup_insert() invoked when a signup is inserted into the DB
+  - hook_signup_update() invoked when a signup is updated in the DB
+= #581652 by dww: Added a {signup_log}.count_towards_limit column and
+  adjusted the limit logic to only operate on the effective total (the
+  SUM() of {signup_log}.count_towards_limit) not the total # of signups.
+  Both signup_total and signup_effective_total are loaded into $node.
+
+Other changes since 6.x-1.0-rc5:
+= #578502 by dww: Moved signup-related settings from node/N/edit to a
+  new "Settings" subtab at node/N/signups/settings.
+= #578592 by dww: Cleaned up and fixed the "Signup summary" at the top
+  of the node/N/signups/admin. The UI also makes sense now for signups
+  that don't count towards the signup limit (#581652).
+= #578344 by dww: Added a "Signup" group on the module administration
+  page (admin/build/modules) for all the signup-related modules.
+
+
+------------------------
+6.x-1.0-rc5 (2009-08-23)
+------------------------
 Bugs fixed since 6.x-1.0-rc4:
 = #533970 by dww: Fixed bug that caused the "signups" tab on nodes to
   generate an "Access denied" message unless the signup attendee list
@@ -23,9 +61,9 @@ New features since 6.x-1.0-rc4:
 = #549646 by dww: Exposed signup-related node and signup data to token.module.
 
 
------------
-6.x-1.0-rc4
------------
+------------------------
+6.x-1.0-rc4 (2009-07-27)
+------------------------
 Bugs fixed since 6.x-1.0-rc3:
 = #370397 by ezra-g: Fixed critical data-loss bug where all anonymous
   signups would be destroyed if any authenticated user was deleted.
@@ -137,9 +175,9 @@ Other changes since 6.x-1.0-rc3:
 = #439784 by seals: Added Swedish (sv) translation.
 
 
------------
-6.x-1.0-rc3
------------
+------------------------
+6.x-1.0-rc3 (2008-12-20)
+------------------------
 New features since 6.x-1.0-rc2:
 = #349292 by dww: Completely reorganized the signup node tabs.  All tabs
   added by this module now appear as sub-tabs under the "Signups" tab at
@@ -190,9 +228,9 @@ Other changes since 6.x-1.0-rc2:
   version 6.x-2.2 or later.
 
 
------------
-6.x-1.0-rc2
------------
+------------------------
+6.x-1.0-rc2 (2008-12-01)
+------------------------
 Bugs fixed since 6.x-1.0-rc1:
 = #336255 by KarenS and dww: Fixed numerous bugs in usage of DateAPI
   that were breaking all time-based signup functionality for datestamp
@@ -241,9 +279,9 @@ Other changes since 6.x-1.0-rc1:
   type that need to be auto-closed and/or have reminder emails sent.
 
 
------------
-6.x-1.0-rc1
------------
+------------------------
+6.x-1.0-rc1 (2008-11-14)
+------------------------
 Changes since 6.x-1.0-beta1:
 = #330828 by dww: Split module code out into separate include files.
 

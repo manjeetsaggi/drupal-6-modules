@@ -1,5 +1,5 @@
 <?php
-// $Id: block_edit.module,v 1.1.2.3 2009/05/27 21:59:06 psynaptic Exp $
+// $Id: block_edit.module,v 1.1.2.4 2009/09/22 16:30:47 psynaptic Exp $
 
 /**
  * @file
@@ -17,14 +17,74 @@ function block_edit_init() {
       drupal_add_js($path .'/block_edit.js');
       drupal_add_css($path .'/block_edit.css');
     }
-    $settings = array(
-      'block_edit' => array(
-        'destination' => drupal_get_destination(),
-      ));
-    drupal_add_js($settings, 'setting');
   }
 }
 
 function block_edit_views_api() {
   return array('api' => 2);
+}
+
+function block_edit_preprocess_block(&$vars) {
+  if (user_access('administer blocks')) {
+    $block = $vars['block'];
+
+    $vars['block_edit_links_array'] = array();
+    $id = 'block-edit-link-'. $block->module .'_'. $block->delta;
+    $class = 'block-edit-link';
+
+    // Display 'Configure' link for blocks.
+    if ($block->module != 'views') {
+      $vars['block_edit_links_array'][] = l(t('[Configure]'), 'admin/build/block/configure/' . $block->module . '/' . $block->delta,
+        array(
+          'attributes' => array(
+            'title' => t('Configure this block'),
+            'id' => $id,
+            'class' => $class,
+          ),
+          'query' => drupal_get_destination(),
+          'html' => TRUE,
+        )
+      );
+    }
+
+    // Display 'Edit menu' link for menu system blocks.
+    if (($block->module == 'menu' || ($block->module == 'user' && $block->delta == 1)) && user_access('administer menu')) {
+      $menu_name = ($block->module == 'user') ? 'navigation' : $block->delta;
+      $vars['block_edit_links_array'][] = l(t('[Edit menu]'), 'admin/build/menu-customize/' . $menu_name,
+        array(
+          'attributes' => array(
+            'title' => t('Edit this menu'),
+            'id' => $id,
+            'class' => $class,
+          ),
+          'query' => drupal_get_destination(),
+          'html' => TRUE,
+        )
+      );
+    }
+
+    // Display 'Edit menu' link for menu_block blocks.
+    elseif ($block->module == 'menu_block' && user_access('administer menu')) {
+      list($menu_name, ) = split(':', variable_get("menu_block_{$block->delta}_parent", 'navigation:0'));
+      $vars['block_edit_links_array'][] = l(t('[Edit menu]'), 'admin/build/menu-customize/' . $menu_name,
+        array(
+          'attributes' => array(
+            'title' => t('Edit this menu'),
+            'id' => $id,
+            'class' => $class,
+          ),
+          'query' => drupal_get_destination(),
+          'html' => TRUE,
+        )
+      );
+    }
+
+    $original_content = $vars['block']->content;
+
+    $edit_links = '<div class="block-edit-link" id="'. $id .'">';
+    $edit_links .= implode('&nbsp;&nbsp;', $vars['block_edit_links_array']);
+    $edit_links .= '</div>';
+    
+    $vars['block']->content = $edit_links . $original_content;
+  }
 }

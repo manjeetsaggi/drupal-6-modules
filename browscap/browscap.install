@@ -1,5 +1,5 @@
 <?php
-// $Id: browscap.install,v 1.1.2.1.2.1 2008/05/29 20:00:43 robloach Exp $
+// $Id: browscap.install,v 1.1.2.1.2.2 2009/06/08 11:43:12 robloach Exp $
 
 /**
  * Implementation of hook_install.
@@ -46,8 +46,6 @@ function browscap_schema() {
 
 function browscap_uninstall() {
   drupal_uninstall_schema('browscap');
-  drupal_uninstall_schema('browscap_statistics');
-  drupal_uninstall_schema('cache_browscap');
   variable_del('browscap_monitor');
   variable_del('browscap_imported');
   variable_del('browscap_version');

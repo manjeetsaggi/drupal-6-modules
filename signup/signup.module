@@ -1,5 +1,5 @@
 <?php
-// $Id: signup.module,v 1.205.2.30 2009/08/23 15:44:54 dww Exp $
+// $Id: signup.module,v 1.205.2.34 2009/09/19 01:42:58 dww Exp $
 
 
 /**
@@ -381,6 +381,17 @@ function signup_menu() {
     'file' => 'node_admin.inc',
     'file path' => $path,
   );
+  $items['node/%node/signups/settings'] = array(
+    'title' => 'Settings',
+    'page callback' => 'signup_node_settings_page',
+    'page arguments' => array(1),
+    'access callback' => '_signup_menu_access',
+    'access arguments' => array(1, 'admin'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 1,
+    'file' => 'node_settings.inc',
+    'file path' => $path,
+  );
   $items['node/%node/signups/confirm'] = array(
     'page callback' => 'drupal_get_form',
     'page arguments' => array('signup_cancel_multiple_confirm', 1),
@@ -755,6 +766,7 @@ function signup_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
         $node->signup_status = $signup->status;
         if ($node->nid) {
           $node->signup_total = db_result(db_query("SELECT COUNT(*) FROM {signup_log} WHERE nid = %d", $node->nid));
+          $node->signup_effective_total = db_result(db_query("SELECT SUM(count_towards_limit) FROM {signup_log} WHERE nid = %d", $node->nid));
         }
       }
       else {
@@ -965,10 +977,40 @@ function signup_load_signup($sid) {
  * @param $signup
  *   Fully-loaded signup object to save.
  *
+ * @return
+ *   The return value from drupal_write_record().
+ *
  * @see signup_load_signup()
+ * @see drupal_write_record()
  */
-function signup_save_signup($signup) {
-  drupal_write_record('signup_log', $signup, array('sid'));
+function signup_save_signup(&$signup) {
+  $rval = FALSE;
+  if (is_array($signup->form_data)) {
+    $form_data_array = $signup->form_data;
+    $signup->form_data = serialize($form_data_array);
+  }
+  if (empty($signup->sid)) {
+    $hook = 'signup_insert';
+    $update = array();
+  }
+  else {
+    $hook = 'signup_update';
+    $update = array('sid');
+  }
+  $rval = drupal_write_record('signup_log', $signup, $update);
+
+  // Restore $signup->form_data if we had to serialized it.
+  if (isset($form_data_array)) {
+    $signup->form_data = $form_data_array;
+  }
+
+  if (!empty($rval)) {
+    // If we successfully wrote a record, invoke the appropriate hook.
+    module_invoke_all($hook, $signup);
+  }
+
+  // Propagate the return value from drupal_write_record().
+  return $rval;
 }
 
 /**
@@ -1034,7 +1076,13 @@ function signup_cancel_signup($signup, $notify_user = TRUE) {
   }
 
   $node = node_load($signup->nid);
+
+  $effective_total_changed = FALSE;
   $node->signup_total--;
+  if (!empty($signup->count_towards_limit)) {
+    $node->signup_effective_total -= $signup->count_towards_limit;
+    $effective_total_changed = TRUE;
+  }
 
   // Invoke hook_signup_cancel().
   module_invoke_all('signup_cancel', $signup, $node);
@@ -1044,8 +1092,11 @@ function signup_cancel_signup($signup, $notify_user = TRUE) {
   if ($notify_user) {
     drupal_set_message(t('Signup to !title cancelled.', array('!title' => l($node->title, "node/$node->nid"))));
   }
-  // See if signups should be re-opened if the total dropped below the limit.
-  _signup_check_limit($node, 'total');
+
+  if ($effective_total_changed) {
+    // See if signups should be re-opened if the total dropped below the limit.
+    _signup_check_limit($node, 'total');
+  }
 }
 
 /**
@@ -1162,22 +1213,22 @@ function signup_sign_up_user($signup_form, $notify_user = TRUE) {
     // user_load() just so theme('username') can have the data it
     // needs for the error message we might print out.
     $result = db_query("SELECT sl.uid, u.name FROM {signup_log} sl INNER JOIN {users} u ON sl.uid = u.uid WHERE sl.uid = %d AND sl.nid = %d", $signup_form['uid'], $signup_form['nid']);
-    $user = db_fetch_object($result);
-    if (!empty($user)) {
-      drupal_set_message(t('User !user is already signed up for %title', array('!user' => theme('username', $user), '%title' => $node->title)), 'error');
+    $account = db_fetch_object($result);
+    if (!empty($account)) {
+      drupal_set_message(t('User !user is already signed up for %title', array('!user' => theme('username', $account), '%title' => $node->title)), 'error');
       return FALSE;
     }
   }
 
-  // If we made it this far, we're going to need the full $user object.
-  $user = user_load(array('uid' => $signup_form['uid']));
+  // If we made it this far, we're going to need the full user object.
+  $account = user_load(array('uid' => $signup_form['uid']));
 
   if ($node->signup_status) {
     // Grab the current time once, since we need it in a few places.
     $current_time = time();
 
     // Allow other modules to inject data into the user's signup data.
-    $extra = module_invoke_all('signup_sign_up', $node, $user);
+    $extra = module_invoke_all('signup_sign_up', $node, $account);
     $signup_info = array();
     if (!empty($signup_form['signup_form_data'])) {
       $signup_info = $signup_form['signup_form_data'];
@@ -1185,27 +1236,31 @@ function signup_sign_up_user($signup_form, $notify_user = TRUE) {
     if (!empty($extra)) {
       $signup_info = array_merge($signup_info, $extra);
     }
-    $signup_form_data = serialize($signup_info);
 
     // Figure out if confirmation or reminder emails will be sent and
     // inform the user.
     $confirmation_email = $node->signup_send_confirmation ? '  '. t('A confirmation email will be sent shortly containing further information about this %node_type.', array('%node_type' => node_get_types('name', $node->type))) : '';
     $reminder_email = $node->signup_send_reminder ? '  '. t('A reminder email will be sent !number !days before the %node_type.', array('!number' => $node->signup_reminder_days_before, '!days' => format_plural($node->signup_reminder_days_before, 'day', 'days'), '%node_type' => node_get_types('name', $node->type))) : '';
 
-    // Insert the user into the signup_log.
-    db_query("INSERT INTO {signup_log} (uid, nid, anon_mail, signup_time, form_data) VALUES (%d, %d, '%s', %d, '%s')", $signup_form['uid'], $signup_form['nid'], $signup_anon_mail, $current_time, $signup_form_data);
-    $sid = db_last_insert_id('signup_log', 'sid');
-
-    // Get the hard-coded tokens provided by the signup module to use
-    // for the confirmation and/or forwarding emails.  We need to create
-    // an object representing the user's signup to get the right values.
-    $signup = $user;
+    // Construct the appropriate $signup object representing this signup.
+    $signup = new stdClass;
+    $signup->nid = $node->nid;
+    // Grab the values from the $account object we care about
+    foreach (array('uid', 'name', 'mail') as $field) {
+      $signup->$field = $account->$field;
+    }
+    // Other special signup values.
     $signup->form_data = $signup_info;
-    $signup->sid = $sid;
     $signup->signup_time = $current_time;
     if (!empty($signup_anon_mail)) {
       $signup->anon_mail = $signup_anon_mail;
     }
+
+    // Invoke hook_signup_data_alter() to let other modules change this.
+    drupal_alter('signup_data', $signup, $signup_form);
+
+    // Insert the signup into the {signup_log} table.
+    signup_save_signup($signup);
 
     // See if we should generate any notifications from this signup.
     if ($notify_user) {
@@ -1222,10 +1277,13 @@ function signup_sign_up_user($signup_form, $notify_user = TRUE) {
     }
 
     $node->signup_total++;
-    if ($node->signup_close_signup_limit) {
-      _signup_check_limit($node, 'total');
+    if (!empty($signup->count_towards_total)) {
+      $node->signup_effective_total += $signup->count_towards_total;
+      if ($node->signup_close_signup_limit) {
+        _signup_check_limit($node, 'total');
+      }
     }
-    return $sid;
+    return $signup->sid;
   }
   else {
     drupal_access_denied();
@@ -1353,7 +1411,7 @@ function _signup_check_limit($node, $type) {
   $node_link = l($node->title, "node/$node->nid");
   $limit = $node->signup_close_signup_limit;
   if ($limit) {
-    if ($node->signup_total >= $limit) {
+    if ($node->signup_effective_total >= $limit) {
       if ($node->signup_status) {
         signup_close_signup($node->nid);
         $status_change = -1;
@@ -1368,7 +1426,7 @@ function _signup_check_limit($node, $type) {
         $status_change = -1;
       }
     }
-    elseif (($node->signup_total < $limit) && (!$node->signup_status) && (!_signup_node_completed($node))) {
+    elseif (($node->signup_effective_total < $limit) && (!$node->signup_status) && (!_signup_node_completed($node))) {
       signup_open_signup($node->nid);
       $status_change = 1;
       if ($type == 'limit') {
@@ -1496,6 +1554,9 @@ function _signup_get_email_tokens($node, $signup) {
       $signup_data = unserialize($signup->form_data);
     }
     $tokens['%user_signup_info'] = theme('signup_email_token_custom_data', $signup_data);
+  }
+  else {
+    $tokens['%user_signup_info'] = '';
   }
 
   $tokens['%user_name'] = _signup_get_username($signup);

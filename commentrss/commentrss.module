@@ -1,5 +1,5 @@
 <?php
-// $Id: commentrss.module,v 1.12.2.2.2.6.2.4 2009/07/17 15:56:31 davereid Exp $
+// $Id: commentrss.module,v 1.12.2.2.2.6.2.5 2009/09/16 16:45:08 davereid Exp $
 
 /**
  * @file
@@ -112,7 +112,7 @@ function commentrss_init() {
     // Expose node feed on node view page.
     if ((arg(0) == 'node') && is_numeric($nid = arg(1)) && is_null(arg(2)) &&
         variable_get('commentrss_node', TRUE) && ($node = node_load($nid)) &&
-        ($node->comment != COMMENT_NODE_DISABLED)) {
+        node_access('view', $node) && ($node->comment != COMMENT_NODE_DISABLED)) {
 
       drupal_add_feed(
         url('crss/node/'. $node->nid),

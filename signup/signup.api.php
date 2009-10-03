@@ -1,11 +1,23 @@
 <?php
-// $Id: signup.api.php,v 1.1.2.2 2009/07/25 21:28:40 dww Exp $
+// $Id: signup.api.php,v 1.1.2.4 2009/09/19 01:42:58 dww Exp $
 
 
 /**
  * @file
  * This file documents the hooks invoked by the Signup module.
  */
+
+/**
+ * Hook to alter signup data before a signup is inserted or updated.
+ *
+ * @param $signup
+ *   Reference to the fully-loaded signup object representing the signup.
+ * @param $form_values
+ *   Array of form values (if any) from the signup being inserted or updated.
+ */
+function hook_signup_data_alter(&$signup, $form_values) {
+  // TODO
+}
 
 /**
  * Hook invoked when a signup is being canceled.
@@ -37,10 +49,31 @@ function hook_signup_cancel($signup, $node) {
   $form_data = unserialize($signup->form_data);
   $info[] = t('Custom signup form data: %signup_form_data', array('%signup_form_data' => theme('signup_custom_data_email', $form_data)));
   $info[] = t('Attendance record: %attended', array('%attended' => theme('signup_attended_text', $signup->attended)));
+  $info[] = t('Slots consumed by this signup: @count_towards_limit', array('@co
+unt_towards_limit' => $signup->count_towards_limit));
 
   drupal_set_message(theme('item_list', $info, t('Signup canceled for %node_title', array('%node_title' => $node->title))));
 }
 
+/**
+ * Hook invoked after a signup has been inserted.
+ *
+ * @param $signup
+ *   The fully-loaded signup object representing the new signup.
+ */
+function hook_signup_insert($signup) {
+  // TODO
+}
+
+/**
+ * Hook invoked after a signup has been updated.
+ *
+ * @param $signup
+ *   The fully-loaded signup object representing the updated signup.
+ */
+function hook_signup_update($signup) {
+  // TODO
+}
 
 /**
  * Hook invoked when a signup is being created to gather other signup data.
