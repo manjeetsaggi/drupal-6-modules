@@ -5,9 +5,9 @@ dependencies[] = apachesolr
 package = Apache Solr
 core = "6.x"
 
-; Information added by drupal.org packaging script on 2009-09-11
+; Information added by drupal.org packaging script on 2009-10-03
 version = "6.x-1.x-dev"
 core = "6.x"
 project = "apachesolr_stats"
-datestamp = "1252627383"
+datestamp = "1254528141"
 
