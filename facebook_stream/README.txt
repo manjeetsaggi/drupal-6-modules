@@ -1,8 +1,14 @@
-$Id
+/*$Id: README.txt,v 1.2 2009/06/27 10:11:29 prajwala Exp $*/
 
 == SUMMARY ==
 Facebook stream module displays the facebook stream in a drupal block. To access the users stream the user has to give permission to our application. This module will the ask the user to give permissions if the user did not give permission to access his stream. The posts will update automatically after some time. This time can be configured by site administrator in the block configuration page
 
+We can able to post status message and and can add comments and likes to the status messages.
+
+Note: In order to publish to a user's stream, the user must grant your application the publish_stream extended permission. If the user previously granted your application the permission to publish short stories into the News Feed automatically, then you don't need to prompt for this permission in order to call this method.
+
+Before you can prompt for the publish_stream permission, you need to apply for the whitelist(http://www.facebook.com/devhelp?category=Stream). Otherwise, the only Facebook users that can grant your application the publish_stream permission are the developers of your application. 
+For more information check http://wiki.developers.facebook.com/index.php/Stream.publish
 
 == REQUIREMENTS ==
 PHP 5.2 or higher versions. 
@@ -11,6 +17,7 @@ Facebook PHP Library: http://svn.facebook.com/svnroot/platform/clients/packages/
 Facebook API key: http://www.facebook.com/developers/
 jquery_ui,jquery_update modules
 
+To publish comments, likes, status messages you need to apply for the whitelist http://www.facebook.com/devhelp?category=Stream . Otherwise, only developers of the facebook application can publish.
 
 == INSTALLATION ==
 
@@ -36,5 +43,7 @@ jquery_ui,jquery_update modules
   2.Enable the module at admin/build/modules
   3.Enable facebook stream block at admin/build/blocks
   4.Configure the no of values to be displayed at user/%/fbstreamconnect
+  5.Admin can configure the retrival interval at the facebook stream block configuration page
+  6.Admin can configure whether to enable publish comments, likes, status message or not at admin/settings/facebook_stream
 
 

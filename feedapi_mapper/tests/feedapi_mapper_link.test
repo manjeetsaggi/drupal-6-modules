@@ -1,5 +1,5 @@
 <?php
-// $Id: feedapi_mapper_link.test,v 1.1.2.2 2009/07/13 19:59:52 alexb Exp $
+// $Id: feedapi_mapper_link.test,v 1.2.2.2 2009/09/18 13:20:18 aronnovak Exp $
 
 require_once(drupal_get_path('module', 'feedapi_mapper') . '/tests/feedapi_mapper_test.inc');
 
@@ -28,7 +28,8 @@ class FeedApiMapperLinkTestCase extends FeedApiMapperTestCase {
       'parser_common_syndication',
       'feedapi_mapper',
       'content',
-      'link'
+      'link',
+      'ctools'
     );
 
     // Create users.
@@ -55,8 +56,6 @@ class FeedApiMapperLinkTestCase extends FeedApiMapperTestCase {
       'filename' => 'php.atom',
       'mappers' => array('node', 'link'),
       'mapping' => array(
-        serialize(array('title')) => serialize(array('node', 'title')),
-        serialize(array('description')) => serialize(array('node', 'body')),
         serialize(array('options', 'guid')) => serialize(array('link', 'field_alpha')),
         serialize(array('options', 'original_author', 'link')) => serialize(array('link', 'field_beta')),
         serialize(array('options', 'raw', 'id')) => serialize(array('link', 'field_gamma')),

@@ -1,5 +1,5 @@
 <?php
-// $Id: feedapi_mapper.api.php,v 1.1.2.3 2009/05/09 14:28:33 alexb Exp $
+// $Id: feedapi_mapper.api.php,v 1.2.2.3 2009/08/28 15:07:06 alexb Exp $
 
 /**
  * @file
@@ -59,9 +59,14 @@
  *
  * @param $op
  *   Operation to perform.
- *   Value of $op is one of 'describe', 'list' or 'map'.
+ *   Value of $op is one of 'describe', 'list', 'map', 'unique supported' and 'unique'.
+ * @param $feed_node
+ *   Drupal node object that is the feed node.
+ * @param $active_processor
+ *   The active processor requesting the operation. Test against this value and
+ *   only respond to an operation on processors that are supported.
  * @param $node
- *   Drupal node object.
+ *   Drupal node object that is the feed item to perform the mapping on.
  * @param $feed_element
  *   Parameter only present on $op = 'map'
  *   Element of the feed to map from. A simple data type (number, string) or a 
@@ -76,17 +81,23 @@
  *   $op = 'list'. 
  *   
  */
-function hook_feedapi_mapper($op, $node, $feed_element = array(), $field_name = '', $sub_field = '') {
-  if ($op == 'describe') {
-    return t('Maps a string or an array of strings to myfields.');
+function hook_feedapi_mapper($op, $feed_node, $active_processor, $node = NULL, $feed_element = array(), $field_name = '', $sub_field = '') {
+
+  // This mapper only operates on feedapi_node processors. If there is no
+  // content type for the feed item nodes, abort.
+  if ($active_processor != 'feedapi_node') {
+    return;
   }
-  else if ($op == 'list') {
-    if ($myfields = myfields_get_available_fields()) {
-      return $myfields;
-    }
-    return FALSE;
-  }
-  else if ($op == 'map') {
+
+  switch ($op) {
+    case 'describe':
+      return t('Maps a string or an array of strings to myfields.');
+    case 'list':
+      if ($myfields = mymodule_get_available_fields($node_type)) {
+        return $myfields;
+      }
+      return FALSE;
+    case 'map':
       if ($field_name == 'myfield') {
         if (is_string($feed_element)) {
           $node->myfields = array ($feed_element);
@@ -94,8 +105,20 @@ function hook_feedapi_mapper($op, $node, $feed_element = array(), $field_name = 
         if (is_array($feed_element)) {
           $node->myfields[$subfield] = $feed_element;
         }
-      return $node;
-    }
+        return $node;
+      }
+    case 'unique supported':
+      // Returning TRUE means that this mapper supports optional unique operations. 
+      // Mappers that support unique operations are displayed with a 
+      // 'unique' yes/no toggle on the UI. If we return TRUE here we also have to 
+      // implement $op = 'unique'.
+      return TRUE; 
+    case 'unique':
+      $ids = array();
+      // This examplary function returns an array of ids of existing feed items 
+      // for the given $feed_element.
+      $ids = mymodule_get_feeds($feed_element);
+      return $ids;
   }
 }
 

@@ -1,5 +1,5 @@
 <?php
-// $Id: feedapi_mapper_test.inc,v 1.1.2.2 2009/07/13 19:59:52 alexb Exp $
+// $Id: feedapi_mapper_test.inc,v 1.2.2.2 2009/08/24 01:42:28 alexb Exp $
 
 /**
  * @file
@@ -98,7 +98,7 @@ class FeedApiMapperTestCase extends DrupalWebTestCase {
     if (isset($options['mappers'])) {
       $this->drupalGet($feed_url . '/map');
       foreach ($options['mappers'] as $mapper) {
-        $this->assertText("($mapper module)");
+        $this->assertText("$mapper module");
       }
     }
 
@@ -113,7 +113,7 @@ class FeedApiMapperTestCase extends DrupalWebTestCase {
 
     // Refresh nodes
     $this->drupalGet($feed_url . '/refresh');
-    $this->assertText('new item(s) were saved. 0 existing item(s) were updated');
+    $this->assertText('new item(s) were saved');
     return $feed_url;
   }
 

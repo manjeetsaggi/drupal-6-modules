@@ -1,18 +1,24 @@
 <?php
-// $Id: feedapi_mapper_emvideo.inc,v 1.1.2.3 2009/04/20 13:31:04 alexb Exp $
+// $Id: feedapi_mapper_emvideo.inc,v 1.2.2.2 2009/08/07 15:43:43 aronnovak Exp $
 
 /**
  * Implementation of hook_feedapi_mapper().
  *
  * @see hook_feedapi_mapper()
  */
-function emvideo_feedapi_mapper($op, $node, $feed_element = array(), $field_name = '', $sub_field = '') {
+function emvideo_feedapi_mapper($op, $feed_node, $active_processor, $node = NULL, $feed_element = array(), $field_name = '', $sub_field = '') {
+
+  // Checks processor compatibility.
+  if ($active_processor != 'feedapi_node') {
+    return;
+  }
+
   switch ($op) {
     case 'describe':
       // Describe what we are doing in this mapper. This shows up as help text on the mapping page.
       return t('Maps a link to a video to the Embedded Media Video CCK field. Use the original_url element for mapping to this field.');
     case 'list':
-      $info = content_types($node->type);
+      $info = content_types(feedapi_mapper_get_item_node_type($feed_node));
       $fields = array();
       if (@count($info['fields'])) {
         foreach ($info['fields'] as $field_name => $field) {

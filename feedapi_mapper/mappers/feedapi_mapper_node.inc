@@ -1,5 +1,5 @@
 <?php
-// $Id: feedapi_mapper_node.inc,v 1.1.2.5 2009/06/19 16:52:06 aronnovak Exp $
+// $Id: feedapi_mapper_node.inc,v 1.2.2.2 2009/08/07 15:43:43 aronnovak Exp $
 
 /**
  * On behalf implementation of hook_feedapi_mapper() for node module.
@@ -12,7 +12,13 @@
  * - if default mapping is removed, nothing is mapped to target (= e. g. body 
  *   stays empty)
  */
-function node_feedapi_mapper($op, $node, $feed_element = array(), $field_name = '', $sub_field = '') {
+function node_feedapi_mapper($op, $feed_node, $active_processor, $node = NULL, $feed_element = array(), $field_name = '', $sub_field = '') {
+
+  // Checks processor compatibility.
+  if ($active_processor != 'feedapi_node') {
+    return;
+  }
+
   if ($op == 'describe') {
     return t('Maps a feed element to the title, created date, published state or body of a node. Note that standard field mapping by FeedAPI still applies. For example if there is no feed element mapped to the node body you will still find the description in node body because that is how FeedAPI stores nodes.');
   }

@@ -1,17 +1,23 @@
 <?php
-// $Id: feedapi_mapper_taxonomy.inc,v 1.1.4.4 2009/04/20 13:31:04 alexb Exp $
+// $Id: feedapi_mapper_taxonomy.inc,v 1.2.2.2 2009/08/07 15:43:43 aronnovak Exp $
 
 /**
  * On behalf implementation of hook_feedapi_mapper() for taxonomy module.
  * 
  * @see hook_feedapi_mapper()
  */
-function taxonomy_feedapi_mapper($op, $node, $feed_element = array(), $field_name = '', $sub_field = '') {
+function taxonomy_feedapi_mapper($op, $feed_node, $active_processor, $node = NULL, $feed_element = array(), $field_name = '', $sub_field = '') {
+
+  // Checks processor compatibility.
+  if ($active_processor != 'feedapi_node') {
+    return;
+  }
+
   if ($op == 'describe') {
     return t('Maps a string or an array of strings to taxonomy terms. Chose a vocabulary from sub options.');
   }
   else if ($op == 'list') {
-    if ($vocabularies = taxonomy_get_vocabularies($node->type)) {
+    if ($vocabularies = taxonomy_get_vocabularies(feedapi_mapper_get_item_node_type($feed_node))) {
       foreach ($vocabularies as $v) {
         $sub_fields[$v->vid] = $v->name;
       }
