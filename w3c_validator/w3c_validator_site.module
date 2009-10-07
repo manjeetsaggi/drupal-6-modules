@@ -1,5 +1,5 @@
 <?php
-// $Id: w3c_validator_site.module,v 1.1 2009/07/28 11:27:19 pl2 Exp $
+// $Id: w3c_validator_site.module,v 1.1.2.2 2009/10/05 10:33:38 pl2 Exp $
 
 /**
  * @file
@@ -209,7 +209,7 @@ function w3c_validator_site_validate_path($rsid, $path, &$context) {
   $result_url->rsid = $rsid;
   $result_url->validity = $results['validity'] == 'true' ? 1 : 0;
   $result_url->error_count = count($results['errors']);
-  $result_url->warning_count = count($result['warnings']);
+  $result_url->warning_count = count($results['warnings']);
   $result_url->doctype = $results['doctype'];
   drupal_write_record('validator_results_url', $result_url);
 
@@ -228,7 +228,7 @@ function w3c_validator_site_validate_path($rsid, $path, &$context) {
       foreach ($results[$type .'s'] as $result_message) {
         $message = new stdClass();
         $message->urlid = $urlid;
-        $message->type = 'error';
+        $message->type = $type;
         $message->line = $result_message['line'];
         $message->col = $result_message['col'];
         $message->message = $result_message['message'];

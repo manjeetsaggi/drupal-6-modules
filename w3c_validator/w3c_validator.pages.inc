@@ -1,5 +1,5 @@
 <?php
-// $Id: w3c_validator.pages.module,v 1.1 2009/07/28 11:27:19 pl2 Exp $
+// $Id: w3c_validator.pages.inc,v 1.1.2.2 2009/10/05 10:33:38 pl2 Exp $
 
 /**
  * @file
@@ -45,6 +45,15 @@ function w3c_validator_validate_uri_page() {
           _w3c_validator_set_validation_result($result);
       }
     }
+  }
+
+  $endpoint = variable_get('w3c_validator_api_endpoint_uri', '');
+  if (empty($endpoint)) {
+    drupal_set_message(t("W3C validator hasn't been configured yet."), 'warning');
+    if (user_access('administer w3c_validator')) {
+      return t('Endpoint must be set before you can use it. Configure W3C Validator at the <a href="!url">settings page</a>', array('!url' => url('admin/settings/w3c_validator')));
+    }
+    return '';
   }
 
   // Process the form and store the result using _w3c_validator_set_validation_result

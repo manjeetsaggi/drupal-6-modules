@@ -5,9 +5,9 @@ core = 6.x
 package = W3C Validator
 dependencies[] = w3c_validator
 
-; Information added by drupal.org packaging script on 2009-07-28
-version = "6.x-1.0"
+; Information added by drupal.org packaging script on 2009-10-05
+version = "6.x-1.1"
 core = "6.x"
 project = "w3c_validator"
-datestamp = "1248781982"
+datestamp = "1254740198"
 

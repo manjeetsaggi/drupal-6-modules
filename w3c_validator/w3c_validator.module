@@ -1,5 +1,5 @@
 <?php
-// $Id: w3c_validator.module,v 1.1 2009/07/28 11:27:19 pl2 Exp $
+// $Id: w3c_validator.module,v 1.1.2.2 2009/10/05 10:33:38 pl2 Exp $
 
 /**
  * @file
@@ -20,7 +20,7 @@ function w3c_validator_menu() {
     'page callback' => 'drupal_get_form',
     'page arguments' => array('w3c_validator_admin_settings'),
     'access arguments' => array('administer w3c_validator'),
-    'file' => 'w3c_validator.pages.module',
+    'file' => 'w3c_validator.pages.inc',
   );
 
   $items['validator'] = array(
@@ -28,7 +28,7 @@ function w3c_validator_menu() {
     'description' => 'Validate URI using the W3C Validator API',
     'page callback' => 'w3c_validator_validate_uri_page',
     'access arguments' => array('use w3c_validator'),
-    'file' => 'w3c_validator.pages.module',
+    'file' => 'w3c_validator.pages.inc',
   );
 
   return $items;
@@ -139,4 +139,20 @@ function _w3c_validator_validate_uri($uri) {
     );
 
   return $result;
+}
+
+/**
+ * Implementation of hook_help().
+ */
+function w3c_validator_help($path, $arg) {
+  switch ($path) {
+    case 'admin/settings/w3c_validator':
+      $output = '';
+      $output .= t('This module uses the official W3c Validator scripts. You must install the official w3c validator on your own server and provide the url here or you could use the official w3c validator.') . '<br />';
+      $output .= t('For instructions on how to install an instance of the w3c validator scripts you have instructions at <a href="http://validator.w3.org/docs/install.html">http://validator.w3.org/docs/install.html</a>.') .'<br />';
+      $output .= t('Debian based distributions comes with a package called w3c_markup_validator which provides a ready to use install of the validator.'). '<br />';
+      $output .= t('Using the official w3v validator endpoint url for high volume of validations could be considered abuse of service.');
+      return $output;
+      break;
+  }
 }

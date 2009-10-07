@@ -1,5 +1,5 @@
 <?php
-// $Id: w3c_validator_site.pages.inc,v 1.1 2009/07/28 11:27:19 pl2 Exp $
+// $Id: w3c_validator_site.pages.inc,v 1.1.2.3 2009/10/05 10:33:38 pl2 Exp $
 
 /**
  * @file
@@ -13,6 +13,21 @@
  * @return void
  */
 function w3c_validator_site_content_validator($form_state) {
+  $endpoint = variable_get('w3c_validator_api_endpoint_uri', '');
+  if (empty($endpoint)) {
+    drupal_set_message(t("W3C validator hasn't been configured yet."), 'warning');
+    if (user_access('administer w3c_validator')) {
+      return array(
+        'warning' => array(
+          '#value' =>  t('Endpoint must be set before you can use it. Configure W3C Validator at the <a href="!url">settings page</a>', array('!url' => url('admin/settings/w3c_validator'))),
+        ),
+      );
+    }
+    else {
+      return array();
+    }
+  }
+
   $form = array();
   $type_options = array(
     'node' => t('Nodes'),
@@ -34,7 +49,7 @@ function w3c_validator_site_content_validator($form_state) {
   $form['content_types'] = array(
     '#type' => 'checkboxes',
     '#title' => t('Content types'),
-    '#description' => t('Node types that will be validated if node validation is requested.'),
+    '#description' => t('Node types that will be validated if node validation is requested. If none is selected all content types will be validated.'),
     '#options' => $content_types,
     '#default_value' => array(),
   );
@@ -59,6 +74,21 @@ function w3c_validator_site_content_validator_submit($form, &$form_state) {
     'validate_elements' => $form_state['values']['validate_elements'],
     'content_types' => $form_state['values']['content_types'],
     );
+
+  // If no content type is selected all will be checked
+  if ($config['validate_elements']['node']) {
+    $selected = FALSE;
+    foreach ($config['content_types'] as $type => $enabled) {
+      if ($enabled) {
+        $selected = TRUE;
+      }
+    }
+    if (!$selected) {
+      foreach ($config['content_types'] as $type => $enabled) {
+        $config['content_types'][$type] = TRUE;
+      }
+    }
+  }
 
   $result_set = new stdClass();
   $result_set->date = time();
@@ -101,7 +131,10 @@ function w3c_validator_settings($form_state) {
 function w3c_validator_site_result_sets_page() {
   $output = '';
 
-  $output .= drupal_get_form('w3c_validator_site_clean_results');
+
+  if (db_result(db_query("SELECT COUNT(*) FROM {validator_results_sets}"))) {
+    $output .= drupal_get_form('w3c_validator_site_clean_results');
+  }
 
   $sql = "SELECT * FROM {validator_results_sets} ORDER BY rsid DESC";
   $result = pager_query($sql, 30);
@@ -211,12 +244,12 @@ function w3c_validator_site_result_set_details_page($result_set) {
     $rows[] = array(
       'data' => array(
         l($row->url, 'admin/content/validator/results/'. $result_set->rsid .'/'. $row->urlid),
-        check_plain($row->validity),
+        $row->error_count ? t('Not valid') : ($row->warning_count ? t('With warnings') : t('Valid')),
         check_plain($row->error_count),
         check_plain($row->warning_count),
         check_plain($row->doctype),
       ),
-      'class' => $row->validity ? 'ok' : 'error',
+      'class' => $row->error_count ? 'error' : ($row->warning_count ? 'warning' : 'ok'),
     );
   }
 
