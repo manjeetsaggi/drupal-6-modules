@@ -1,5 +1,5 @@
 <?php
-// $Id: services.module,v 1.8.2.88.2.6 2009/09/05 13:57:58 marcingy Exp $
+// $Id: services.module,v 1.8.2.88.2.8 2009/10/15 03:59:55 marcingy Exp $
 /**
  * @author Services Dev Team
  * @file
@@ -308,9 +308,11 @@ function services_method_call($method_name, $args = array(), $browsing = FALSE) 
     }
   }
 
-  // Load the proper file
+  // Load the proper file.
   if ($file = $method['#file']) {
-    module_load_include($file['file'], $file['module']);
+    // Initialize file name if not given.
+    $file += array('file name' => '');
+    module_load_include($file['file'], $file['module'], $file['file name']);
   }
 
   // Construct access arguments array
@@ -388,7 +390,7 @@ function services_resource_uri($path) {
  * @return array
  *  An array containing all resources.
  */
-function services_get_all_resources($include_services = TRUE) {
+function services_get_all_resources($include_services = TRUE, $reset = FALSE) {
   $cache_key = 'services:resources' . ($include_services?'_with_services':'');
 
   if (!$reset && ($cache = cache_get($cache_key)) && isset($cache->data)) {
@@ -432,6 +434,18 @@ function services_get_all_resources($include_services = TRUE) {
     cache_set($cache_key, $resources);
     return $resources;
   }
+}
+
+function services_form_alter(&$form, $form_state, $form_id) {
+  if ($form_id == 'system_modules') {
+    // Add our own submit hook to clear cache
+    $form['#submit'][] = 'services_system_modules_submit';
+  }
+}
+
+function services_system_modules_submit($form, &$form_state) {
+  // Reset services cache
+  services_get_all(TRUE, TRUE);
 }
 
 function services_process_resources(&$resources, &$controllers, $path=array()) {
@@ -510,10 +524,10 @@ function services_delegate_access($perm) {
  * @return array
  *   An array containing all services and thir methods
  */
-function services_get_all($include_resources = TRUE) {
+function services_get_all($include_resources = TRUE, $reset = FALSE) {
   $cache_key = 'services:methods' . ($include_resources?'_with_resources':'');
 
-  if (($cache = cache_get($cache_key)) && isset($cache->data)) {
+  if (!$reset && ($cache = cache_get($cache_key)) && isset($cache->data)) {
     return $cache->data;
   }
   else {
@@ -553,7 +567,7 @@ function services_get_all($include_resources = TRUE) {
 
     // Add resources if wanted
     if ($include_resources) {
-      $resources = services_get_all_resources(FALSE);
+      $resources = services_get_all_resources(FALSE, $reset);
 
       // Include the file that has the necessary functions for translating
       // resources to method calls.

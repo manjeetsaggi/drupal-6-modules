@@ -1,5 +1,5 @@
 <?php
-// $Id: views_service.module,v 1.4.2.20 2009/05/18 20:55:22 marcingy Exp $
+// $Id: views_service.module,v 1.4.2.20.2.1 2009/10/15 03:54:06 marcingy Exp $
 /**
  * @author Services Dev Team
  * @file
@@ -106,12 +106,4 @@ function views_service_service() {
       '#help'             => t('Imports a view through code, equivalent to using the Import tab in the views admin.'),
     ),
   );
-}
-
-function views_service_disable() {
-  cache_clear_all('services:methods', 'cache');
-}
-
-function views_service_enable() {
-  cache_clear_all('services:methods', 'cache');
 }

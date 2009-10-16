@@ -1,5 +1,5 @@
 <?php
-// $Id: comment_service.module,v 1.1.2.1 2009/06/06 22:57:40 marcingy Exp $
+// $Id: comment_service.module,v 1.1.2.1.2.1 2009/10/15 03:54:05 marcingy Exp $
 /**
  * @author Services Dev Team
  * @file
@@ -130,12 +130,4 @@ function comment_service_service() {
       '#help'   => t('This method returns the number of new comments on a given node since a given timestamp.'),
     ),
   );
-}
-
-function comments_service_disable() {
-  cache_clear_all('services:methods', 'cache');
-}
-
-function comments_service_enable() {
-  cache_clear_all('services:methods', 'cache');
 }

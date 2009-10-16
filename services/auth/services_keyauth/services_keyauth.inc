@@ -1,5 +1,5 @@
 <?php
-// $Id: services_keyauth.inc,v 1.1.2.8.2.3 2009/09/05 13:57:58 marcingy Exp $
+// $Id: services_keyauth.inc,v 1.1.2.8.2.4 2009/10/15 02:59:56 marcingy Exp $
 
 /**
  * @file
@@ -86,9 +86,6 @@ function _services_keyauth_alter_methods(&$methods) {
     // set method defaults
     switch ($method['#method']) {
       case 'system.connect':
-      case 'search.nodes':
-      case 'search.content':
-      case 'search.users':
         $method['#key'] = FALSE;
         $method['#auth'] = FALSE;
         break;

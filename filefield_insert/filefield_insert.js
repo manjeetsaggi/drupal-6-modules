@@ -1,4 +1,4 @@
-// $Id: filefield_insert.js,v 1.5 2009/06/15 16:18:36 quicksketch Exp $
+// $Id: filefield_insert.js,v 1.6 2009/10/15 22:47:45 quicksketch Exp $
 
 /**
  * Behavior to add "Insert" buttons to FileField uploads.
@@ -117,16 +117,15 @@ Drupal.behaviors.fileFieldInsert = function(context) {
     if (fileFieldInsertTextarea && fileFieldInsertTextarea.fileFieldInsertHasFocus) {
       insertAtCursor(fileFieldInsertTextarea, content);
     }
-    // WYSIWYG support, should work in all editors if available.
-    else if (Drupal.wysiwyg && Drupal.wysiwyg.activeId) {
-      Drupal.wysiwyg.instances[Drupal.wysiwyg.activeId].insert(content)
-    }
     // Direct tinyMCE support.
     else if (typeof(tinyMCE) != 'undefined' && tinyMCE.activeEditor) {
       tinyMCE.activeEditor.execCommand('mceInsertContent', false, content);
     }
+    // WYSIWYG support, should work in all editors if available.
+    else if (Drupal.wysiwyg && Drupal.wysiwyg.activeId) {
+      Drupal.wysiwyg.instances[Drupal.wysiwyg.activeId].insert(content)
+    }
     // FCKeditor module support.
-    // Requires http://drupal.org/node/445878.
     else if (typeof(FCKeditorAPI) != 'undefined' && fckActiveId) {
       FCKeditorAPI.Instances[fckActiveId].InsertHtml(content);
     }
