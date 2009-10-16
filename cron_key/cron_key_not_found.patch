@@ -1,0 +1,45 @@
+Index: cron.php
+===================================================================
+--- cron.php    (revision 1446)
++++ cron.php    (working copy)
+@@ -8,4 +8,10 @@
+ 
+ include_once './includes/bootstrap.inc';
+ drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
+-drupal_cron_run();
++if ((isset($_GET['cron_key']) && variable_get('cron_key', 'drupal') == $_GET['cron_key']) || user_access('run cron')) {
++  drupal_cron_run();
++}
++else {
++  watchdog('cron', 'Cron did not run because an invalid key used.', array(), WATCHDOG_NOTICE);
++  drupal_not_found();
++}
+Index: INSTALL.txt
+===================================================================
+--- INSTALL.txt	(revision 1446)
++++ INSTALL.txt	(working copy)
+@@ -230,13 +230,22 @@
+    system module (to perform routine maintenance and pruning on system tables).
+    To activate these tasks, call the cron page by visiting
+    http://www.example.com/cron.php, which, in turn, executes tasks on behalf
+-   of installed modules.
++   of installed modules. The URL of the cron.php page requires a "cron key" to
++   protect against unauthorized access. The full URL of the page, with cron key,
++   is available in the "Cron maintenance tasks" section of the "Status report
++   page" at:
++   
++          Administer > Reports > Status report
+ 
+    Most systems support the crontab utility for scheduling tasks like this. The
+    following example crontab line will activate the cron tasks automatically on
+    the hour:
+ 
+-   0   *   *   *   *   wget -O - -q -t 1 http://www.example.com/cron.php
++   0   *   *   *   *   wget -O - -q -t 1 http://www.example.com/cron.php?cron_key=RANDOMTEXT
++   
++   Replace the text "http://www.example.com/cron.php?cron_key=RANDOMTEXT" in the
++   example with the full URL displayed under "Cron maintenance tasks" on the
++   "Status report" page.
+ 
+    More information about cron maintenance tasks are available in the help pages
+    and in Drupal's online handbook at http://drupal.org/cron. Example scripts can

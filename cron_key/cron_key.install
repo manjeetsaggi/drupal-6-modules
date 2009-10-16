@@ -1,0 +1,11 @@
+<?php
+// $Id: cron_key.install,v 1.1 2009/05/25 21:37:53 doq Exp $
+
+/**
+ * Implementation of hook_install().
+ */
+function cron_key_install() {
+  // Generate cron key.
+  $key = md5(uniqid(mt_rand(), true)) . md5(uniqid(mt_rand(), true));
+  variable_set('cron_key', drupal_get_token($key));
+}

@@ -1,0 +1,75 @@
+<?php
+// $Id: cron_key.module,v 1.1 2009/05/25 21:37:53 doq Exp $
+
+/**
+ * @file
+ * Protect "cron.php" against unauthorized access.
+ */
+
+/**
+ * Implementation of hook_help().
+ */
+function cron_key_help($path, $arg) {
+  switch ($path) {
+    case 'admin/help#cron_key':
+      $output = '<p>'. t('The Cron key module protects <em>cron.php</em> against unauthorized access. The URL of the <em>cron.php</em> page requires a "cron key" to protect against unauthorized access. The full URL of the page, with cron key, is available in the <em>Cron maintenance tasks</em> section of the <a href="@status-report">Status report</a>.', array('@status-report' => url('admin/reports/status'))) .'</p>';
+      return $output;
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function cron_key_menu() {
+  $items['admin/settings/cron-key'] = array(
+    'title' => 'Cron key',
+    'description' => 'Configure cron key to protect against unauthorized access.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('cron_key_settings'),  
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'cron_key.admin.inc',
+  );
+  return $items;
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+/// @todo Consider new permission "run cron".
+/*
+function cron_key_perm() {
+  return array('run cron');
+}
+*/
+
+/**
+ * Implementation of hook_patch().
+ */
+function cron_key_patch() {
+  $path = drupal_get_path('module', 'cron_key');
+  
+  return array(
+    'cron_key_not_found' => array(
+      'name' => t('Cron key, not found'),
+      'description' => t('Show 404 not found page if invalid key passed to "cron.php". You should apply this patch or "Cron key, access denied" patch, not both.'),
+      'file' => $path .'/cron_key_not_found.patch',
+      'patch arguments' => '-u -p0',
+    ),
+    'cron_key_access_denied' => array(
+      'name' => t('Cron key, access denied'),
+      'description' => t('Show 403 access denied page if invalid key passed to "cron.php". You should apply this patch or "Cron key, not found" patch, not both.'),
+      'file' => $path .'/cron_key_access_denied.patch',
+      'patch arguments' => '-u -p0',
+    ),
+  );
+}
+
+/**
+ * Regenerate cron key and save it.
+ */
+function cron_key_regenerate() {
+  $key = md5(uniqid(mt_rand(), true)) . md5(uniqid(mt_rand(), true));
+  variable_set('cron_key', drupal_get_token($key));
+}

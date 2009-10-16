@@ -1,0 +1,12 @@
+; $Id: cron_key.info,v 1.1 2009/05/25 21:37:53 doq Exp $
+name = Cron key
+description = Protect "cron.php" against unauthorized access.
+dependencies[] = patchdoq
+core = 6.x
+
+; Information added by drupal.org packaging script on 2009-05-25
+version = "6.x-1.0-alpha1"
+core = "6.x"
+project = "cron_key"
+datestamp = "1243287620"
+
