@@ -1,9 +1,11 @@
-$Id: CHANGELOG.txt,v 1.1.2.4 2009/06/27 12:41:12 mfu Exp $
+$Id: CHANGELOG.txt,v 1.1.2.5 2009/10/16 16:45:57 mfu Exp $
+
+v1.3 bug fix release
+Fixed #588208 by ikogan : username with t are concidered invalid
 
 v1.2 bug fix release
 Fixed #503718 by m.fu : htpassword corruption when enabling/disabling user
-Fixed #437904 by fasdalf@fasdalf.ru : group file not generated properly, now happen on 
-                            after_update
+Fixed #437904 by fasdalf@fasdalf.ru : group file not generated properly, now happen on after_update
 Fixed #437844 by fasdalf@fasdalf.ru : error when deleting one user
 Fixed #503726 by m.fu: group file no longer contain disabled users
 Added #503720 by m.fu : option to overwrite htpasswd
