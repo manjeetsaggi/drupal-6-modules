@@ -1,0 +1,39 @@
+<?php
+// $Id: couchdb_node.module,v 1.1 2009/07/14 13:45:41 damz Exp $
+
+/**
+ * @file
+ * Index Drupal nodes into a CouchDB database.
+ */
+
+/**
+ * Implementation of hook_cron().
+ */
+function couchdb_node_cron() {
+  $databases = variable_get('couchdb_databases', array());
+  $servers = variable_get('couchdb_servers', array());
+
+  if (!isset($databases['node'])) {
+    return;
+  }
+
+  $couchdb = new CouchDB($servers[$databases['node']['server']]['base_url']);
+  $database = $couchdb->getDatabase($databases['node']['database']);
+
+  if (!isset($database)) {
+    return;
+  }
+
+  // variable_del('couchdb_last_index_node');
+
+  foreach (couchdb_dirty_objects('node', variable_get('couchdb_node_limit', 2000)) as $object) {
+    echo $object->object_id . " ";
+    $node = node_load($object->object_id);
+    $result = $database->storeDocument('node:' . $node->nid, $node);
+    if (TRUE) { // TODO, error detection.
+      
+    }
+
+    couchdb_updated_index('node', $object);
+  }
+}

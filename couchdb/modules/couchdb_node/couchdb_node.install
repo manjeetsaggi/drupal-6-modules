@@ -1,0 +1,20 @@
+<?php
+// $Id: couchdb_node.install,v 1.1 2009/07/14 13:45:41 damz Exp $
+
+/**
+ * @file
+ * Installation functions for the couchdb_node module.
+ */
+
+/**
+ * Implementation of hook_install().
+ */
+function couchdb_node_enable() {
+  // Make sure we don't have stale data.
+  variable_del('couchdb_last_index_node');
+  db_query("DELETE FROM {couchdb_object_status} WHERE object_type = 'node'");
+  // Pre-populate the tracking table.
+  db_query("INSERT INTO {couchdb_object_status} (object_type, object_id, status, changed)
+            SELECT 'node', n.nid, n.status, GREATEST(n.created, n.changed, c.last_comment_timestamp) AS changed FROM {node} n INNER JOIN {node_comment_statistics} c ON n.nid = c.nid");
+}
+

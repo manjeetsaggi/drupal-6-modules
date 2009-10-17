@@ -1,0 +1,71 @@
+<?php
+// $Id: couchdb.module,v 1.1 2009/07/14 13:45:41 damz Exp $
+
+/**
+ * @file
+ * Integrate Drupal and CouchDB.
+ */
+
+/**
+ * Implementation of hook_autoload_info().
+ */
+function couchdb_autoload_info() {
+  return array(
+    'CouchDB' => array(
+      'file' => 'couchdb.inc',
+    ),
+    'CouchDBDatabase' => array(
+      'file' => 'couchdb.inc',
+    ),
+    'CouchDBException' => array(
+      'file' => 'couchdb.inc',
+    ),
+  );
+}
+
+/**
+ * Fetch a list of dirty objects.
+ */
+function couchdb_dirty_objects($object_type, $limit = 20) {
+  $last_index = variable_get('couchdb_last_index_' . $object_type, array(
+    'position' => 0,
+    'time' => 0,
+  ));
+  $result = db_query_range("SELECT object_id, changed FROM {couchdb_object_status} WHERE object_type = '%s' AND (changed > %d OR (changed = %d AND object_id > %d)) AND status = 1 ORDER BY changed ASC, object_id ASC", $object_type, $last_index['time'], $last_index['time'], $last_index['position'], 0, $limit);
+  $rows = array();
+  while ($object = db_fetch_object($result)) {
+    $rows[] = $object;
+  }
+  return $rows;
+}
+
+function couchdb_updated_index($object_type, $object) {
+  variable_set('couchdb_last_index_' . $object_type, array(
+    'position' => $object->object_id,
+    'time' => $object->changed,
+  ));
+}
+
+/**
+ * Save an object status.
+ */
+function couchdb_save_object_status($object_type, $object_id, $status, $changed) {
+  db_query("UPDATE {couchdb_object_status} SET status = %d, changed = %d WHERE object_type = '%s' AND object_id = %d", $status, $changed, $object_type, $object_id);
+  if (!db_affected_rows()) {
+    @db_query("INSERT INTO {couchdb_object_status} (object_type, object_id, status, changed) VALUES ('%s', %d, %d, %d)", $object_type, $object_id, $status, $changed);
+  }
+}
+
+/**
+ * Mark an object as modified.
+ */
+function couchdb_object_updated($object_type, $object_id) {
+  
+}
+
+/**
+ * Mark an object as deleted.
+ */
+function couchdb_object_deleted($object_type, $object_id) {
+  
+}

@@ -1,0 +1,13 @@
+; $Id: couchdb.info,v 1.1 2009/07/14 13:45:41 damz Exp $
+name = Couchdb
+description = Integration between CouchDB and Drupal.
+package = Couchdb
+core = 6.x
+dependencies[] = autoload
+
+; Information added by drupal.org packaging script on 2009-07-15
+version = "6.x-1.x-dev"
+core = "6.x"
+project = "couchdb"
+datestamp = "1247616437"
+
