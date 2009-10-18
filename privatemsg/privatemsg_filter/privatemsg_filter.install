@@ -1,5 +1,5 @@
 <?php
-// $Id: privatemsg_filter.install,v 1.1.2.3 2009/07/11 13:37:31 litwol Exp $
+// $Id: privatemsg_filter.install,v 1.1.2.5 2009/10/14 14:19:00 berdir Exp $
 
 /**
  * @file
@@ -24,6 +24,13 @@ function privatemsg_filter_schema() {
         'type'          => 'varchar',
         'length'        => 255,
         'not null'      => TRUE,
+      ),
+      'public'    => array(
+        'description'   => 'Defines if a tag is public (visible for all users)',
+        'type'          => 'int',
+        'unsigned'      => TRUE,
+        'size'          => 'tiny',
+        'default'       => 0,
       ),
     ),
     'primary key'     => array('tag_id')
@@ -67,6 +74,7 @@ function privatemsg_filter_install() {
 function privatemsg_filter_uninstall() {
   variable_del('privatemsg_filter_searchbody');
   variable_del('privatemsg_filter_tagfield_weight');
+  variable_del('privatemsg_filter_default_list');
   drupal_uninstall_schema('privatemsg_filter');
 }
 
@@ -74,5 +82,16 @@ function privatemsg_filter_update_6001() {
   $ret = array();
   $ret[] = update_sql("UPDATE {permission} SET perm = REPLACE(perm, 'use privatemsg_filter', 'filter private messages') WHERE perm LIKE '%use privatemsg_filter%'");
   $ret[] = update_sql("UPDATE {permission} SET perm = REPLACE(perm, 'create privatemsg_filter', 'create private message tags') WHERE perm LIKE '%create privatemsg_filter%'");
+  return $ret;
+}
+
+function privatemsg_filter_update_6002() {
+  $ret = array();
+  db_add_column($ret, 'pm_tags', 'public', 'int', array(
+    'description'   => 'Defines if a tag is public (visible for all users)',
+    'unsigned'      => TRUE,
+    'size'          => 'tiny',
+    'default'       => 0,
+  ));
   return $ret;
 }

@@ -1,5 +1,5 @@
 <?php
-// $Id: google_groups.module,v 1.2 2009/03/26 04:00:38 dragonwize Exp $
+// $Id: google_groups.module,v 1.4 2009/10/17 06:30:53 dragonwize Exp $
 
 /**
  * @file
@@ -76,7 +76,7 @@ function google_groups_block($op = 'list', $delta = 0) {
     case 'view':
       $settings = variable_get('google_groups_settings', array());
       $block['subject'] = t('Subscribe to @name', array('@name' => $settings['groups'][$delta]['name']));
-      $block['content'] = theme('google_groups_block_content', $delta);
+      $block['content'] = theme('google_groups_subscribe_form_block', $delta);
       return $block;
   }
 }
@@ -98,7 +98,7 @@ function google_groups_block_list() {
  */
 function google_groups_theme() {
   return array(
-    'google_groups_block_content' => array(
+    'google_groups_subscribe_form_block' => array(
       'template' => 'google-groups-subscribe-form-block',
       'arguments' => array('delta' => NULL),
     ),
@@ -108,7 +108,7 @@ function google_groups_theme() {
 /**
  * template preprocesser
  */
-function template_preprocess_google_groups_block_content(&$vars, $hook) {
+function template_preprocess_google_groups_subscribe_form_block(&$vars, $hook) {
   $settings = variable_get('google_groups_settings', array());
   $group = $settings['groups'][$vars['delta']];
   $vars['group_id'] = $group['id'];
@@ -168,7 +168,7 @@ function google_groups_mail($group_email, $from_email, $op = 'subscribe') {
   );
   $message = array(
     'id'       => 'google_groups_' . $op,
-    'to'       => $group_email . '-' . $op . '@googlegroups.com',
+    'to'       => $group_email . '+' . $op . '@googlegroups.com',
     'subject'  => $op,
     'body'     => drupal_wrap_mail($op),
     'headers'  => $headers,

@@ -162,7 +162,7 @@ function google_groups_delete_confirm(&$form_state) {
 function google_groups_delete_confirm_submit($form, &$form_state) {
   $settings = variable_get('google_groups_settings', array());
 
-  drupal_set_message(t('The Google Group %name has been deleted.', $settings['groups'][$form_state['delta']]['name']));
+  drupal_set_message(t('The Google Group %name has been deleted.', array('%name' => $settings['groups'][$form_state['delta']]['name'])));
   unset($settings['groups'][$form_state['values']['delta']]);
   variable_set('google_groups_settings', $settings);
 

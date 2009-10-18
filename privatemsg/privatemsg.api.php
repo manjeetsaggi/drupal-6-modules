@@ -1,5 +1,5 @@
 <?php
-// $Id: privatemsg.api.php,v 1.1.2.5 2009/06/08 13:38:41 litwol Exp $
+// $Id: privatemsg.api.php,v 1.1.2.7 2009/10/10 08:04:48 berdir Exp $
 
 /**
  * @file
@@ -150,43 +150,34 @@ function hook_privatemsg_sql_autocomplete_alter(&$fragments, $search, $names) {
 function hook_privatemsg_sql_list_alter(&$fragment, $account) {
 
 }
-/**
- * Display a list of sent messages.
- *
- * @param $fragments
- *   Query fragments
- * @param $account
- *   User object
- */
-function hook_privatemsg_sql_list_sent_alter(&$fragment, $account) {
-
-}
 
 /**
- * Load a single message.
+ * Query definition to load a message.
  *
  * @param $fragments
- *   Query fragments
+ *   Query fragments array.
  * @param $pmid
- *   message id, pm.mid
- * @param $account
- *   User object
+ *   the id of the message.
+  * @param $account
+ *   User object of account for which to load the message.
  */
-function hook_privatemsg_sql_load_alter(&$fragment, $pmid, $account) {
+function hook_privatemsg_sql_load_alter(&$fragments, $pmid, $account = NULL) {
 
 }
+
 /**
- * Load all message id's of a thread.
+ * Query definition to load messages of one or multiple threads.
  *
  * @param $fragments
- *   Query fragments
- * @param $thread_id
- *   Thread id, pmi.thread_id is the same as the mid of the first
- *   message of that thread
+ *   Query fragments array.
+ * @param $threads
+ *   Array with one or multiple thread id's.
  * @param $account
- *   User object
+ *   User object for which the messages are being loaded.
+ * @param $load_all
+ *   Deleted messages are only loaded if this is set to TRUE.
  */
-function hook_privatemsg_sql_messages_alter(&$fragment, $thread_id, $account) {
+function hook_privatemsg_sql_messages_alter(&$fragments, $threads, $account = NULL, $load_all = FALSE) {
 
 }
 
@@ -285,20 +276,6 @@ function hook_privatemsg_sql_unread_count_alter(&$fragment, $account) {
  */
 function hook_privatemsg_message_load($message) {
   return array('my_key' => 'my_value');
-}
-
-/**
- * Is called when a message is deleted.
- *
- * Note: The message is actually only marked as deleted and only for the current
- * user.
- * @todo There is no "undelete" hook
- *
- * @param $message
- *   Message array
- */
-function hook_privatemsg_message_delete($message) {
-
 }
 
 /**

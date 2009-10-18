@@ -1,5 +1,5 @@
 <?php
-// $Id: privatemsg.theme.inc,v 1.1.2.6 2009/07/10 16:53:18 litwol Exp $
+// $Id: privatemsg.theme.inc,v 1.1.2.8 2009/10/08 21:09:25 berdir Exp $
 
 /**
  * @file
@@ -91,7 +91,13 @@ function phptemplate_privatemsg_list_field__participants($thread) {
  */
 function phptemplate_privatemsg_list_field__subject($thread) {
   $field = array();
-  $field['data'] =l($thread['subject'], 'messages/view/'. $thread['thread_id']);
+  $options = array();
+  $is_new = '';
+  if (!empty($thread['is_new'])) {
+    $is_new = theme_mark(MARK_NEW);
+    $options['fragment'] = 'new';
+  }
+  $field['data'] = l($thread['subject'], 'messages/view/' . $thread['thread_id'], $options) . $is_new;
   $field['class'] = 'privatemsg-list-subject';
   return $field;
 }
@@ -103,7 +109,12 @@ function phptemplate_privatemsg_list_field__subject($thread) {
  */
 function phptemplate_privatemsg_list_field__count($thread) {
   $field = array();
-  $field['data'] =$thread['count'] -1;
+  $field['data'] = $thread['count'];
+  $options = array();
+  if (!empty($thread['is_new']) && $thread['is_new'] < $thread['count']) {
+    $options['fragment'] = 'new';
+    $field['data'] .= '<br />' . l((format_plural($thread['is_new'], '(1 new)', '(@count new)')),'messages/view/' . $thread['thread_id'], $options);
+  }
   $field['class'] = 'privatemsg-list-count';
   return $field;
 }
@@ -169,7 +180,7 @@ function phptemplate_privatemsg_list_header__subject() {
  */
 function phptemplate_privatemsg_list_header__count() {
   return array(
-    'data'    => t('Answers'),
+    'data'    => t('Messages'),
     'key'     => 'count',
     'class'   => 'privatemsg-header-count',
     '#weight' => -25,
@@ -242,7 +253,7 @@ function theme_privatemsg_list($form) {
     foreach ($form['#rows'] as $thread_id => $row) {
       $data = array();
       // Render the checkbox.
-      $data[] = drupal_render($form['threads'][$thread_id]);
+      $data[] = array('data' => drupal_render($form['threads'][$thread_id]), 'class' => 'privatemsg-list-select');
 
       // Store the #rows data in the same order as the header is, the key property of the header refers to the field that belongs to it.
       foreach ($headers as $header) {

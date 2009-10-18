@@ -1,5 +1,5 @@
 <?php
-// $Id: privatemsg.install,v 1.5.2.4.2.11.2.11 2009/07/07 23:31:43 litwol Exp $
+// $Id: privatemsg.install,v 1.5.2.4.2.11.2.14 2009/10/10 08:04:48 berdir Exp $
 
 /**
  * @file
@@ -80,6 +80,13 @@ function privatemsg_schema() {
         'type'          => 'text',
         'not null'      => TRUE,
         'size'          => 'big',
+      ),
+      'format'        => array(
+        'type'          => 'int',
+        'size'          => 'small',
+        'not null'      => TRUE,
+        'default'       => FILTER_FORMAT_DEFAULT,
+        'description'   => 'The {filter_formats}.format of the message text.',
       ),
       'timestamp'     => array(
         'description'   => 'Time when the message was sent',
@@ -415,6 +422,53 @@ function privatemsg_update_6003() {
   while($row = db_fetch_object($result)) {
       privatemsg_message_change_status($row->mid, PRIVATEMSG_READ, $row );
   }
+  $ret[] = array('success' => $result !== FALSE, 'query' => check_plain($sql));
+  return $ret;
+}
+
+/**
+ * Create a format column.
+ *
+ * Copied from system_update_6051
+ */
+function privatemsg_update_6004() {
+  $ret = array();
+  if (!db_column_exists('pm_message', 'format')) {
+    $schema = array(
+      'type' => 'int',
+      'size' => 'small',
+      'not null' => TRUE,
+      'default' => FILTER_FORMAT_DEFAULT,
+      'description' => 'The {filter_formats}.format of the message text.',
+    );
+
+    db_add_field($ret, 'pm_message', 'format', $schema);
+
+    // Set the format of existing signatures to the current default input format.
+    if ($current_default_filter = (int)variable_get('filter_default_format', 1)) {
+      $ret[] = update_sql("UPDATE {pm_message} SET format = ". $current_default_filter);
+    }
+  }
+  return $ret;
+}
+
+/**
+ * Enable delete permission for all users that are allowed to read them.
+ */
+function privatemsg_update_6005() {
+  $ret = array();
+  $ret[] = update_sql("UPDATE {permission} SET perm = REPLACE(perm, 'read privatemsg', 'read privatemsg, delete privatemsg') WHERE perm LIKE '%read privatemsg%'");
+  return $ret;
+}
+
+/**
+ * Set the deleted timestamp of all messages to now.
+ */
+function privatemsg_update_6006() {
+  $ret = array();
+
+  $sql = "UPDATE {pm_index} SET deleted = %d WHERE deleted = 1";
+  $result = db_query($sql, time());
   $ret[] = array('success' => $result !== FALSE, 'query' => check_plain($sql));
   return $ret;
 }

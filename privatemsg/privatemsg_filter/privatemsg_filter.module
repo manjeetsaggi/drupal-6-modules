@@ -1,5 +1,5 @@
 <?php
-// $Id: privatemsg_filter.module,v 1.1.2.17 2009/07/11 13:37:31 litwol Exp $
+// $Id: privatemsg_filter.module,v 1.1.2.22 2009/10/16 13:30:22 berdir Exp $
 
 /**
  * @file
@@ -29,36 +29,71 @@ function privatemsg_filter_menu() {
     'access arguments' => array('administer privatemsg settings'),
     'type'             => MENU_LOCAL_TASK,
   );
-  $items['messages/list/all'] = array(
-    'title'            => 'All messages',
-    'page callback'    => 'drupal_get_form',
-    'page arguments'   => array('privatemsg_list', 'list'),
-    'access callback'  => 'privatemsg_user_access',
+  $items['admin/settings/messages/tags'] = array(
+    'title'            => 'Tags',
+    'description'      => 'Configure tags.',
+    'page callback'    => 'privatemsg_tags_admin',
+    'access arguments' => array('administer privatemsg settings'),
+    'type'             => MENU_LOCAL_TASK,
+    'file'             => 'privatemsg_filter.admin.inc',
+  );
+  $items['admin/settings/messages/tags/list'] = array(
+    'title'            => 'List',
+    'description'      => 'Configure tags.',
+    'page callback'    => 'privatemsg_tags_admin',
+    'access arguments' => array('administer privatemsg settings'),
     'type'             => MENU_DEFAULT_LOCAL_TASK,
+    'file'             => 'privatemsg_filter.admin.inc',
     'weight'           => -10,
   );
-  $items['messages/list/inbox'] = array(
+  $items['admin/settings/messages/tags/add'] = array(
+    'title'            => 'Add',
+    'description'      => 'Configure tags.',
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('privatemsg_tags_form'),
+    'access arguments' => array('administer privatemsg settings'),
+    'type'             => MENU_LOCAL_TASK,
+    'file'             => 'privatemsg_filter.admin.inc',
+  );
+  $items['admin/settings/messages/tags/edit/%'] = array(
+    'title'            => 'Add',
+    'description'      => 'Configure tags.',
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('privatemsg_tags_form', 5),
+    'access arguments' => array('administer privatemsg settings'),
+    'type'             => MENU_CALLBACK,
+    'file'             => 'privatemsg_filter.admin.inc',
+  );
+  $items['admin/settings/messages/tags/delete/%'] = array(
+    'title'            => 'Add',
+    'description'      => 'Configure tags.',
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('privatemsg_filter_tags_delete', 5),
+    'access arguments' => array('administer privatemsg settings'),
+    'type'             => MENU_CALLBACK,
+    'file'             => 'privatemsg_filter.admin.inc',
+  );
+  $items['messages/inbox'] = array(
     'title'            => 'Inbox',
     'page callback'    => 'drupal_get_form',
     'page arguments'   => array('privatemsg_list', 'inbox'),
     'access callback'  => 'privatemsg_user_access',
-    'type'             => MENU_LOCAL_TASK,
-    'weight'           => -10,
+    'type'             => variable_get('privatemsg_filter_default_list', 0) ? MENU_LOCAL_TASK : MENU_DEFAULT_LOCAL_TASK,
+    'weight'           => -15,
   );
-  $items['messages/list/sent'] = array(
-    'title'            => 'Sent Messages',
+  $items['messages/sent'] = array(
+    'title'            => 'Sent messages',
     'page callback'    => 'drupal_get_form',
     'page arguments'   => array('privatemsg_list', 'sent'),
     'access callback'  => 'privatemsg_user_access',
     'type'             => MENU_LOCAL_TASK,
-    'weight'           => -10,
+    'weight'           => -12,
   );
   $items['messages/filter/user-name-autocomplete'] = array(
     'page callback'    => 'privatemsg_user_name_autocomplete',
     'access callback'  => 'privatemsg_user_access',
     'access arguments' => array('write privatemsg'),
     'type'             => MENU_CALLBACK,
-    'weight'           => -10,
   );
   $items['messages/filter/tag-autocomplete'] = array(
     'page callback'    => 'privatemsg_filter_tags_autocomplete',
@@ -68,6 +103,20 @@ function privatemsg_filter_menu() {
     'weight'           => -10,
   );
   return $items;
+}
+
+/**
+ * Implement hook_menu_alter().
+ */
+function privatemsg_filter_menu_alter(&$items) {
+  // Rename messages to "All messages".
+  $items['messages/list']['title'] = 'All messages';
+
+  if(variable_get('privatemsg_filter_default_list', 0) == 0) {
+    // Change default argument of /messages to inbox. and set the task to MENU_LOCAL_TASK.
+    $items['messages']['page arguments'] = array('privatemsg_list', 'inbox');
+    $items['messages/list']['type'] = MENU_LOCAL_TASK;
+  }
 }
 
 function privatemsg_filter_admin() {
@@ -89,6 +138,118 @@ function privatemsg_filter_admin() {
   );
 
   return system_settings_form($form);
+}
+
+/**
+ * Implementation of hook_form_FORM_ID_alter() to add a filter widget to the message listing pages.
+ */
+function privatemsg_filter_form_private_message_settings_alter(&$form, $form_state) {
+  $form['privatemsg_listing']['privatemsg_filter_default_list'] = array(
+    '#type' => 'radios',
+    '#default_value' => variable_get('privatemsg_filter_default_list', 0),
+    '#options' => array(t('Inbox'), t('All messages')),
+    '#title' => t('Choose the default list option'),
+    '#description' => t('Choose which of the two lists are shown by default when following the messages link.'),
+  );
+
+  $form['#submit'][] = 'privatemsg_filter_settings_submit';
+}
+
+/**
+ * Rebuilding the menu if necessary.
+ */
+function privatemsg_filter_settings_submit($form, &$form_state) {
+  if ($form['privatemsg_listing']['privatemsg_filter_default_list']['#default_value'] != $form_state['values']['privatemsg_filter_default_list']) {
+    menu_rebuild();
+  }
+}
+
+/**
+ * Function to create a tag
+ *
+ * @param $tags A single tag or an array of tags.
+ */
+function privatemsg_filter_create_tags($tags) {
+  if (!is_array($tags)) {
+    $tags = array($tags);
+  }
+  
+  $tag_ids = array();
+
+  foreach ($tags as $tag) {
+    $tag = trim($tag);
+    if (empty($tag)) {
+      // Do not save a blank tag.
+      continue;
+    }
+
+    // Check if the tag already exists and only create the tag if it does not.
+    $tag_id = db_result(db_query("SELECT tag_id FROM {pm_tags} WHERE tag = '%s'", $tag));
+    if (empty($tag_id) && privatemsg_user_access('create private message tags')) {
+      db_query("INSERT INTO {pm_tags} (tag) VALUES ('%s')", $tag);
+      $tag_id = db_last_insert_id('pm_tags', 'tag_id');
+    }
+    elseif (empty($tag_id)) {
+      // The user does not have permission to create new tags - disregard this tag and move onto the next.
+      drupal_set_message(t('Tag %tag was ignored because you do not have permission to create new tags.', array('%tag' => $tag)));
+      continue;
+    }
+    $tag_ids[] = $tag_id;
+  }
+  return $tag_ids;
+}
+
+/**
+ * Tag one or multiple threads with a tag.
+ *
+ * @param $threads A single thread id or an array of thread ids.
+ * @param $tag_id Id of the tag.
+ */
+function privatemsg_filter_add_tags($threads, $tag_id, $account = NULL) {
+  if (!is_array($threads)) {
+    $threads = array($threads);
+  }
+  if (empty($account)) {
+    global $user;
+    $account = drupal_clone($user);
+  }
+
+  foreach ($threads as $thread) {
+    // Make sure that we don't add a tag to a thread twice,
+    // only insert if there is no such tag yet.
+    if (db_result(db_query('SELECT COUNT(*) FROM {pm_tags_index} WHERE tag_id = %d AND (uid = %d AND thread_id = %d)', $tag_id, $account->uid, $thread)) == 0) {
+      db_query('INSERT INTO {pm_tags_index} (tag_id, uid, thread_id) VALUES (%d, %d, %d)', $tag_id, $account->uid, $thread);
+    }
+  }
+}
+
+/**
+ * Remove tag from one or multiple threads.
+ *
+ * @param $threads A single thread id or an array of thread ids.
+ * @param $tag_id Id of the tag - set to NULL to remove all tags.
+ */
+function privatemsg_filter_remove_tags($threads, $tag_id = NULL, $account = NULL) {
+  if (!is_array($threads)) {
+    $threads = array($threads);
+  }
+  if (empty($account)) {
+    global $user;
+    $account = drupal_clone($user);
+  }
+
+  if (is_null($tag_id)) {
+    //Delete all tag mapping.
+    foreach ($threads as $thread) {
+      db_query('DELETE FROM {pm_tags_index} WHERE uid = %d AND thread_id = %d', $account->uid, $thread);
+    }
+  }
+  else {
+    //Delete tag mapping for the specified tag.
+    foreach ($threads as $thread) {
+      db_query('DELETE FROM {pm_tags_index} WHERE uid = %d AND thread_id = %d AND tag_id = %d', $account->uid, $thread, $tag_id);
+    }
+  }
 }
 
 function privatemsg_filter_get_filter($account) {
@@ -132,7 +293,7 @@ function privatemsg_filter_get_tags_data($account) {
   }
 
   // Only show the tags that a user have used.
-  $query = _privatemsg_assemble_query(array('used_tags', 'privatemsg_filter'), $account);
+  $query = _privatemsg_assemble_query(array('tags', 'privatemsg_filter'), $account);
   $results = db_query($query['query']);
 
   $tag_data = array();
@@ -305,14 +466,79 @@ function privatemsg_filter_create_get_query($filter)
 }
 
 /**
- * Implementation of hook_form_alter() to add a filter widget to the message listing pages.
+ * Implementation of hook_form_FORM_ID_alter() to add a filter widget to the message listing pages.
  */
 function privatemsg_filter_form_privatemsg_list_alter(&$form, $form_state) {
+  global $user;
+  
   if (privatemsg_user_access('filter private messages')) {
     $form += privatemsg_filter_dropdown($form_state, $form['#account']);
   }
+
+  $tags = privatemsg_filter_get_tags_data($user);
+  if (privatemsg_user_access('filter private messages') && !empty($tags)) {
+    $options = array();
+    $options[] = t('Apply Tag...');
+    foreach ($tags as $tag_id => $tag) {
+      $options[$tag_id] = $tag;
+    }
+    $form['actions']['tag-add'] = array(
+      '#type'          => 'select',
+      '#options'       => $options,
+      '#default_value' => 0,
+      // Execute the submit button if a operation has been selected.
+      '#attributes'    => array('onchange' => "$('#edit-tag-add-submit').click()"),
+    );
+    $form['actions']['tag-add-submit'] = array(
+        '#type'       => 'submit',
+        '#value'      => t('Apply Tag'),
+        '#submit'     => array('privatemsg_filter_add_tag_submit'),
+        '#attributes' => array('class' => 'privatemsg-action-button'),
+    );
+    $options[0] = t('Remove Tag...');
+    $form['actions']['tag-remove'] = array(
+      '#type'          => 'select',
+      '#options'       => $options,
+      '#default_value' => 0,
+      // Execute the submit button if a operation has been selected.
+      '#attributes'    => array('onchange' => "$('#edit-tag-remove-submit').click()"),
+    );
+    $form['actions']['tag-remove-submit'] = array(
+        '#type'       => 'submit',
+        '#value'      => t('Remove Tag'),
+        '#submit'     => array('privatemsg_filter_remove_tag_submit'),
+        '#attributes' => array('class' => 'privatemsg-action-button'),
+    );
+  }
 }
 
+/**
+ * Form callback for adding a tag to threads.
+ */
+function privatemsg_filter_add_tag_submit($form, &$form_state) {
+  $operation = array(
+    'callback' => 'privatemsg_filter_add_tags',
+    'callback arguments' => array('tag_id' => $form_state['values']['tag-add']),
+    'undo callback' => 'privatemsg_filter_remove_tags',
+    'undo callback arguments' => array('tag_id' => $form_state['values']['tag-add']),
+  );
+  drupal_set_message(t('The selected conversations have been tagged.'));
+  privatemsg_operation_execute($operation, $form_state['values']['threads']);
+}
+
+/**
+ * Form callback for removing a tag to threads.
+ */
+function privatemsg_filter_remove_tag_submit($form, &$form_state) {
+  $operation = array(
+    'callback' => 'privatemsg_filter_remove_tags',
+    'callback arguments' => array('tag_id' => $form_state['values']['tag-remove']),
+    'undo callback' => 'privatemsg_filter_add_tags',
+    'undo callback arguments' => array('tag_id' => $form_state['values']['tag-remove']),
+  );
+  drupal_set_message(t('The tag has been removed from the selected conversations.'));
+  privatemsg_operation_execute($operation, $form_state['values']['threads']);
+}
 
 /**
  * Hook into the query builder to add the tagging info to the correct query
@@ -383,7 +609,7 @@ function privatemsg_filter_form(&$form_state) {
   $thread_id = arg(2);
 
   // Get a list of current tags for this thread
-  $query = _privatemsg_assemble_query(array('used_tags', 'privatemsg_filter'), $user, $thread_id);
+  $query = _privatemsg_assemble_query(array('tags', 'privatemsg_filter'), $user, $thread_id);
   $results = db_query($query['query']);
   $count = db_result(db_query($query['count']));
   $tags = '';
@@ -430,34 +656,16 @@ function privatemsg_filter_form_submit($form, &$form_state) {
     $tags = explode(',', $form_state['values']['tags']);
 
     // Step 1 - Delete all tag mapping. I cannot think of a better way to remove tags that are no longer in the textfield, so ideas welcome.
-    db_query('DELETE FROM {pm_tags_index} WHERE uid = %d AND thread_id = %d', $form_state['values']['user_id'], $form_state['values']['thread_id']);
+    privatemsg_filter_remove_tags($form_state['values']['thread_id']);
 
-    foreach ($tags as $tag) {
-      // Step 2 - We need to sanitise the tag.
-      // Since we allow tags to be passed via the url, there needs to be some sanity testing of each tag.
-      // Currently we replace blank spaces and a # with a "-", but this needs to be expanded to cover all the url special cases.
-      $tag = trim($tag);
-      if (empty($tag)) {
-        // Do not save a blank tag.
-        continue;
-      }
-
-      // Step 3 - Make sure that the tag exists and if it does not, we need to create it.
-      $tag_id = db_result(db_query("SELECT tag_id FROM {pm_tags} WHERE tag = '%s'", $tag));
-      if (empty($tag_id) && privatemsg_user_access('create private message tags')) {
-        db_query("INSERT INTO {pm_tags} (tag) VALUES ('%s')", $tag);
-        $tag_id = db_last_insert_id('pm_tags', 'tag_id');
-      }
-      elseif (empty($tag_id)) {
-        // The user does not have permission to create new tags - disregard this tag and move onto the next.
-        drupal_set_message(t('Tag %tag was ignored because you do not have permission to create new tags.', array('%tag' => $tag)));
-        continue;
-      }
-
-      // Step 4 - map the tag to the thread and the user.
-      db_query('INSERT INTO {pm_tags_index} (tag_id, uid, thread_id) VALUES (%d, %d, %d)', $tag_id, $form_state['values']['user_id'], $form_state['values']['thread_id']);
+    // Step 2 - Get the id for each of the tags.
+    $tag_ids = privatemsg_filter_create_tags($tags);
+    
+    // Step 3 - Save all the tagging data.
+    foreach ($tag_ids as $tag_id) {
+      privatemsg_filter_add_tags($form_state['values']['thread_id'], $tag_id);
     }
-  drupal_set_message(t('Tagging information has been saved.'));
+    drupal_set_message(t('Tagging information has been saved.'));
   }
 }
 
@@ -512,28 +720,39 @@ function privatemsg_filter_privatemsg_sql_autocomplete_alter(&$fragments, $searc
 }
 
 /**
- * Query definition to get the tags in use by the specified user.
+ * Query definition to fetch tags.
  *
  * @param $fragments
- *  Query fragments array.
+ *   Query fragments array.
  * @param $user
- *  User object for whom we want the tags.
+ *   User object for whom we want the tags. Defaults to all users.
  * @param $thread_id
- *  The thread_id - Only needed if we want the tags for a specific thread instead of all used tags on any thread.
+ *   The thread_id - Only needed if we want the tags for a specific thread instead of all used tags on any thread.
  */
-function privatemsg_filter_sql_used_tags(&$fragments, $user, $thread_id = NULL) {
+function privatemsg_filter_sql_tags(&$fragments, $user = NULL, $thread_id = NULL) {
   $fragments['primary_table'] = '{pm_tags} t';
   $fragments['select'][] = 't.tag';
   $fragments['select'][] = 't.tag_id';
-  $fragments['inner_join'][]  = 'INNER JOIN {pm_tags_index} ti on ti.tag_id = t.tag_id';
+  $fragments['select'][] = 't.public';
+
   if (!empty($thread_id)) {
-    $fragments['where'][] = 'ti.thread_id = %d';
+    $fragments['inner_join'][]  = 'INNER JOIN {pm_tags_index} ti on ti.tag_id = t.tag_id';
+    $fragments['where'][]       = 'ti.thread_id = %d';
     $fragments['query_args']['where'][] = $thread_id;
   }
-  $fragments['where'][] = 'ti.uid = %d';
-  $fragments['query_args']['where'][] = $user->uid;
-
-  $fragments['order_by'][] = 't.tag ASC';
+  else {
+    $fragments['select'][]      = 'COUNT(ti.thread_id) as count';
+    $fragments['inner_join'][]  = 'LEFT JOIN {pm_tags_index} ti ON t.tag_id = ti.tag_id';
+    $fragments['group_by'][]    = 't.tag_id';
+    $fragments['group_by'][]    = 't.tag';
+  }
+  if (!empty($user)) {
+    $fragments['where'][]       = 'ti.uid = %d';
+    $fragments['query_args']['where'][] = $user->uid;
+  }
+  if (!empty($thread_id) || !empty($user)) {
+    $fragments['order_by'][] = 't.tag ASC';
+  }
 }
 
 /**
@@ -547,6 +766,8 @@ function privatemsg_filter_sql_used_tags(&$fragments, $user, $thread_id = NULL) 
  *  Array of tags not to be used as suggestions.
  */
 function privatemsg_filter_sql_tags_autocomplete(&$fragments, $search, $tags) {
+  global $user;
+
   $fragments['primary_table'] = '{pm_tags} pmt';
   $fragments['select'][] = 'pmt.tag';
   $fragments['where'][] = "pmt.tag LIKE '%s'";
@@ -555,5 +776,8 @@ function privatemsg_filter_sql_tags_autocomplete(&$fragments, $search, $tags) {
     $fragments['where'][] = "pmt.tag NOT IN (". db_placeholders($tags, 'text') .")";
     $fragments['query_args']['where'] += $tags;
   }
+  $fragments['inner_join'][]  = 'LEFT JOIN {pm_tags_index} pmti ON pmt.tag_id = pmti.tag_id AND pmti.uid = %d';
+  $fragments['query_args']['join'][] = $user->uid;
+  $fragments['where'][] = '(pmti.uid IS NOT NULL OR pmt.public = 1)';
   $fragments['order_by'][] = 'pmt.tag ASC';
 }
