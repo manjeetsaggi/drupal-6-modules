@@ -1,5 +1,5 @@
 <?php
-// $Id: shadowbox.module,v 1.1.2.12.2.28.2.7 2009/08/21 16:27:37 psynaptic Exp $
+// $Id: shadowbox.module,v 1.1.2.12.2.28.2.17 2009/09/18 01:19:40 psynaptic Exp $
 
 /**
  * @file
@@ -7,42 +7,30 @@
  * modal dialogue.
  */
 
+define('SHADOWBOX_DEFAULT_PATH', 'sites/all/plugins/shadowbox');
+
 /**
  * Implementation of hook_help().
  */
 function shadowbox_help($path, $arg) {
   switch ($path) {
     case 'admin/help#shadowbox':
-      $output = '<p>'. t('Shadowbox is a modal media viewer application akin to !lightbox and !thickbox. You can use it to display images, movies, and other web content in a window that is overlaid on top of the originating page.', array('!lightbox' => l('lightbox2', 'http://drupal.org/project/lightbox2', array('absolute' => TRUE)), '!thickbox' => l('thickbox', 'http://drupal.org/project/thickbox', array('absolute' => TRUE)))) .'</p>';
-      $output .= '<h3>'. t('From the author of Shadowbox:') .'</h3>';
-      $output .= '<blockquote>'. t('Shadowbox is an online media viewer application that supports all of the web\'s most popular media publishing formats. Shadowbox is written entirely in JavaScript and CSS and is highly customizable. Using Shadowbox, website authors can showcase a wide assortment of media in all major browsers without navigating users away from the linking page.') .'</blockquote>';
-      $output .= '<h3>'. t('Usage:') .'</h3>';
-      $output .= '<p>'. t('This module has !global_settings that work on a site-wide basis.', array('!global_settings' => l('global settings', 'admin/settings/shadowbox'))) .'</p>';
-      $output .= '<p>'. t('Integration with !imagefield 2, !imagecache 2 and !views is provided and the same formatters found in lightbox2 are available in this module.', array('!imagecache' => l('imagecache', 'http://drupal.org/project/imagecache', array('absolute' => TRUE)), '!imagefield' => l('imagefield', 'http://drupal.org/project/imagefield', array('absolute' => TRUE)), '!views' => l('views', 'http://drupal.org/project/views', array('absolute' => TRUE)))) .'</p>';
-      $output .= '<p>'. t('To manually enable Shadowbox for a link you must add a <strong><code>rel</code></strong> attribute with a value of <strong><code>shadowbox</code></strong> (for compatibility with lightbox2 you can also use a value of <strong><code>lightbox</code></strong>).') .'</p>';
-      $output .= '<h4>'. t('Single media item:') .'</h4>';
-      $output .= '<p>'. t('The important thing to note here is the <code>rel</code> attribute. This tells Shadowbox you wish to activate it for this link. The <code>title</code> attribute is optional and can be used to give a caption to the item.') .'</p>';
-      $output .= '<strong>'. t('Example:') .'</strong>';
-      $output .= '<p>'. t('<code><pre>&lt;a href=&quot;image1.jpg&quot; rel=&quot;shadowbox&quot; title=&quot;Caption&quot;&gt;Image&lt;/a&gt;</pre></code>') .'</p>';
-      $output .= '<h4>'. t('Gallery:') .'</h4>';
-      $output .= '<p>'. t('Media of mixed type can be grouped into a gallery using <code>shadowbox[name]</code> where <code>name</code> is any value you wish to use for the current grouping of media. The value of <code>name</code> is only used internally by Shadowbox and won\'t be shown to the user.') .'</p>';
-      $output .= '<strong>'. t('Example:') .'</strong>';
-      $output .= '<p>'. t('<code><pre>&lt;a href=&quot;image1.jpg&quot; rel=&quot;shadowbox[gallery]&quot; title=&quot;Caption 1&quot;&gt;Image 1&lt;/a&gt;
-&lt;a href=&quot;image2.jpg&quot; rel=&quot;shadowbox[gallery]&quot; title=&quot;Caption 2&quot;&gt;Image 2&lt;/a&gt;
-&lt;a href=&quot;image3.jpg&quot; rel=&quot;shadowbox[gallery]&quot; title=&quot;Caption 3&quot;&gt;Image 3&lt;/a&gt;</pre></code>') .'</p>';
-      $output .= '<h4>'. t('iFrame:') .'</h4>';
-      $output .= '<p>'. t('A useful feature of Shadowbox is the ability to open another website directly on top of the current page.') .'</p>';
-      $output .= '<strong>'. t('Example:') .'</strong>';
-      $output .= '<p>'. t('<code><pre>&lt;a href=&quot;http://google.com&quot; rel=&quot;shadowbox&quot; title=&quot;Google&quot;&gt;Google&lt;/a&gt;</pre></code>') .'<p>';
-      $output .= '<h4>'. t('Advanced usage:') .'</h4>';
-      $output .= '<p>'. t('Shadowbox allows you to specify options on a per-instance basis by using a JSON-formatted parameter. More information on this feature can be found on the !shadowbox_usage', array('!shadowbox_usage' => l('Shadowbox usage page', 'http://mjijackson.com/shadowbox/doc/usage.html#markup', array('absolute' => TRUE)))) .'</p>';
-      $output .= '<strong>'. t('Example:') .'</strong>';
-      $output .= '<p>'. t('<code><pre>&lt;a href=&quot;http://google.com&quot; rel=&quot;shadowbox;width=740;height=380;
-  options={overlayOpacity:1,resizeDuration:0.2};&quot;&gt;Google&lt;/a&gt;</pre></code>') .'</p>';
-      return $output;
+      return t('
+<p>Shadowbox is a modal media viewer application akin to !lightbox and !thickbox. You can use it to display images, movies, and other web content in a window that is overlaid on top of the page.</p>
+
+<p>The module is integrated with filefield\'s image element so you can select from a number of different options for displaying images uploaded to nodes and shown in views.</p>
+
+<p>For instructions on manually crafting your links please see the !usage.</p>
+
+<p>This module has !options that work on a site-wide basis.</p>', array(
+  '!lightbox' => l('lightbox2', 'http://drupal.org/project/lightbox2'),
+  '!thickbox' => l('thickbox', 'http://drupal.org/project/thickbox'),
+  '!options' => l('options', 'admin/settings/shadowbox'),
+  '!usage' => l('official usage guide', 'http://www.shadowbox-js.com/usage.html#markup'),  
+));
 
     case 'admin/settings/shadowbox':
-      return '<p>'. t('This page provides access to the Shadowbox settings. The settings here work globally so any changes made here will affect Shadowbox for the entire site.') .'</p>';
+      return t('<p>This page provides access to the Shadowbox settings. The settings here work globally so any changes made here will affect Shadowbox for the entire site.</p>');
   }
 }
 
@@ -95,7 +83,16 @@ function shadowbox_menu() {
  * Implementation of hook_init().
  */
 function shadowbox_init() {
+  if (!shadowbox_installed()) {
+    drupal_set_message(t('Shadowbox is not properly installed. Please check the !status', array('!status' => l('status report', 'admin/reports/status'))), 'warning');
+  }
   shadowbox_construct_header();
+}
+
+function shadowbox_installed() {
+  $shadowbox_path = SHADOWBOX_DEFAULT_PATH;
+  $shadowbox_location = variable_get('shadowbox_location', $shadowbox_path);
+  return file_exists($shadowbox_location);
 }
 
 /**
@@ -183,15 +180,16 @@ function shadowbox_theme() {
   $theme = array(
     'imagefield_image_imagecache_shadowbox' => array(
       'arguments' => array(
-        'view_preset' => NULL,
-        'field' => NULL,
+        'source' => NULL,
+        'destination' => NULL,
         'item' => NULL,
-        'attributes' => array(),
-        'gallery' => NULL,
+        'gallery_id' => array(),
+        'field_type_names' => NULL,
       ),
     ),
     'shadowbox_image' => array(
       'arguments' => array(
+        'path' => NULL,
         'alt' => '',
         'title' => '',
         'attributes' => array(),
@@ -249,10 +247,28 @@ function theme_shadowbox_image($path, $alt = '', $title = '', $attributes = NULL
 /**
  * Implementation of theme_imagefield_image_imagecache_shadowbox().
  */
-function theme_imagefield_image_imagecache_shadowbox($source, $destination, $item, $gallery_id = '') {
+function theme_imagefield_image_imagecache_shadowbox($source, $destination, $item, $gallery_id = '', $field_type_names) {
   $filepath = $item['filepath'];
+  if ($filepath == '') {
+    return;
+  }
+
   $alt = $item['data']['alt'];
-  $title = $item['data']['title'];
+
+  $title_text_setting = variable_get('shadowbox_title_text_'. $field_type_names, 0);
+  switch ($title_text_setting) {
+    case 0:
+      $title = $item['data']['title'];
+      break;
+    case 1:
+      $title = $item['data']['description'];
+      break;
+    case 2:
+      $node = node_load($item['nid']);
+      $title = $node->title;
+      break;
+  }
+
   $rel = ($gallery_id != '') ? 'shadowbox['. $gallery_id .']' : 'shadowbox';
   $link_attributes = array(
     'rel' => $rel,
@@ -262,10 +278,6 @@ function theme_imagefield_image_imagecache_shadowbox($source, $destination, $ite
     'attributes' => $link_attributes,
     'html' => TRUE,
   );
-
-  if ($filepath == '') {
-    return;
-  }
 
   if ($source == 'original') {
     $image = theme('shadowbox_image', $filepath, $alt, $title);
@@ -298,6 +310,7 @@ function theme_shadowbox_formatter_imagefield($element) {
   }
 
   $field_name = $element['#field_name'];
+  $field_type_names = $element['#type_name'] .'_'. $field_name;
   $item = $element['#item'];
   $formatter = $element['#formatter'];
   $node = node_load($element['#node']->nid);
@@ -322,7 +335,7 @@ function theme_shadowbox_formatter_imagefield($element) {
   }
 
   if ($source == 'original' || in_array($source, $presets)) {
-    $output = theme('imagefield_image_imagecache_shadowbox', $source, $destination, $item, $gallery_id);
+    $output = theme('imagefield_image_imagecache_shadowbox', $source, $destination, $item, $gallery_id, $field_type_names);
   }
 
   return $output;
@@ -349,6 +362,7 @@ function shadowbox_construct_header() {
   global $language;
 
   $module_path = drupal_get_path('module', 'shadowbox');
+  $shadowbox_path = SHADOWBOX_DEFAULT_PATH;
   $shadowbox_location = variable_get('shadowbox_location', $shadowbox_path);
 
   $images = variable_get('shadowbox_supported_images', shadowbox_get_types('image'));
@@ -368,21 +382,22 @@ function shadowbox_construct_header() {
   $iframe_support = array_filter($iframe);
 
   if (shadowbox_active() && variable_get('shadowbox_enabled', TRUE)) {
+    // Add the base files.
     drupal_add_js($shadowbox_location .'/shadowbox.js');
     drupal_add_js($shadowbox_location .'/adapters/shadowbox-jquery.js');
-    drupal_add_js($module_path .'/shadowbox_auto.js');
     drupal_add_css($shadowbox_location .'/shadowbox.css');
-    // If language is set to xx (i.e. when using string overrides module) default to English.
-    if ($language->language == 'xx') {
-      $language->language = 'en';
-    }
+
+    // Add the language file.
     $language_file = $shadowbox_location .'/languages/shadowbox-'. $language->language .'.js';
     if (file_exists($language_file)) {
       drupal_add_js($language_file);
     }
     else {
-      drupal_set_message(t('Shadowbox: A language file does not exist for your language: !language (!code). Tried to load: !file. You can resolve this by either copying an existing language file and renaming the file or creating a new language file. Using either method you must use the 2-letter code for your language so the filename has the form: shadowbox-xx.js where xx is your 2-letter language code.', array('!language' => $language->name, '!code' => $language->language, '!file' => $language_file)), 'error');
+      // If a language file doesn't exist, default to English.
+      drupal_add_js($shadowbox_location .'/languages/shadowbox-en.js');
     }
+
+    // Add the "player" files.
     if (!empty($image_support)) {
       drupal_add_js($shadowbox_location .'/players/shadowbox-img.js');
     }
@@ -403,10 +418,16 @@ function shadowbox_construct_header() {
       drupal_add_js($shadowbox_location .'/players/shadowbox-iframe.js');
     }
 
+    // Print the JavaScript settings to the page.
     drupal_add_js(shadowbox_get_settings(), 'setting');
+
+    // Add the automatic image handling.
+    drupal_add_js($module_path .'/shadowbox_auto.js', 'module', 'footer');
+
+    // Initialize Shadowbox.
     drupal_add_js('Shadowbox.init(Drupal.settings.shadowbox);', 'inline', 'footer');
   }
-  
+
   // Special case for the admin settings page test.
   if ($_GET['q'] == 'admin/settings/shadowbox'
     || $_GET['q'] == 'admin/settings/shadowbox/global') {
@@ -667,3 +688,44 @@ function _array_to_string_values($array) {
   }
   return $output;
 }
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function shadowbox_form_alter(&$form, $form_state, $form_id) {
+  switch ($form_id) {
+    case 'content_field_edit_form':
+      if ($form['basic']['type']['#value'] == 'filefield') {
+        $field_name = $form['field_name']['#value'];
+        $type_name = $form['type_name']['#value'];
+        
+        $form['widget']['shadowbox_settings'] = array(
+          '#type' => 'fieldset',
+          '#title' => t('Shadowbox settings'),
+          '#collapsible' => TRUE,
+          '#collapsed' => TRUE,
+          '#access' => user_access('administer shadowbox'),
+          '#weight' => 10,
+        );
+        $form['widget']['shadowbox_settings']['title_text'] = array(
+          '#type' => 'select',
+          '#title' => t('Title text'),
+          '#description' => t('Select the source of the title text for this content type.'),
+          '#options' => array(
+            0 => t('Title text'),
+            1 => t('Description text'),
+            2 => t('Node title'),
+          ),
+          '#default_value' => variable_get('shadowbox_title_text_'. $type_name .'_'. $field_name, 0),
+        );
+        $form['#submit'][] = 'shadowbox_form_alter_submit';
+      }
+      break;
+  }
+}
+
+function shadowbox_form_alter_submit($form, &$form_state) {
+  $values = $form_state['values'];
+  variable_set('shadowbox_title_text_'. $values['type_name'] .'_'. $values['field_name'], $values['title_text']);
+}
+
