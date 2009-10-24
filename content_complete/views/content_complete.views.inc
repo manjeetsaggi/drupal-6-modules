@@ -1,5 +1,5 @@
 <?php
-// $Id: content_complete.views.inc,v 1.1.2.4 2009/09/29 20:29:08 pvhee Exp $
+// $Id: content_complete.views.inc,v 1.1.2.5 2009/09/30 08:46:24 pvhee Exp $
 
 /**
  *  @file
@@ -76,20 +76,19 @@ function content_complete_views_handlers() {
 /**
   * Implementation of hook_views_plugin().
   */
-// function content_complete_views_plugins() {
-//   return array(
-//     'module' => 'content_complete',
-//     'style' => array(
-//       'content_complete' => array(
-//         'path' => drupal_get_path('module', 'content_complete') . '/views/plugins',
-//         'title' => t('Content Complete'),
-//         // 'theme' => 'scrollable_view',
-//         'help' => t('Display completeness for a number of rows.'),
-//         'handler' => 'content_complete_style_plugin',
-//         'uses row plugin' => TRUE,
-//         'uses options' => TRUE,
-//         'type' => 'normal',
-//       ),
-//     ),
-//   );
-// }
+function content_complete_views_plugins() {
+  return array(
+    'module' => 'content_complete',
+    'style' => array(
+      'content_complete' => array(
+        'path' => drupal_get_path('module', 'content_complete') . '/views/plugins',
+        'title' => t('Content Complete'),
+        'help' => t('Display completeness for a number of rows.'),
+        'handler' => 'content_complete_style_plugin',
+        'uses row plugin' => TRUE,
+        'uses options' => TRUE,
+        'type' => 'normal',
+      ),
+    ),
+  );
+}

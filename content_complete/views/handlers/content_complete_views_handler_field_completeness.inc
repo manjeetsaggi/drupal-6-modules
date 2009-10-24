@@ -1,5 +1,5 @@
 <?php
-// $Id: content_complete_views_handler_field_completeness.inc,v 1.1.2.3 2009/09/29 20:29:08 pvhee Exp $
+// $Id: content_complete_views_handler_field_completeness.inc,v 1.1.2.4 2009/10/06 12:55:46 pvhee Exp $
 
 /**
  *  @file
@@ -62,8 +62,8 @@ class content_complete_views_handler_field_completeness extends views_handler_fi
         if ($this->options['next']) {
           $nid = $values->nid;
           $node = node_load($nid);
-          $data = content_complete_get_data($node); // overwrite data array with values computed on the fly
-        }
+          $data = content_complete_get_data($node); // overwrite data array with values computed on the fly          
+      }
     	  return theme('content_complete_profile_percent_complete', $data);
       break;    	
     }

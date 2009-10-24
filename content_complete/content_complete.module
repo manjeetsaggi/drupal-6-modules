@@ -1,5 +1,5 @@
 <?php
-// $Id: content_complete.module,v 1.1.2.30 2009/09/29 20:29:07 pvhee Exp $
+// $Id: content_complete.module,v 1.1.2.34 2009/10/18 12:52:09 pvhee Exp $
 
 /**
  * @file
@@ -61,7 +61,7 @@ function content_complete_block($op = 'list', $delta = 0, $edit = array()) {
         // This is kept for legacy, soon to be replaced with views.
         $types = content_complete_get_enabled_types();
         foreach ($types as $type => $name) {
-          $blocks[$type]['info'] = t('Content Complete: !name (first node)', array('!name' => $name));
+          $blocks[$type]['info'] = t('Content Complete: !name (first node)', array('!name' => content_complete_tt("nodetype:type:$type:name", $name)));
           $blocks[$type]['cache'] = BLOCK_NO_CACHE;
         }
                 
@@ -97,8 +97,9 @@ function content_complete_block($op = 'list', $delta = 0, $edit = array()) {
               $complete = content_complete_get_data($node);
               $types = content_complete_get_enabled_types();
             
-              if (!empty($complete) && $complete['percent'] != 100) {
-                $block['subject'] = t('!name', array('!name' => $types[$type]));
+              if (!empty($complete) &&
+                ($complete['percent'] != 100 || ($complete['percent'] == 100 && !variable_get('content_complete_hide_complete', TRUE)))) {
+                $block['subject'] = t('!name', array('!name' => content_complete_tt("nodetype:type:$type:name", $types[$type])));
                 $block['content'] = theme('content_complete_profile_percent_complete', $complete);
               }
             }
@@ -110,7 +111,7 @@ function content_complete_block($op = 'list', $delta = 0, $edit = array()) {
           '#title' => t('Hide the blocks when the percentage reaches 100%'),
           '#type' => 'checkbox',
           '#default_value' => variable_get('content_complete_hide_complete', TRUE),
-          '#description' => t('If you disable this feature, the blocks will be shown even when 100% has been reached.'),
+          '#description' => t('If you disable this feature, all the Content Complete blocks will be shown even when 100% has been reached.'),
         );
         return $form;
       case 'save':
@@ -208,9 +209,12 @@ function content_complete_form_alter(&$form, $form_state, $form_id) {
 function content_complete_node_type_delete_confirm_submit($form, &$form_state) {
   if (isset($form['type']['#value'])) {
     $type = $form['type']['#value'];
-    variable_del('content_complete_'. $type);
-    variable_del('content_complete_fields_'. $type);
-    db_query("DELETE FROM {content_complete} c INNER JOIN {node} n ON c.nid = n.nid WHERE n.type = '%s'", $type);
+    
+    if (content_complete_enabled_type($type)) {
+      variable_del('content_complete_'. $type);
+      variable_del('content_complete_fields_'. $type);
+      db_query("DELETE FROM {content_complete} c USING {content_complete} c INNER JOIN {node} n ON c.nid = n.nid WHERE n.type = '%s'", $type);
+    }
   }
 }
 
@@ -223,13 +227,23 @@ function content_complete_node_type_delete_confirm_submit($form, &$form_state) {
 function content_complete_content_field_remove_form_submit($form, &$form_state) {
   if (isset($form['type_name']['#value']) && isset($form['field_name']['#value'])) {
     $type = $form['type_name']['#value'];
-    $field_name = $form['field_name']['#value'];
-    $fields = variable_get('content_complete_fields_'. $type, array());
-    for ($i = 0; $i < count(fields); $i++) {
-      if ($fields[$i] == $field_name) unset($fields[$i]);
+    
+    if (content_complete_enabled_type($type)) {
+      $field_name = $form['field_name']['#value'];
+      $fields = variable_get('content_complete_fields_'. $type, array());
+      
+      $nr_fields = count($fields);      
+      for ($i = 0; $i < $nr_fields; $i++) {
+        if ($fields[$i] == $field_name) unset($fields[$i]);
+      }
+      
+      // a content complete enabled field has been deleted: remove from database and clean cache
+      if (count($fields) < $nr_fields) {
+        variable_set('content_complete_fields_'. $type, $fields);
+        db_query("DELETE FROM {content_complete} c USING {content_complete} c INNER JOIN {node} n ON c.nid = n.nid WHERE n.type = '%s'", $type);
+        drupal_set_message(t('A field enabled for content completion has been deleted. You need to <a href="@cache">rebuild your cache</a> to reflect the correct completion percentage.', array('@cache' => url('admin/content/content_complete'))), 'warning');
+      }
     }
-    variable_get('content_complete_fields_'. $type, $fields);
-    db_query("DELETE FROM {content_complete} c INNER JOIN {node} n ON c.nid = n.nid WHERE n.type = '%s'", $type);
   }
 }
 
@@ -249,20 +263,20 @@ function content_complete_get_data(&$node) {
   $fields = content_complete_get_fields($node->type); // Grab all fields for that content type
   $tagged_fields = variable_get('content_complete_fields_'. $node->type, array()); // Fields tagged for completeness (can be empty)
   $fields_values = content_complete_get_fields_values($node); // Completed fields (can be empty)
-    
+      
   $percent = 0;
   $complete = 0;
   $incomplete = 0;
   $total = 0;
   $nextfield_set = FALSE;
-  
+
   // Compare the two arrays and compute percentages etc.
-  foreach ($tagged_fields as $key => $value) {
-    if ($fields_values[$value] == '') { // Empty field
+  foreach ($tagged_fields as $tagged_field) {
+    if ($fields_values[$tagged_field] == '') { // Empty field
       if ($nextfield_set === FALSE) {
         $nextfield_set = TRUE;
-        $nextfield = $fields[$value]['label'];
-        $nextname = $value;
+        $nextfield = $fields[$tagged_field]['label'];
+        $nextname = $tagged_field;
       }
     }
     else {
@@ -297,12 +311,7 @@ function content_complete_get_data(&$node) {
   $data['type'] = $node->type;
   
   // Put human readble name.
-  if (module_exists('i18ncontent')) {
-    $data['name'] = tt("nodetype:type:$node->type:name", $type_names[$node->type]);
-  }
-  else {
-    $data['name'] = $type_names[$node->type];
-  }
+  $data['name'] = content_complete_tt("nodetype:type:$node->type:name", $type_names[$node->type]);
   
   // See who has edit permissions, depending on this we show/hide the edit links
   global $user;
@@ -525,6 +534,18 @@ function content_complete_get_fields($content_type) {
   }
   
   return $fields;
+}
+
+/**
+ * Wrapper function for tt() if i18nstrings enabled.
+ */
+function content_complete_tt($name, $string, $langcode = NULL, $update = FALSE) {
+  if (module_exists('i18ncontent')) {
+    return tt($name, $string, $langcode, $update);
+  }
+  else {
+    return $string;
+  }
 }
 
 /**

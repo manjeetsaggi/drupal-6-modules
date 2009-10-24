@@ -1,4 +1,4 @@
-// $Id: CHANGELOG.txt,v 1.1.2.1 2009/09/11 17:30:25 pvhee Exp $
+// $Id: CHANGELOG.txt,v 1.1.2.2 2009/09/30 08:46:24 pvhee Exp $
 
 Content Complete 1.2, ?
 --------------------------------
@@ -6,7 +6,8 @@ Content Complete 1.2, ?
 - Settings are stored along with the content type instead of in a separate
   table
 - Completeness values are cached in the database
-- Views integration to retrieve completeness per node
+- Views integration to retrieve completeness per node + style plugin to 
+  compute completeness over a series of nodes
 - Batch API integration to rebuild cache
 - To rebuild the cache, go to the settings menu at 
   admin/content/content_complete
