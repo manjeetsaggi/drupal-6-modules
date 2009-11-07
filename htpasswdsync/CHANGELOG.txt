@@ -1,4 +1,10 @@
-$Id: CHANGELOG.txt,v 1.1.2.5 2009/10/16 16:45:57 mfu Exp $
+$Id: CHANGELOG.txt,v 1.1.2.7 2009/11/03 23:08:53 mfu Exp $
+
+Fixed #588208 by ikogan : username shall not contain colon
+
+v1.4 bug fix release
+Fixed #588208 by ikogan : fixed the colon detection
+Fixed #611020 by fasdalf@fasdalf.ru : group file not updated when adding user
 
 v1.3 bug fix release
 Fixed #588208 by ikogan : username with t are concidered invalid

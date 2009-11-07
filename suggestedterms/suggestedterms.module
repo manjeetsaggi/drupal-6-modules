@@ -1,13 +1,17 @@
 <?php
-/* $Id: suggestedterms.module,v 1.2.2.3 2008/10/09 17:58:17 crell Exp $ */
+/* $Id: suggestedterms.module,v 1.2.2.7 2009/10/08 22:34:21 crell Exp $ */
 
 /**
 * define constants
 */
-//
-define('SUGGESTEDTERMS_SORT_NAME', 1);
 define('SUGGESTEDTERMS_SORT_POPULAR', 0);
+define('SUGGESTEDTERMS_SORT_NAME', 1);
 define('SUGGESTEDTERMS_SORT_RECENT', 2);
+define('SUGGESTEDTERMS_SORT_WEIGHT', 3);
+define('SUGGESTEDTERMS_SORT_USED', 4);
+
+define('SUGGESTEDTERMS_DISPLAY_ALL', 1);
+define('SUGGESTEDTERMS_DISPLAY_USED', 2);
 
 /**
  * Implementation of hook_help().
@@ -44,7 +48,7 @@ function suggestedterms_theme() {
 
 /**
  * Build tags for each term.
- * 
+ *
  * @ingroup themeable
  * @param $name
  *   The term name to theme.
@@ -58,25 +62,37 @@ function theme_suggestedterm($name) {
 
 /**
 * Creates all spans from vocabulary terms
-* 
-* @return 
+*
+* @return
 *   A string containing the clickable spans for the suggestedterms module.
 */
-function _suggestedterms_build_suggestions($vid, $sort_order) {
-  // get total terms set by admin
+function _suggestedterms_build_suggestions($vid, $sort_order, $display_what) {
+  // Use left join to display all entries, inner join to diaplay only used ones.
+  $query_type = ($display_what == SUGGESTEDTERMS_DISPLAY_ALL) ? " LEFT " : " INNER ";
+
+  // Get total terms set by admin.
   $total_terms = variable_get('suggestedterms_maximum_displayed', 5);
-  // get sort order set by admin
+
+  // Get sort order set by admin.
   switch ($sort_order) {
     case SUGGESTEDTERMS_SORT_POPULAR:
-      $query = "SELECT t.name AS name, COUNT(t.name) AS total FROM {term_data} t INNER JOIN {term_node} n ON (t.tid = n.tid) WHERE t.vid = %d GROUP BY t.name ORDER BY total desc";
+      $query = "SELECT t.name AS name, COUNT(t.name) AS total FROM {term_data} t $query_type JOIN {term_node} tn ON (t.tid = tn.tid) WHERE t.vid = %d GROUP BY t.name ORDER BY total desc";
       break;
 
     case SUGGESTEDTERMS_SORT_RECENT:
-      $query = "SELECT t.name AS name FROM {term_data} t INNER JOIN {term_node} n ON (t.tid = n.tid) WHERE t.vid = %d GROUP BY t.name ORDER BY t.tid desc";
+      $query = "SELECT t.name AS name FROM {term_data} t $query_type JOIN {term_node} tn ON (t.tid = nt.tid) WHERE t.vid = %d GROUP BY t.name ORDER BY t.tid desc";
+      break;
+
+    case SUGGESTEDTERMS_SORT_WEIGHT:
+      $query = "SELECT t.name AS name, t.weight AS weight FROM {term_data} t $query_type JOIN {term_node} tn ON (t.tid = tn.tid) WHERE t.vid = %d GROUP BY t.name ORDER BY weight, name";
+      break;
+
+    case SUGGESTEDTERMS_SORT_USED:
+      $query = "SELECT DISTINCT t.name AS name FROM {term_data} t $query_type JOIN {term_node} tn ON (t.tid = tn.tid) $query_type JOIN {node} n ON (tn.nid = n.nid) WHERE t.vid = %d ORDER BY n.changed DESC, name";
       break;
 
     default:
-      $query = "SELECT t.name AS name FROM {term_data} t INNER JOIN {term_node} n ON (t.tid = n.tid) WHERE t.vid = %d GROUP BY t.name ORDER BY t.name";
+      $query = "SELECT t.name AS name FROM {term_data} t $query_type JOIN {term_node} tn ON (t.tid = tn.tid) WHERE t.vid = %d GROUP BY t.name ORDER BY t.name";
       break;
   }
   $query_result = ($total_terms > 0) ? db_query_range($query, $vid, 0, $total_terms) : db_query($query, $vid);
@@ -94,25 +110,34 @@ function suggestedterms_form_alter(&$form, $form_state, $form_id) {
   if ((isset($form['type']) && $form['type']['#value'] .'_node_form' == $form_id) && isset($form['taxonomy']['tags'])) {
     $path = drupal_get_path('module', 'suggestedterms');
     drupal_add_js($path . '/suggestedterms.js');
+    $display_what = variable_get('suggestedterms_display_mode', SUGGESTEDTERMS_DISPLAY_ALL);
     // If multiple vocabularies, loop over each.
     foreach ($form['taxonomy']['tags'] as $vid => $thisindex) {
       // If free-tagging taxonomy is true, add new links for each free-tag textfield.
       $sort_order = variable_get('suggestedterms_sort_order', SUGGESTEDTERMS_SORT_NAME);
       switch ($sort_order) {
         case SUGGESTEDTERMS_SORT_POPULAR:
-	      $tag_description = 'Most popular terms';
+          $tag_description = t('Most popular terms');
           break;
 
         case SUGGESTEDTERMS_SORT_RECENT:
-          $tag_description = 'Recently added';
+          $tag_description = t('Recently added');
+          break;
+
+        case SUGGESTEDTERMS_SORT_WEIGHT:
+          $tag_description = t('Terms by Weight');
+          break;
+
+        case SUGGESTEDTERMS_SORT_USED:
+          $tag_description = t('Recently Used');
           break;
 
         default:
-          $tag_description = 'Terms by name';
+          $tag_description = t('Terms by name');
           break;
       }
       // Build the suggested terms and set in description tag.
-      $form['taxonomy']['tags'][$vid]['#description'] .= "<br />\n". t($tag_description) . ': ' . _suggestedterms_build_suggestions($vid, $sort_order);
+      $form['taxonomy']['tags'][$vid]['#description'] .= "<br />\n". $tag_description . ': ' . _suggestedterms_build_suggestions($vid, $sort_order, $display_what);
     }
   }
 }
@@ -138,7 +163,19 @@ function suggestedterms_admin() {
     '#options' => array(
       SUGGESTEDTERMS_SORT_POPULAR => t('Most used'),
       SUGGESTEDTERMS_SORT_NAME => t('Alphabetically'),
+      SUGGESTEDTERMS_SORT_WEIGHT => t('Weight'),
       SUGGESTEDTERMS_SORT_RECENT => t('Most recently added'),
+      SUGGESTEDTERMS_SORT_USED => t('Most recently used'),
+     ),
+  );
+  $form['suggestedterms_display_mode'] = array(
+    '#type' => 'radios',
+    '#title' => t('Which terms to display'),
+    '#default_value' => variable_get('suggestedterms_display_mode', SUGGESTEDTERMS_DISPLAY_ALL),
+    '#description' => t("Whether to display all defined terms or only the ones previously used."),
+    '#options' => array(
+       SUGGESTEDTERMS_DISPLAY_USED => t('Previously-used terms'),
+       SUGGESTEDTERMS_DISPLAY_ALL => t('All terms'),
      ),
   );
 

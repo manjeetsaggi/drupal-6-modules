@@ -1,5 +1,5 @@
 <?php
-// $Id: apachesolr_rdf.hooks.php,v 1.1.2.5 2009/08/10 15:16:52 drunkenmonkey Exp $
+// $Id: apachesolr_rdf.hooks.php,v 1.1.2.8 2009/11/02 00:08:05 drunkenmonkey Exp $
 
 /**
  * @file
@@ -15,9 +15,8 @@
  * methods are implemented.
  *
  * @return
- * An associative array with schema ids as keys and associative
- * arrays with the schema data as values. The schema data consists of the
- * following items:
+ * An associative array with schema ids as keys and associative arrays with the
+ * schema data as values. The schema data consists of the following items:
  * - name: A translated, human-readable name for the schema.
  * - description: A translated description of what the schema does, its
  *     specifics and what has to be done to use it.
@@ -28,12 +27,15 @@
  * - index_options_form (optional)
  * - search_options_form (optional)
  *
- * The three functions have to be specified as associative arrays with the
- * following keys:
+ * The functions have to be specified as associative arrays with the following
+ * keys:
  * - module: The module defining this function.
  * - file: The file with the function definition, relative to the module's
  *     base directory.
  * - function: The name of the function.
+ *
+ * The schema array may also contain fields with the keys "module" or "file"
+ * which are then taken as the default values for functions of that schema.
  *
  * @see create_document
  * @see search_form_alter
@@ -42,7 +44,7 @@
  * @see index_options_form
  * @see search_options_form
  */
-function apachesolr_rdf_apachesolr_rdf_schemas() {}
+function hook_apachesolr_rdf_schemas() {}
 
 /**
  * Creates an Apache_Solr_Document from the specified resource.
@@ -193,3 +195,61 @@ function index_options_form(&$form_state, $info = NULL) {}
  * schema_arguments_form and its validation and submit function.
  */
 function search_options_form(&$form_state, $info = NULL) {}
+
+/**
+ * Hook for defining custom types that can be used when defining dynamic fields.
+ *
+ * @return
+ * An associative array with type ids as keys and associative arrays with the
+ * type data as values. The type data consists of the following items:
+ * - name: A translated, human-readable name for the schema.
+ * - description: A translated description of what the schema does, its
+ *     specifics and what has to be done to use it.
+ * - add_to_document
+ * - add_to_query
+ *
+ * The functions have to be specified as associative arrays with the following
+ * keys:
+ * - module: The module defining this function.
+ * - file: The file with the function definition, relative to the module's
+ *     base directory.
+ * - function: The name of the function.
+ *
+ * The type array may also contain fields with the keys "module" or "file"
+ * which are then taken as the default values for functions of that type.
+ *
+ * @see add_to_document
+ * @see add_to_query
+ */
+function hook_apachesolr_rdf_dynamic_datatypes() {}
+
+/**
+ * Adds the given value to the specified field of the document.
+ *
+ * @param $doc The document the field should be added to.
+ * @param $field_id The field's id (without prefix).
+ * @param $field_info The field's options.
+ * @param $value The value to be added.
+ * @param $context The context this document is created for.
+ * @param $label If $value is a resource, this may contain its rdfs:label for
+ *        caching purposes. If this field is NULL, it cannot be concluded that
+ *        the resource has no label. This is the case, however, if $label
+ *        contains an empty string.
+ * @return This method does not need to return anything.
+ */
+function add_to_document(
+    &$doc, $field_id, $field_info, $value, $context, $label = NULL) {}
+
+/**
+ * Adds terms for searching the specified field for the given values to an
+ * array of query terms.
+ *
+ * @param $query An array containing query components, that will later be
+ *        imploded with " ".
+ * @param $field_id The field's id (without prefix).
+ * @param $field_info The field's options.
+ * @param $values The values the field should be searched for.
+ * @param $solr An object for communicating to the Solr server.
+ * @return This method does not need to return anything.
+ */
+function add_to_query(&$query, $field_id, $field_info, $values, $solr) {}

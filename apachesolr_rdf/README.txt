@@ -1,4 +1,4 @@
-$Id: README.txt,v 1.1.2.2 2009/08/08 16:43:06 drunkenmonkey Exp $
+$Id: README.txt,v 1.1.2.5 2009/11/02 00:08:05 drunkenmonkey Exp $
 
 This module integrates the Resource Description Framework (RDF) module with
 Apache Solr search servers, providing the possibility to do fulltext searches,
@@ -61,6 +61,15 @@ range of applications:
   predicates, which e.g. allows for more detailled facetting and filtering.
   Objects which are RDF resources are indexed with their URIs to allow for
   exact queries on objects.
+  When using this schema for normal searches, you should add the default dynamic
+  fields right after defining the server. To do so, go to the server's "Edit"
+  page and click "Add default fields". This will define fields for the rdf:type,
+  rdfs:label and rdfs:comment predicates, which will then be used for rendering
+  search results (this works even if you rename them). Other fields can be
+  defined manually via the "Add new field" link on the server's "Edit" page.
+  To enable this schema, you'll also have to place the file
+  sindice-url-preserving-tokenizer.jar into Solr's lib directory (when using the
+  example application this is located at $SOLR_HOME/example/solr/lib).
 * Text data: This schema, on the other hand, concentrates (as the name suggests)
   on indexing the text data associated with a resource, i.e. the literal-valued
   objects directly, but for resource-valued objects only their labels. This
@@ -68,11 +77,10 @@ range of applications:
   where resources related to those keywords should be found. Facetting is only
   possible on the existence of predicates, or on the type.
 
-When defining your own schema, please note that it has to contain the fields
-"uri" (of type "string") and "index" (of type "integer"), for storing the
-indexed resource's URI and the id of the index this document was indexed by,
-respectively. The document ID should be some combination of the two, e.g. as
-returned by the apachesolr_rdf_create_id() function.
+When defining your own schema, please note that it has to contain the field
+"index" of type "integer", for storing the ID of the index this document was
+indexed for. The document ID should be some combination of the index ID and the
+resource's URI, e.g. as returned by the apachesolr_rdf_create_id() function.
 
 
 Note:

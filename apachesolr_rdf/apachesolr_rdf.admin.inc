@@ -1,5 +1,5 @@
 <?php
-// $Id: apachesolr_rdf.admin.inc,v 1.1.2.10 2009/08/11 01:24:32 drunkenmonkey Exp $
+// $Id: apachesolr_rdf.admin.inc,v 1.1.2.15 2009/11/01 23:31:38 drunkenmonkey Exp $
 
 //
 // General
@@ -106,9 +106,11 @@ function apachesolr_rdf_confirm_form(&$form_state, $type, $action, $info) {
       '#value' => $messages[$type][$action][2],
     ),
   );
-  return confirm_form($form, $messages[$type][$action][0],
-      "admin/settings/apachesolr_rdf/$type/$id",
-      $messages[$type][$action][1], t('Confirm'), t('Cancel'));
+  $desc = "<h3>{$messages[$type][$action][0]}</h3>" .
+          "{$messages[$type][$action][1]}";
+  return confirm_form($form, $info['name'],
+      "admin/settings/apachesolr_rdf/$type/$id", $desc, t('Confirm'),
+      t('Cancel'));
 }
 
 /**
@@ -200,12 +202,14 @@ function apachesolr_rdf_settings_object_view($type, $info) {
       $info['url'] = l($url, $url);
       break;
     case 'search':
-      $path = "search/apachesolr_rdf/{$info['id']}";
+      $path = "search/apachesolr_rdf_{$info['id']}";
       $info['search_path'] = l($path, $path);
-      $info['server_name'] = $server['name'];
+      $info['server_name'] = l($server['name'],
+          "admin/settings/apachesolr_rdf/server/{$server['id']}");
       break;
     case 'index':
-      $info['server_name'] = $server['name'];
+      $info['server_name'] = l($server['name'],
+          "admin/settings/apachesolr_rdf/server/{$server['id']}");
       $info['context'] = $info['resources']['context'];
       $info['context'] = l($info['context'], $info['context']);
       break;
@@ -332,7 +336,7 @@ function apachesolr_rdf_settings_table($type) {
   }
 
   if (empty($rows)) {
-    return '<p>' . t("There are currently no {$type}es enabled.") . '</p>';
+    return '<p>' . t("There are currently no {$type}es defined.") . '</p>';
   }
 
   return theme('table', $header, $rows);
@@ -373,7 +377,7 @@ function apachesolr_rdf_settings_servers_table() {
   }
 
   if (empty($rows)) {
-    return '<p>' . t('There are currently no servers enabled.') . '</p>';
+    return '<p>' . t('There are currently no servers defined.') . '</p>';
   }
 
   return theme('table', $header, $rows);
@@ -475,13 +479,11 @@ function apachesolr_rdf_settings_server_edit(&$form_state, $info = FALSE) {
   );
   $form['schema'] = array(
     '#type' => 'value',
-    '#value' => $form_state['storage']['schema'],
+    '#value' => $info ? $info['schema'] : $form_state['storage']['schema'],
   );
   $form['schema_info'] = array(
     '#type' => 'item',
     '#title' => t('Schema'),
-    '#description' => t('The schema used by this server. Cannot be changed, ' .
-        'once set.'),
     '#value' => '<strong>' . $schema['name'] . '</strong><br />' .
         $schema['description'],
   );
@@ -491,7 +493,7 @@ function apachesolr_rdf_settings_server_edit(&$form_state, $info = FALSE) {
   if ($schema_arguments_form) {
     // If there is a schema_arguments_form function, add the sub-form returned
     // by that function.
-    $schema_args = $schema_arguments_form($form_state, $info);
+    $schema_args = $schema_arguments_form($form_state, $info, 'schema_args');
     if ($schema_args) {
       $form['schema_args'] = array(
         '#type' => 'fieldset',
@@ -525,8 +527,11 @@ function apachesolr_rdf_settings_server_edit(&$form_state, $info = FALSE) {
  * Validation function for apachesolr_rdf_settings_server_edit().
  */
 function apachesolr_rdf_settings_server_edit_validate($form, &$form_state) {
-  $values = $form_state['values'];
+  if (!$form_state['submitted']) {
+    return;
+  }
 
+  $values = $form_state['values'];
   if (!isset($values['action'])) {
     // We are at step 1 of adding a server, nothing to validate.
     return;
@@ -715,8 +720,11 @@ function apachesolr_rdf_settings_index_edit(&$form_state, $info = FALSE) {
 
   // This can be arbitrarily extended, as long as the changes are considered
   // when indexing
+  $contexts[''] = '-' . t('Select one') . '-';
+  $contexts += drupal_map_assoc(rdf_get_contexts());
   $form['context'] = array(
-    '#type' => 'textfield',
+    '#type' => 'select',
+    '#options' => $contexts,
     '#title' => t('Context'),
     '#description' => t('Specify the context the resources of which should ' .
         'be indexed.') . ($info ? ' ' . t('After changing this setting, you ' .
@@ -724,7 +732,6 @@ function apachesolr_rdf_settings_index_edit(&$form_state, $info = FALSE) {
         url("admin/settings/apachesolr_rdf/index/{$info['id']}/clear"))) : ''),
     '#default_value' => $info ? $info['resources']['context'] : '',
     '#required' => TRUE,
-    '#autocomplete_path' => 'apachesolr_rdf/autocomplete/context',
   );
 
   $form['cron_limit'] = array(
@@ -877,9 +884,10 @@ function apachesolr_rdf_settings_index_edit_submit($form, &$form_state) {
     $id = db_last_insert_id('apachesolr_rdf_indexes', 'id');
 
     // Add data for the index to the resources table
+    $values['id'] = $id;
     $values['resources'] = $resources;
     $values['options'] = $val_options;
-    apachesolr_rdf_update_index_data($id, $values, NULL, TRUE);
+    apachesolr_rdf_update_index_data($values, NULL, TRUE);
 
     drupal_set_message(t('The index was successfully added.'));
     $form_state['redirect'] = "$path_prefix/$id";
@@ -964,6 +972,7 @@ function apachesolr_rdf_settings_search_edit(&$form_state, $info = FALSE) {
         'alphanumeric characters and underscores ("_").'),
     '#default_value' => $info ? $info['id'] : '',
     '#maxlength' => 30,
+    '#required' => TRUE,
   );
   $form['name'] = array(
     '#type' => 'textfield',
@@ -1042,14 +1051,14 @@ function apachesolr_rdf_settings_search_edit_validate($form, &$form_state) {
     return;
   }
 
-  if ($values['id'] == $values['old_id']) {
+  if (isset($values['old_id']) && $values['id'] == $values['old_id']) {
     // Don't need to check the id
   }
   else if ($values['id'] == 'add') {
     form_set_error('id', t('You cannot use "add" as search id.'));
   }
-  else if (db_result(db_query('SELECT id FROM {apachesolr_rdf_searches} WHERE ' .
-      "id = '%s'", $values['id']))) {
+  else if (db_result(db_query('SELECT id FROM {apachesolr_rdf_searches} ' .
+      "WHERE id = '%s'", $values['id']))) {
     form_set_error('id', t("The ID \"{$values['id']}\" is " .
         'already in use! Please specify a new one!'));
   }
@@ -1102,7 +1111,7 @@ function apachesolr_rdf_settings_search_edit_submit($form, &$form_state) {
   extract($values, EXTR_PREFIX_ALL, 'val');
 
   if (isset($val_options)) {
-    $schema_argument_form = _apachesolr_rdf_get_schema_function(
+    $search_options_form = _apachesolr_rdf_get_schema_function(
         'search_options_form', $val_schema);
     $search_options_form_submit = "{$search_options_form}_submit";
     if (function_exists($search_options_form_submit)) {
@@ -1189,4 +1198,278 @@ function apachesolr_rdf_search_options_form_submit($form, $values) {
   // Since no processing is done, this would be unnecessary, but it's here for
   // demonstration.
   return $values;
+}
+
+/**
+ * Displays a sub-form for specifying schema arguments for a server with the
+ * "dynamic fields" schema.
+ */
+function apachesolr_rdf_schema_arguments_form_dynamic(
+    $form_state, $info, $parent) {
+  $form['#description'] = t('Changes here will only take effect when data is ' .
+      'indexed. They will not affect existing index data.');
+
+  $form['text'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Include "text" field'),
+    '#description' => t('Include a field (named "text") in the index that ' .
+        'contains all text data, for easy fulltext searches. If the field ' .
+        'would be unused, disable it here to save space and indexing time.'),
+    '#default_value' => $info ? $info['schema_args']['text'] : TRUE,
+  );
+  $form['property_object'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Include "property_object" field'),
+    '#description' => t('Include a field (named "property_object") in the ' .
+        'index that allows for searching the (exact) values of arbitrary ' .
+        'predicates. If the field would be unused, disable it here to save ' .
+        'space and indexing time.'),
+    '#default_value' => $info ? $info['schema_args']['property_object'] : TRUE,
+  );
+
+  if (!$info) {
+    $form['fields'] = array(
+      '#type' => 'item',
+      '#title' => t('Dynamic fields'),
+      '#description' => t('<p>Define the predicates that should be mapped to ' .
+          'dynamic fields at this server.</p>' .
+          '<p>These can only be defined after the server is created.</p>'),
+    );
+    return $form;
+  }
+
+  $form['fields'] = array(
+    '#type' => 'item',
+    '#title' => t('Dynamic fields'),
+    '#description' => t('<p>Define the predicates that should be mapped to ' .
+        'dynamic fields at this server.</p>' .
+        '<p><strong>Changes will only take effect after data is re-indexed.' .
+        '</strong></p>'),
+  );
+  $header = array(t('ID'), t('Name'), t('URI'), t('Type'), t('Facets'),
+      t('Multi-valued'));
+  $rows = array();
+  $url_base = "admin/settings/apachesolr_rdf/server/$info[id]/dynamic_field/";
+  foreach (_apachesolr_rdf_get_dynamic_fields($info) as $id => $field) {
+    $url = $url_base . $id;
+    $rows[] = array(l($id, $url), l($field['name'], $url),
+        l($field['uri'], $url), l($field['type'], $url),
+        l($field['facet'] ? t('yes') : t('no'), $url),
+        l($field['multiValued'] ? t('yes') : t('no'), $url));
+  }
+  if ($rows) {
+    $form['fields']['#value'] = theme('table', $header, $rows);
+  }
+  else {
+    $form['fields']['#value'] = '<p>' . t('There are currently no dynamic ' .
+        'fields defined for this server.') . '</p>';
+    $form['fields']['#value'] .=
+        '<p>' . l(t('Add default fields (rdf:type, rdfs:label, rdfs:comment)'),
+        $url_base . 'defaults') . '</p>';
+  }
+  $form['fields']['#value'] .=
+      '<p>' . l(t('Add new field'), $url_base . 'add') . '</p>';
+
+  return $form;
+}
+
+/**
+ * Submit function for apachesolr_rdf_schema_arguments_form_dynamic().
+ */
+function apachesolr_rdf_schema_arguments_form_dynamic_submit(
+    $values) {
+  return array(
+    'text' => !empty($values['text']),
+    'property_object' => !empty($values['property_object']),
+  );
+}
+
+/**
+ * Form function for creating or editing dynamic fields.
+ */
+function apachesolr_rdf_dynamic_field_edit(&$form_state, $server,
+    $id = NULL) {
+  if ($id) {
+    $info = _apachesolr_rdf_get_dynamic_fields($server);
+    if (!isset($info[$id])) {
+      unset($info);
+      unset($id);
+    }
+    else {
+      $info = $info[$id];
+    }
+  }
+  $form['warning']['#value'] = '<p><strong>' . ($id ? t('Please keep in mind ' .
+      'that changes here will only take effect when new data is indexed (or ' .
+      'old one re-indexed).') : t('Please keep in mind that old data will be ' .
+      'unaffected by the new field, until it is re-indexed.')) .
+      '</strong></p>';
+
+  if ($id) {
+    $form['delete_fields'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Delete field'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      '#tree' => FALSE,
+      'delete_check' => array(
+        '#type' => 'checkbox',
+        '#title' => t('Really delete this field?'),
+        '#description' => t('Check this if you want to delete this field.'),
+      ),
+      'delete' => array(
+        '#type' => 'submit',
+        '#value' => t('Delete field'),
+      ),
+    );
+  }
+
+  $form['server_info'] = array(
+    '#type' => 'item',
+    '#title' => t('Server'),
+    '#value' => l($server['name'],
+        "admin/settings/apachesolr_rdf/server/{$server['id']}"),
+  );
+  $form['id'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Field ID'),
+    '#description' => t('The unique identifier for the field, which is e.g. ' .
+        'used in queries.'),
+    '#maxlength' => 50,
+    '#default_value' => $id ? $id : '',
+    '#required' => TRUE,
+  );
+  $form['name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Name'),
+    '#description' => t('A human-readable name for this search.'),
+    '#maxlength' => 50,
+    '#default_value' => $id ? $info['name'] : '',
+  );
+  $form['uri'] = array(
+    '#type' => 'textfield',
+    '#title' => t('URI'),
+    '#description' => t('The URI of the predicate that should be mapped to ' .
+        'this field.'),
+    '#maxlength' => 100,
+    '#default_value' => $id ? $info['uri'] : '',
+    '#required' => TRUE,
+  );
+
+  $types = module_invoke_all('apachesolr_rdf_dynamic_datatypes');
+  $options[''] = '-' . t('Select a data type') . '-';
+  foreach ($types as $type => $data) {
+    $options[$type] = $data['name'];
+  }
+  $form['type'] = array(
+    '#type' => 'select',
+    '#title' => t('Type'),
+    '#description' => t("The field's data type."),
+    '#options' => $options,
+    '#default_value' => $id ? $info['type'] : '',
+    '#required' => TRUE,
+  );
+  // TODO: Shiny AHAH magic for displaying type description
+
+  $form['facet'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enable facets'),
+    '#description' => t('Sets whether facets are enabled for this field.'),
+    '#default_value' => $id ? $info['facet'] : FALSE,
+  );
+  $form['multiValued'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Has multiple values'),
+    '#description' => t('If set, a resource may have multiple values for ' .
+        'this field.'),
+    '#default_value' => $id ? $info['multiValued'] : TRUE,
+  );
+
+
+  $form['server'] = array(
+    '#type' => 'value',
+    '#value' => $server['id'],
+  );
+  $form['old_id'] = array(
+    '#type' => 'value',
+    '#value' => $id,
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => $id ? t('Save changes') : t('Add field'),
+  );
+
+  return $form;
+}
+
+/**
+ * Validation function for apachesolr_rdf_dynamic_field_edit.
+ */
+function apachesolr_rdf_dynamic_field_edit_validate($form, &$form_state) {
+  $v = $form_state['values'];
+  if ($v['op'] == t('Delete field')) {
+    if (!$v['delete_check']) {
+      form_set_error('delete_check', t('Checkbox has to be checked for field' .
+          'to be deleted.'));
+    }
+  }
+  else if ($v['id'] != $v['old_id']) {
+    $fields = _apachesolr_rdf_get_dynamic_fields(
+        apachesolr_rdf_server_load($v['server']));
+    if (isset($fields[$v['id']])) {
+      form_set_error('id', t('The specified field id is already in use for ' .
+          'this server.'));
+    }
+  }
+}
+
+/**
+ * Submit function for apachesolr_rdf_dynamic_field_edit.
+ */
+function apachesolr_rdf_dynamic_field_edit_submit($form, &$form_state) {
+  $v = $form_state['values'];
+  $server = apachesolr_rdf_server_load($v['server']);
+
+  if ($v['op'] == t('Delete field')) {
+    db_query('DELETE FROM {apachesolr_rdf_dynamic_fields} WHERE server = %d ' .
+        "AND id = '%s'", $v['server'], $v['old_id']);
+  }
+  else if ($v['old_id']) {
+    db_query("UPDATE {apachesolr_rdf_dynamic_fields} SET id = '%s', " .
+        "name = '%s', uri = '%s', type = '%s', facet = %d, multiValued = %d " .
+        "WHERE id = '%s' AND server = %d", $v['id'], $v['name'], $v['uri'],
+        $v['type'], $v['facet'], $v['multiValued'], $v['old_id'], $v['server']);
+  }
+  else {
+    db_query('INSERT INTO {apachesolr_rdf_dynamic_fields} (server, id, name, ' .
+        "uri, type, facet, multiValued) VALUES (%d, '%s', '%s', '%s', '%s', " .
+        '%d, %d)', $v['server'], $v['id'], $v['name'], $v['uri'], $v['type'],
+        $v['facet'], $v['multiValued']);
+  }
+
+  _apachesolr_rdf_get_dynamic_fields($server, TRUE);
+
+  $form_state['redirect'] = url("admin/settings/apachesolr_rdf/server/" .
+      "{$v['server']}/edit", array('fragment' =>
+          'edit-schema-args-property-object', 'absolute' => TRUE));
+}
+
+/**
+ * Page handler for adding default fields to a server.
+ */
+function apachesolr_rdf_dynamic_field_defaults($server) {
+  $id = $server['id'];
+
+  db_query('INSERT INTO {apachesolr_rdf_dynamic_fields} (server, id, name, ' .
+        "uri, type, facet, multiValued) VALUES (%d, 'type', '%s', '%s', " .
+        "'resource', 0, 1)", $id, t('Type'), APACHESOLR_RDF_TYPE);
+  db_query('INSERT INTO {apachesolr_rdf_dynamic_fields} (server, id, name, ' .
+        "uri, type, facet, multiValued) VALUES (%d, 'label', '%s', '%s', " .
+        "'text', 0, 1)", $id, t('Label'), APACHESOLR_RDF_LABEL);
+  db_query('INSERT INTO {apachesolr_rdf_dynamic_fields} (server, id, name, ' .
+        "uri, type, facet, multiValued) VALUES (%d, 'comment', '%s', '%s', " .
+        "'text', 0, 1)", $id, t('Comment'), APACHESOLR_RDF_COMMENT);
+
+  drupal_goto("admin/settings/apachesolr_rdf/server/$id/edit", NULL,
+      'edit-schema-args-property-object'');
 }

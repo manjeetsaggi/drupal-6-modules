@@ -1,5 +1,5 @@
 <?php
-// $Id: network_manager.module,v 1.3 2009/09/09 19:46:54 btopro Exp $
+// $Id: network_manager.module,v 1.5 2009/11/02 21:45:14 btopro Exp $
 //ELMS: Network Manager - Define a network of sites that you manage and monitor / modify settings from a central one
 //Copyright (C) 2009  The Pennsylvania State University
 //
@@ -32,12 +32,12 @@
  *
  *
  */
- 
+
 /**
  * Implementation of hook_perm().
  */
 function network_manager_perm() {
-  return array('access network manager','access network status report','access variable map');
+  return array('access network manager', 'access network status report', 'access variable map');
 }
 
 /**
@@ -46,57 +46,57 @@ function network_manager_perm() {
 function network_manager_menu() {
   $items = array();
   $items['network_manager'] = array(
-    'title' => 'Network Management Panel',
+    'title' => 'Network Management',
     'type' => MENU_NORMAL_ITEM,
-    'description' => 'Control panel for your Network',
+    'description' => 'Control display for your Network',
     'page callback' => '_network_manager_overview',
     'access arguments' => array('access network manager'),
   );
   $items['network_manager/network_display'] = array(
     'title' => 'Network Display',
     'type' => MENU_NORMAL_ITEM,
-    'description' => 'Control panel for your Network',
+    'description' => 'Control display for your Network',
     'page callback' => '_network_manager_overview',
     'access arguments' => array('access network manager'),
-	'weight' => 0,
+    'weight' => 0,
   );
   $items['network_manager/network_modules'] = array(
     'title' => 'Network Modules',
     'type' => MENU_NORMAL_ITEM,
     'description' => 'See what modules are running on which sites',
-	'page callback' => 'drupal_get_form',
-	'page arguments' => array('_network_manager_modules'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('_network_manager_modules'),
     'access arguments' => array('access network manager'),
-	'weight' => 1,
+    'weight' => 1,
   );
   $items['network_manager/network_watchdog'] = array(
     'title' => 'Network Watchdog',
     'type' => MENU_NORMAL_ITEM,
     'description' => 'Check on watchdog issues across your network',
-	'page callback' => 'drupal_get_form',
-	'page arguments' => array('_network_manager_watchdog'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('_network_manager_watchdog'),
     'access arguments' => array('access network manager'),
-	'weight' => 2,
+    'weight' => 2,
   );
   $items['network_manager/my_display'] = array(
     'title' => 'Configure Display',
     'type' => MENU_NORMAL_ITEM,
     'description' => 'Configure your Network Display',
-	'page callback' => 'drupal_get_form',
-	'page arguments' => array('_network_manager_my_display'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('_network_manager_my_display'),
     'access arguments' => array('access network manager'),
-	'weight' => 3,
+    'weight' => 3,
   );
   $items['network_manager/variable_map'] = array(
     'title' => 'Variable Map',
     'type' => MENU_NORMAL_ITEM,
     'description' => 'Map variables for display in the overview table',
-	'page callback' => 'drupal_get_form',
-	'page arguments' => array('_network_manager_variable_map'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('_network_manager_variable_map'),
     'access arguments' => array('access variable map'),
-	'weight' => 4,
+    'weight' => 4,
   );
-  
+
   $items['admin/settings/network_manager'] = array(
     'title' => 'Network Manager',
     'description' => 'This allows you to define your network and perform actions across it',
@@ -110,13 +110,13 @@ function network_manager_menu() {
     'page callback'  => '_network_manager_ajax',
     'type'  => MENU_CALLBACK,
   );
-  
+
   return $items;
 }
 
 /**
-* Implementation of hook_init
-*/
+ * Implementation of hook_init().
+ */
 function network_manager_init() {
 
 }
@@ -124,285 +124,305 @@ function network_manager_init() {
 //this will try to only list databases that are Drupal
 function network_manager_settings() {
   $options = array();
-  $result = db_query("SELECT SCHEMA_NAME FROM information_schema.SCHEMATA JOIN information_schema.TABLES ON TABLE_SCHEMA = SCHEMA_NAME WHERE SCHEMA_NAME <> 'information_schema' AND TABLE_NAME='system'");
+  $result = db_query("SELECT SCHEMA_NAME FROM {information_schema}.{SCHEMATA} JOIN {information_schema}.{TABLES} ON TABLE_SCHEMA = SCHEMA_NAME WHERE SCHEMA_NAME <> 'information_schema' AND TABLE_NAME='system'");
   while ($db = db_fetch_array($result)) {
     $options[$db['SCHEMA_NAME']] = $db['SCHEMA_NAME'];
   }
   $form["network_manager_network"] = array(
     '#type' => 'select',
     '#title' => t("Network"),
-    '#default_value' => variable_get("network_manager_network", array()),
-	'#options' => $options,
-	'#multiple' => TRUE,
+    '#default_value' => variable_get('network_manager_network', array()),
+    '#options' => $options,
+    '#multiple' => TRUE,
     '#description' => t("Select the databases that you are defining as part of your network"),
   );
-  if (variable_get('network_manager_topology',array()) != $options) {
-    variable_set('network_manager_last_topology',$options);
-	drupal_set_message("Network Topology has changed since the last time you configured this page","warning");
+  $form['paths'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Site Paths',
+    '#collapsed' => FALSE,
+    '#collapsible' => TRUE,
+    '#description' => t('Set the path for this domain.  Use this to generate links to each site on the Network Manager Display.  Make sure it is of the form http://domain.com/ or whatever the base address should be. (include the http:// and trailing slash)'),
+  );
+
+  $network = variable_get('network_manager_network', array());
+  foreach ($network as $db) {
+    $form['paths']['network_manager_path_'. $db] = array(
+    '#type' => 'textfield',
+    '#title' => $db .' path',
+    '#default_value' => variable_get('network_manager_path_'. $db, ''),
+  );
+  }
+  if (variable_get('network_manager_topology', array()) != $options) {
+    variable_set('network_manager_last_topology', $options);
+    drupal_set_message(t("Network Topology has changed since the last time you configured this page"), "warning");
   }
   $form['#submit'] = array('network_manager_settings_submit');
   $form['buttons']['submit'] = array('#type' => 'submit', '#value' => t('Save configuration') );
-  
+
   return $form;
 }
 
 function network_manager_settings_submit($form, &$form_state) {
   variable_set('network_manager_topology', variable_get('network_manager_last_topology', array()));
-  variable_set('network_manager_network',$form_state['values']['network_manager_network']);
-  drupal_set_message('Network saved!');
+  $network = variable_get('network_manager_last_topology', array());
+  foreach ($network AS $db) {
+    variable_set('network_manager_path_'. $db, $form_state['values']['network_manager_path_'. $db]);
+  }
+  variable_set('network_manager_network', $form_state['values']['network_manager_network']);
+  drupal_set_message(t('Network saved!'));
 }
 
 function _network_manager_overview() {
   global $user;
   $network = _network_manager_user_network($user->uid);
   if ($network['default'] == 'default' || $network == 'default') {
-    $network = variable_get('network_manager_network',array());
+    $network = _network_manager_verify_network(variable_get('network_manager_network', array()));
+    //set the network incase the verification found any deleted databases
+    variable_set('network_manager_network', $network);
   }
   if (count($network) == 0) {
-    return l(t('Click to define your network'),'admin/settings/network_manager');
+    return l(t('Click to define your network'), 'admin/settings/network_manager');
   }
   else {
     $header = array();
-	$var_db_dump = array();
-	$rows = array();
-	$attributes = array('attributes' => array('target' => '_blank'));
-	$variables = unserialize(db_result(db_query("SELECT variables FROM {network_manager_user_settings} WHERE uid=%s",$user->uid)));
-	if ($variables == '') {
-	  $variables = array();
-	}
-	$complex_variables = unserialize(db_result(db_query("SELECT complex_variables FROM {network_manager_user_settings} WHERE uid=%s",$user->uid)));
-	if ($complex_variables == '') {
-	  $complex_variables = array();
-	}
-	//site has to be here or the information is kind of meaningless
-	$var_db_dump['site']['name'] = 'Site';
-	$var_db_dump['site']['map'] = array();
-	$var_db_dump['site']['link'] = array('admin/settings/site-information');
-	$var_db_dump['connector']['name'] = '';
-	$var_db_dump['connector']['map'] = array();
-	$var_db_dump['connector']['link'] = array();
-	foreach ($complex_variables AS $var) {
-	  switch($var) {
-		case 'clear-cache':
-		  $var_db_dump['clear-cache']['name'] = 'Clear Cache';
-		  $var_db_dump['clear-cache']['map'] = array();
-		  $var_db_dump['clear-cache']['link'] = array(
-		  '6' => 'admin_menu/flush-cache');
-		break;
-		case 'database':
-		  $var_db_dump['database']['name'] = 'Database';
-		  $var_db_dump['database']['map'] = array();
-		  $var_db_dump['database']['link'] = array(
-		  '0' => 'update.php');
-		break;
-		case 'version':
-		  $var_db_dump['version']['name'] = 'Version';
-		  $var_db_dump['version']['map'] = array();
-		  $var_db_dump['version']['link'] = array('admin/reports/status');
-		break;
-		case 'modules':
-		  $var_db_dump['modules']['name'] = 'Modules';
-		  $var_db_dump['modules']['map'] = array();
-		  $var_db_dump['modules']['link'] = array(
-		  '5' => 'admin/build/modules', 
-		  '6' => 'admin/build/modules', 
-		  '7' => 'admin/config/modules');
-		break;
-		case 'performance':
-		  $var_db_dump['performance']['name'] = 'Performance';
-		  $var_db_dump['performance']['map'] = array();
-		  $var_db_dump['performance']['link'] = array(
-		  '5' => 'admin/settings/performance',
-		  '6' => 'admin/settings/performance',
-		  '7' => 'admin/config/development/performance');
-		break;
-		case 'cron_run':
-		  $var_db_dump['cron_run']['name'] = 'Cron';
-		  $var_db_dump['cron_run']['map'] = array();
-		  $var_db_dump['cron_run']['link'] = array(
-		  '5' => 'admin/logs/status/run-cron',
-		  '6' => 'admin/reports/status/run-cron',
-		  '7' => 'admin/reports/status/run-cron');
-		break;
-		default:
-		  $role = explode('_',$var);
-		  $var_db_dump[$var]['name'] = $role[2] .' users';
-		  $var_db_dump[$var]['map'] = array();
-		  $var_db_dump[$var]['link'] = array(
-		  '5' => 'admin/user/user',
-		  '6' => 'admin/user/user',
-		  '7' => 'admin/people');
-		break;
-	  }
-	}
-	foreach ($variables AS $var) {
-	  $result = db_query("SELECT * FROM {network_manager_variable_map} WHERE variable='%s'",$var);
-	  while ($var_map = db_fetch_array($result)) {
-	    $var_db_dump[$var_map['variable']]['name'] = $var_map['variable_name'];
-	    $var_db_dump[$var_map['variable']]['map'] = unserialize($var_map['map']);
-	    $var_db_dump[$var_map['variable']]['link'] = unserialize($var_map['link']);
-	  }
-	}
-	$variables = $var_db_dump;
-	//setup the header for the table
-	foreach ($variables AS $var) {
-	  $header[] = $var['name'];
-	}
-	//monster to run through and grab all the rows
-	foreach ($network AS $db) {
-	    $row = array();
-	    $path = _network_manager_get_variable($db,'network_connector_path');
-	    $base_version = substr(_network_manager_get_version($db),0,1);
-		foreach ($variables AS $key => $var) {
-		  switch($key) {
-			case 'clear-cache':
-			  if (_network_manager_has_module($db,'admin_menu')) {
-			    $row[] = 'Clear';
-			  }
-			  else {
-			    $row[] = '';
-			  }
-			break;
-			case 'connector':
-			  $row[] = _network_manager_has_connector($db);
-			break;
-			case 'site':
-			  $row[] = _network_manager_get_variable($db,'site_name');
-			break;
-			case 'database':
-			  $row[] = $db;
-			break;
-			case 'version':
-			  $row[] = _network_manager_get_version($db);
-			break;
-			case 'modules':
-			  $row[] = _network_manager_get_module_count($db);
-			break;
-			case 'performance':
-			  $data = '';
-			  $cache = _network_manager_get_variable($db,'cache');
-			  if ($cache == 1) {
-				$data.= 'Cache';
-			  }
-			  else if ($cache == 2) {
-				$data.= 'Ag. Cache';
-			  }
-			  if (_network_manager_get_variable($db,'preprocess_css') == 1) {
-				if ($data == '') {
-				  $data.= 'CSS';
-				}
-				else {
-				  $data.= '/CSS';
-				}
-			  }
-			  if (_network_manager_get_variable($db,'preprocess_js') == 1) {
-				if ($data == '') {
-				  $data.= 'JS';
-				}
-				else {
-				  $data.= '/JS';
-				}
-			  }
-			  $row[] = $data;
-			break;
-			case 'cron_run':
-			  $row[] = date('m/d/y H:i:s',_network_manager_get_variable($db,'cron_last'));
-			break;
-			default:
-			  $role = explode('_',$key);
-			  if ($role[0] == 'role') {
-			    $row[] = db_result(db_query("SELECT COUNT(uid) FROM %s.users_roles WHERE rid=%s",$db,$role[1]));
-			  }
-			  else {
-			    $value = _network_manager_get_variable($db,$key);
-			    if ($value == '') {
-			      $row[] = '';
-			    }
-			    else if (count($var['map'][0]) == '') {
-			      $row[] = $value;
-			    }
-			    else {
-			      $row[] = $var['map'][$value];
-			    }
-			  }
-			break;
-		  }
-		}
-	  $rowtotals[] = $row;
-	  if ($path != ''){
-	    $count=0;
-	    foreach ($variables AS $var) {
-		  if (count($var['link']) == 0) {
-		  }
-		  else {
-		    if ($var['link'][$base_version] == '') {
-			  if($var['link'][0] == '') {
-			    $link_path = '';
-			  }
-			  else {
-		        $link_path = $var['link'][0];
-			  }
-		    }else {
-		      $link_path = $var['link'][$base_version];
-		    }
-			if ($link_path == 'update.php') {
-			  $row[$count] = l(t($row[$count]), $path . $link_path,$attributes);
-		    }
-			else if ($link_path != ''){
-		      $row[$count] = l(t($row[$count]), $path .'?q='. $link_path,$attributes);
-		    }
-			else {
-			  $row[$count] = t($row[$count]);
-		    }
-		  }
-		  $count++;
-		}
-	  }
-	  $rows[] = $row;
-	}
-	asort($rows);
-	$total = array();
-	foreach ($rowtotals as $key1 => $row) {
-	  $count = 0;
-	  foreach ($row as $key2 => $cell) {
-	    $total[$count]+= $cell;
-		$count++;
-	  }
-	}
-	foreach ($total as $key => $cell) {
-	  if ($cell == 0 || $header[$key] == 'Version' || $header[$key] == 'Cron') {
-	    $total[$key] = '';
-	  }
-	  else {
-	  $total[$key] = '<strong>'. $total[$key] .'</strong>';
-	  }
-	}
-	$total[0] = '<strong>Total</strong>';
-	$rows[] = $total;
-	return theme('table',$header,$rows);
+    $var_db_dump = array();
+    $rows = array();
+    $attributes = array('attributes' => array('target' => '_blank'));
+    $variables = unserialize(db_result(db_query("SELECT variables FROM {network_manager_user_settings} WHERE uid='%s'", $user->uid)));
+    if ($variables == '') {
+      $variables = array();
+    }
+    $complex_variables = unserialize(db_result(db_query("SELECT complex_variables FROM {network_manager_user_settings} WHERE uid='%s'", $user->uid)));
+    if ($complex_variables == '') {
+      $complex_variables = array();
+    }
+    //site has to be here or the information is kind of meaningless
+    $var_db_dump['site']['name'] = 'Site';
+    $var_db_dump['site']['map'] = array();
+    $var_db_dump['site']['link'] = array('admin/settings/site-information');
+    foreach ($complex_variables AS $var) {
+      switch ($var) {
+      case 'clear-cache':
+        $var_db_dump['clear-cache']['name'] = 'Clear Cache';
+        $var_db_dump['clear-cache']['map'] = array();
+        $var_db_dump['clear-cache']['link'] = array(
+          '6' => 'admin_menu/flush-cache');
+      break;
+      case 'database':
+        $var_db_dump['database']['name'] = 'Database';
+        $var_db_dump['database']['map'] = array();
+        $var_db_dump['database']['link'] = array(
+          '0' => 'update.php');
+      break;
+      case 'version':
+        $var_db_dump['version']['name'] = 'Version';
+        $var_db_dump['version']['map'] = array();
+        $var_db_dump['version']['link'] = array('admin/reports/status');
+      break;
+      case 'modules':
+        $var_db_dump['modules']['name'] = 'Modules';
+        $var_db_dump['modules']['map'] = array();
+        $var_db_dump['modules']['link'] = array(
+          '5' => 'admin/build/modules',
+          '6' => 'admin/build/modules',
+          '7' => 'admin/config/modules');
+      break;
+      case 'performance':
+        $var_db_dump['performance']['name'] = 'Performance';
+        $var_db_dump['performance']['map'] = array();
+        $var_db_dump['performance']['link'] = array(
+          '5' => 'admin/settings/performance',
+          '6' => 'admin/settings/performance',
+          '7' => 'admin/config/development/performance');
+      break;
+      case 'cron_run':
+        $var_db_dump['cron_run']['name'] = 'Cron';
+        $var_db_dump['cron_run']['map'] = array();
+        $var_db_dump['cron_run']['link'] = array(
+          '5' => 'admin/logs/status/run-cron',
+          '6' => 'admin/reports/status/run-cron',
+          '7' => 'admin/reports/status/run-cron');
+      break;
+      default:
+        $role = explode('_', $var);
+        $var_db_dump[$var]['name'] = $role[2] .' users';
+        $var_db_dump[$var]['map'] = array();
+        $var_db_dump[$var]['link'] = array(
+          '5' => 'admin/user/user',
+          '6' => 'admin/user/user',
+          '7' => 'admin/people');
+      break;
+    }
+  }
+  foreach ($variables AS $var) {
+    $result = db_query("SELECT * FROM {network_manager_variable_map} WHERE variable='%s'", $var);
+    while ($var_map = db_fetch_array($result)) {
+      $var_db_dump[$var_map['variable']]['name'] = $var_map['variable_name'];
+      $var_db_dump[$var_map['variable']]['map'] = unserialize($var_map['map']);
+      $var_db_dump[$var_map['variable']]['link'] = unserialize($var_map['link']);
+    }
+  }
+  $variables = $var_db_dump;
+  //setup the header for the table
+  foreach ($variables AS $var) {
+    $header[] = $var['name'];
+  }
+  //monster to run through and grab all the rows
+  foreach ($network AS $db) {
+    $row = array();
+    $path = variable_get('network_manager_path_'. $db, '');
+    $base_version = drupal_substr(_network_manager_get_version($db), 0, 1);
+    foreach ($variables AS $key => $var) {
+      switch ($key) {
+        case 'clear-cache':
+          if (_network_manager_has_module($db, 'admin_menu')) {
+            $row[] = 'Clear';
+          }
+          else {
+            $row[] = '';
+          }
+        break;
+        case 'site':
+          $row[] = _network_manager_get_variable($db, 'site_name');
+        break;
+        case 'database':
+          $row[] = $db;
+        break;
+        case 'version':
+          $row[] = _network_manager_get_version($db);
+        break;
+        case 'modules':
+          $row[] = _network_manager_get_module_count($db);
+        break;
+        case 'performance':
+          $data = '';
+          $cache = _network_manager_get_variable($db, 'cache');
+          if ($cache == 1) {
+            $data .= 'Cache';
+          }
+          elseif ($cache == 2) {
+            $data .= 'Ag. Cache';
+          }
+          if (_network_manager_get_variable($db, 'preprocess_css') == 1) {
+            if ($data == '') {
+              $data .= 'CSS';
+            }
+            else {
+              $data .= '/CSS';
+            }
+          }
+          if (_network_manager_get_variable($db, 'preprocess_js') == 1) {
+            if ($data == '') {
+              $data .= 'JS';
+            }
+            else {
+              $data .= '/JS';
+            }
+          }
+          $row[] = $data;
+        break;
+        case 'cron_run':
+          $row[] = date('m/d/y H:i:s', _network_manager_get_variable($db, 'cron_last'));
+        break;
+        default:
+          $role = explode('_', $key);
+          if ($role[0] == 'role') {
+            $row[] = db_result(db_query("SELECT COUNT(uid) FROM %s.users_roles WHERE rid=%s", $db, $role[1]));
+          }
+          else {
+            $value = _network_manager_get_variable($db, $key);
+            if ($value == '') {
+              $row[] = '';
+            }
+            elseif (count($var['map'][0]) == '') {
+              $row[] = $value;
+            }
+            else {
+              $row[] = $var['map'][$value];
+            }
+          }
+        break;
+      }
+    }
+    $rowtotals[] = $row;
+    if ($path != '') {
+      $count=0;
+      foreach ($variables AS $var) {
+        if (count($var['link']) == 0) {
+        }
+        else {
+          if ($var['link'][$base_version] == '') {
+            if ($var['link'][0] == '') {
+              $link_path = '';
+            }
+            else {
+              $link_path = $var['link'][0];
+            }
+          }
+          else {
+            $link_path = $var['link'][$base_version];
+          }
+        if ($link_path == 'update.php') {
+          $row[$count] = l(t($row[$count]), $path . $link_path, $attributes);
+        }
+        elseif ($link_path == '<front>') {
+          $row[$count] = l(t($row[$count]), $path, $attributes);
+        }
+        elseif ($link_path != '') {
+          $row[$count] = l(t($row[$count]), $path . _network_manager_clean_urls($db) . $link_path, $attributes);
+        }
+        else {
+          $row[$count] = t($row[$count]);
+        }
+      }
+      $count++;
+    }
+  }
+  $rows[] = $row;
+  }
+  asort($rows);
+  $total = array();
+  foreach ($rowtotals as $key1 => $row) {
+    $count = 0;
+    foreach ($row as $key2 => $cell) {
+      $total[$count]+= $cell;
+      $count++;
+    }
+  }
+  foreach ($total as $key => $cell) {
+    if ($cell == 0 || $header[$key] == 'Version' || $header[$key] == 'Cron') {
+      $total[$key] = '';
+    }
+    else {
+      $total[$key] = '<strong>'. $total[$key] .'</strong>';
+    }
+  }
+  $total[0] = '<strong>Total</strong>';
+  $rows[] = $total;
+  return theme('table', $header, $rows);
   }
 }
 
 function _network_manager_my_display() {
   global $user;
-  $options = array('default'=>' Default');
-  $network = variable_get('network_manager_network',array());
+  $options = array('default' => ' Default');
+  $network = _network_manager_verify_network(variable_get('network_manager_network', array()));
   foreach ($network AS $db) {
-    $options[$db] = _network_manager_get_variable($db,'site_name');
-	if ($options[$db] == '') {
-	  $options[$db] = $db;
-	}
-	else {
-	  $options[$db].=' ('. $db .')';
-	}
+    $options[$db] = _network_manager_get_variable($db, 'site_name');
+  if ($options[$db] == '') {
+    $options[$db] = $db;
+  }
+  else {
+    $options[$db] .=' ('. $db .')';
+  }
   }
   asort($options);
   $form["network"] = array(
     '#type' => 'select',
     '#title' => t("My Network"),
     '#default_value' => _network_manager_user_network($user->uid),
-	'#options' => $options,
-	'#multiple' => TRUE,
+  '#options' => $options,
+  '#multiple' => TRUE,
     '#description' => t("Select the sites that you want to see on your display"),
   );
   $options = array('default' => ' Default');
@@ -414,18 +434,18 @@ function _network_manager_my_display() {
     '#type' => 'select',
     '#title' => t("Values to Monitor"),
     '#default_value' => _network_manager_user_variables($user->uid),
-	'#options' => $options,
-	'#multiple' => TRUE,
-	'#required' => FALSE,
+  '#options' => $options,
+  '#multiple' => TRUE,
+  '#required' => FALSE,
     '#description' => t("Select just the values that you want to view across your network"),
   );
   $options = array(
     'cron_run' => 'Last Cron Run',
-	'clear-cache' => 'Clear Cache',
-	'database' => 'Database Name',
-	'version' => 'Drupal Version',
-	'modules' => 'Number of Modules',
-	'performance' => 'Aggregate of Performance settings',
+  'clear-cache' => 'Clear Cache',
+  'database' => 'Database Name',
+  'version' => 'Drupal Version',
+  'modules' => 'Number of Modules',
+  'performance' => 'Aggregate of Performance settings',
   );
   _network_manager_add_roles($options);
   asort($options);
@@ -433,15 +453,15 @@ function _network_manager_my_display() {
     '#type' => 'select',
     '#title' => t("Network Generated Values"),
     '#default_value' => _network_manager_user_complex_variables($user->uid),
-	'#options' => $options,
-	'#multiple' => TRUE,
-	'#required' => FALSE,
+  '#options' => $options,
+  '#multiple' => TRUE,
+  '#required' => FALSE,
     '#description' => t("These are the packaged computed values which are too difficult to manually define."),
   );
-  
+
   $form['#submit'] = array('_network_manager_my_display_submit');
   $form['buttons']['submit'] = array('#type' => 'submit', '#value' => t('Save') );
-  
+
   return $form;
 }
 
@@ -450,20 +470,20 @@ function _network_manager_my_display_submit($form, &$form_state) {
   $network = serialize($form_state['values']['network']);
   $variables = serialize($form_state['values']['variables']);
   $complex_variables = serialize($form_state['values']['complex_variables']);
-  if (db_result(db_query("SELECT uid FROM {network_manager_user_settings} WHERE uid=%s",$user->uid)) == '') {
-    db_query("INSERT INTO {network_manager_user_settings} VALUES(%s,'%s','%s','%s')",$user->uid,$network,$variables,$complex_variables);
+  if (db_result(db_query("SELECT uid FROM {network_manager_user_settings} WHERE uid='%s'", $user->uid)) == '') {
+    db_query("INSERT INTO {network_manager_user_settings} VALUES('%s','%s','%s','%s')", $user->uid, $network, $variables, $complex_variables);
   }
   else {
-    db_query("UPDATE {network_manager_user_settings} SET network='%s',variables='%s',complex_variables='%s' WHERE uid=%s",$network,$variables,$complex_variables,$user->uid);
+    db_query("UPDATE {network_manager_user_settings} SET network='%s',variables='%s',complex_variables='%s' WHERE uid=%s", $network, $variables, $complex_variables, $user->uid);
   }
-  
-  drupal_set_message("Your display configuration has been saved");  
+
+  drupal_set_message(t("Your display configuration has been saved"));
 }
 
 function _network_manager_user_network($uid) {
-  $network = unserialize(db_result(db_query("SELECT network FROM {network_manager_user_settings} WHERE uid=%s",$uid)));
+  $network = unserialize(db_result(db_query("SELECT network FROM {network_manager_user_settings} WHERE uid='%s'", $uid)));
   if ($network == '') {
-    return 'default';
+    return array('default' => 'default');
   }
   else {
     return $network;
@@ -471,7 +491,7 @@ function _network_manager_user_network($uid) {
 }
 
 function _network_manager_user_variables($uid) {
-  $vars = unserialize(db_result(db_query("SELECT variables FROM {network_manager_user_settings} WHERE uid=%s",$uid)));
+  $vars = unserialize(db_result(db_query("SELECT variables FROM {network_manager_user_settings} WHERE uid='%s'", $uid)));
   if ($vars == '') {
     return 'default';
   }
@@ -481,7 +501,7 @@ function _network_manager_user_variables($uid) {
 }
 
 function _network_manager_user_complex_variables($uid) {
-  $complex_variables = unserialize(db_result(db_query("SELECT complex_variables FROM {network_manager_user_settings} WHERE uid=%s",$uid)));
+  $complex_variables = unserialize(db_result(db_query("SELECT complex_variables FROM {network_manager_user_settings} WHERE uid='%s'", $uid)));
   if ($complex_variables == '') {
     return '';
   }
@@ -491,28 +511,28 @@ function _network_manager_user_complex_variables($uid) {
 }
 
 function _network_manager_variable_map() {
-  $options = array(''=>'');
-  $network = variable_get('network_manager_network',array());
+  $options = array('' => '');
+  $network = _network_manager_verify_network(variable_get('network_manager_network', array()));
   foreach ($network AS $db) {
-    $result = db_query("SELECT name FROM %s.variable ORDER BY name",$db);
-	while ($var_name = db_fetch_array($result)) {
-	  $options[$var_name['name']] = $var_name['name'];
-	}
+    $result = db_query("SELECT name FROM %s.variable ORDER BY name", $db);
+    while ($var_name = db_fetch_array($result)) {
+      $options[$var_name['name']] = $var_name['name'];
+    }
   }
   asort($options);
   $form["variable"] = array(
     '#type' => 'select',
     '#title' => t("Variable"),
     '#default_value' => '',
-	'#options' => $options,
-	'#multiple' => FALSE,
-	'#ahah' => array(
+  '#options' => $options,
+  '#multiple' => FALSE,
+  '#ahah' => array(
       'path' => 'network_manager/ajax/variable_get',
       'wrapper' => 'var_wrap',
       'method' => 'replace',
       'effect' => 'fade',
     ),
-	'#required' => TRUE,
+  '#required' => TRUE,
     '#description' => t("This allows you to map specific variables to monitor"),
   );
   $form["var_wrap"] = array(
@@ -521,105 +541,97 @@ function _network_manager_variable_map() {
     '#collapsed' => FALSE,
     '#attributes' => array('id' => 'var_wrap'),
   );
-  
+
   $form['#submit'] = array('_network_manager_variable_map_submit');
   $form['buttons']['submit'] = array('#type' => 'submit', '#value' => t('Save') );
-  
+
   return $form;
 }
 
 function _network_manager_variable_map_submit($form, &$form_state) {
   $variable = $form_state['clicked_button']['#post']['variable'];
   $variable_name = $form_state['clicked_button']['#post']['variable_name'];
-  $map = explode("\r\n",$form_state['clicked_button']['#post']['map']);
+  $map = explode("\r\n", $form_state['clicked_button']['#post']['map']);
   foreach ($map AS $value) {
-    $tmp = explode(":",$value,2);
-	$tmp_map[$tmp[0]] = $tmp[1];
+    $tmp = explode(":", $value, 2);
+    $tmp_map[$tmp[0]] = $tmp[1];
   }
   $map = serialize($tmp_map);
   $link = serialize(array(
     0 => $form_state['clicked_button']['#post']['link_default'],
     5 => $form_state['clicked_button']['#post']['link5'],
-	6 => $form_state['clicked_button']['#post']['link6'],
-	7 => $form_state['clicked_button']['#post']['link7'],
+    6 => $form_state['clicked_button']['#post']['link6'],
+    7 => $form_state['clicked_button']['#post']['link7'],
   ));
-  if (db_result(db_query("SELECT variable FROM {network_manager_variable_map} WHERE variable='%s'",$variable)) == '') {
-    db_query("INSERT INTO {network_manager_variable_map} VALUES('%s','%s','%s','%s')",$variable,$variable_name,$map,$link);
+  if (db_result(db_query("SELECT variable FROM {network_manager_variable_map} WHERE variable='%s'", $variable)) == '') {
+    db_query("INSERT INTO {network_manager_variable_map} VALUES('%s','%s','%s','%s')", $variable, $variable_name, $map, $link);
   }
-  else {  
-    db_query("UPDATE {network_manager_variable_map} SET variable_name='%s',map='%s',link='%s' WHERE variable='%s'",$variable_name,$map,$link,$variable);
+  else {
+    db_query("UPDATE {network_manager_variable_map} SET variable_name='%s', map='%s', link='%s' WHERE variable='%s'", $variable_name, $map, $link, $variable);
   }
   drupal_set_message($variable_name .' ('. $variable .') Mapped!');
 }
 
-function _network_manager_get_variable($db,$field) {
-  return unserialize(db_result(db_query("SELECT value FROM %s.variable WHERE name='%s'",$db,$field)));
+function _network_manager_get_variable($db, $field) {
+  return unserialize(db_result(db_query("SELECT value FROM %s.variable WHERE name='%s'", $db, $field)));
 }
 
 function _network_manager_get_version($db) {
   //make sure that system table has info column which only started to exist as of Drupal 6
-  $info_exists = db_result(db_query("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='%s' AND COLUMN_NAME='info' AND TABLE_NAME='system'",$db));
-  if($info_exists == '') {
-	return '5.x';
+  $info_exists = db_result(db_query("SELECT COLUMN_NAME FROM {information_schema}.{COLUMNS} WHERE TABLE_SCHEMA='%s' AND COLUMN_NAME='info' AND TABLE_NAME='system'", $db));
+  if ($info_exists == '') {
+    return '5.x';
   }
   else {
-	$info_array = unserialize(db_result(db_query("SELECT info FROM %s.system WHERE name='system'",$db)));
-	return $info_array['version'];
+    $info_array = unserialize(db_result(db_query("SELECT info FROM %s.system WHERE name='system'", $db)));
+    return $info_array['version'];
   }
 }
 
 function _network_manager_get_module_count($db) {
-  $active_modules = db_result(db_query("SELECT COUNT(status) FROM %s.system WHERE status=1 AND type='module'",$db));
+  $active_modules = db_result(db_query("SELECT COUNT(status) FROM %s.{system} WHERE status=1 AND type='module'", $db));
   return $active_modules;
-}
-
-function _network_manager_has_connector($db) {
-  $status = db_result(db_query("SELECT status FROM %s.system WHERE name='network_connector'",$db));
-  if ($status == 1) {
-    return '<img src="'. base_path() .'misc/watchdog-ok.png" alt="Network Connector is installed!" title="Network Connector is installed!" />';
-  }
-  else {
-    return '<img src="'. base_path() .'misc/watchdog-error.png" alt="Network Connector is not installed" title="Network Connector is not installed" />';
-  }
 }
 
 function _network_manager_add_roles(&$options) {
   global $user;
-  $network = _network_manager_user_network($user->uid);
+  $network = _network_manager_verify_network(_network_manager_user_network($user->uid));
   if ($network['default'] == 'default' || $network == 'default') {
-    $network = variable_get('network_manager_network',array());
+    $network = _network_manager_verify_network(variable_get('network_manager_network', array()));
+    //set the network incase the verification found any deleted databases
+    variable_set('network_manager_network', $network);
   }
   foreach ($network as $db) {
-    $result = db_query("SELECT * FROM %s.role WHERE rid<>1",$db);
+    $result = db_query("SELECT * FROM %s.role WHERE rid<>1", $db);
     while ($val = db_fetch_array($result)) {
-	  $options['role_'. $val['rid'] .'_'. $val['name']] = 'Count Role: '. $val['name'];
-	}
+    $options['role_'. $val['rid'] .'_'. $val['name']] = 'Count Role: '. $val['name'];
+  }
   }
 }
 
 function _network_manager_modules() {
-  $options = array(''=>'');
-  $network = variable_get('network_manager_network',array());
+  $options = array('' => '');
+  $network = _network_manager_verify_network(variable_get('network_manager_network', array()));
   foreach ($network AS $db) {
-    $result = db_query("SELECT name FROM %s.system WHERE type='module' ORDER BY name",$db);
-	while ($var_name = db_fetch_array($result)) {
-	  $options[$var_name['name']] = $var_name['name'];
-	}
+    $result = db_query("SELECT name FROM %s.system WHERE type='module' ORDER BY name", $db);
+  while ($var_name = db_fetch_array($result)) {
+    $options[$var_name['name']] = $var_name['name'];
+  }
   }
   asort($options);
   $form["module"] = array(
     '#type' => 'select',
     '#title' => t("Module"),
     '#default_value' => '',
-	'#options' => $options,
-	'#multiple' => FALSE,
-	'#ahah' => array(
+    '#options' => $options,
+    '#multiple' => FALSE,
+    '#ahah' => array(
       'path' => 'network_manager/ajax/network_modules',
       'wrapper' => 'var_wrap',
       'method' => 'replace',
       'effect' => 'fade',
     ),
-	'#required' => FALSE,
+  '#required' => FALSE,
     '#description' => t("This will tell you what sites the module you select is activated on"),
   );
   $form["var_wrap"] = array(
@@ -628,50 +640,50 @@ function _network_manager_modules() {
     '#collapsed' => FALSE,
     '#attributes' => array('id' => 'var_wrap'),
   );
-  
+
   return $form;
 }
 
 function _network_manager_watchdog() {
-  $options = array(''=>'');
-  $network = variable_get('network_manager_network',array());
+  $options = array('' => '');
+  $network = _network_manager_verify_network(variable_get('network_manager_network', array()));
   foreach ($network AS $db) {
-    if (_network_manager_has_module($db,'dblog') || _network_manager_has_module($db,'watchdog')) {
-      $result = db_query("SELECT type FROM %s.watchdog ORDER BY type",$db);
-	  while ($var_name = db_fetch_array($result)) {
-	    $options[$var_name['type']] = $var_name['type'];
-	  }
-	}
+    if (_network_manager_has_module($db, 'dblog') || _network_manager_has_module($db, 'watchdog')) {
+      $result = db_query("SELECT type FROM %s.{watchdog} ORDER BY type", $db);
+    while ($var_name = db_fetch_array($result)) {
+      $options[$var_name['type']] = $var_name['type'];
+    }
+  }
   }
   asort($options);
   $form["watchdog_type"] = array(
     '#type' => 'select',
     '#title' => t("Type of Watchdog Entry"),
     '#default_value' => '',
-	'#options' => $options,
-	'#multiple' => FALSE,
-	'#ahah' => array(
+  '#options' => $options,
+  '#multiple' => FALSE,
+  '#ahah' => array(
       'path' => 'network_manager/ajax/network_watchdog',
       'wrapper' => 'var_wrap',
       'method' => 'replace',
       'effect' => 'fade',
     ),
-	'#required' => FALSE,
+  '#required' => FALSE,
     '#description' => t("This will return a list of watchdog entries across your network of this type"),
   );
   $form["watchdog_limit"] = array(
     '#type' => 'select',
     '#title' => t("Record Limit per Site"),
     '#default_value' => '5',
-	'#options' => array('5'=>'5','10'=>'10','20'=>'20','30'=>'30','40'=>'40','50'=>'50','75'=>'50','100'=>'100'),
-	'#multiple' => FALSE,
-	'#ahah' => array(
+    '#options' => array('5' => '5', '10' => '10', '20' => '20', '30' => '30', '40' => '40', '50' => '50'),
+  '#multiple' => FALSE,
+  '#ahah' => array(
       'path' => 'network_manager/ajax/network_watchdog',
       'wrapper' => 'var_wrap',
       'method' => 'replace',
       'effect' => 'fade',
     ),
-	'#required' => FALSE,
+  '#required' => FALSE,
     '#description' => t("How many records should it return at a time?"),
   );
   $form["var_wrap"] = array(
@@ -680,202 +692,209 @@ function _network_manager_watchdog() {
     '#collapsed' => FALSE,
     '#attributes' => array('id' => 'var_wrap'),
   );
-  
+
   return $form;
 }
 
-function _network_manager_has_module($db,$module) {
-  return db_result(db_query("SELECT status FROM %s.system WHERE name='%s'",$db,$module));
+function _network_manager_has_module($db, $module) {
+  return db_result(db_query("SELECT status FROM %s.system WHERE name='%s'", $db, $module));
 }
 
 function _network_manager_ajax() {
   $action = arg(2);
   switch ($action) {
     case 'network_watchdog':
-      $header = array('Site','Type','Message','User','Date');
-	  $rows = array();
-	  $network = variable_get('network_manager_network',array());
+      $header = array('Site', 'Type', 'Message', 'User', 'Date');
+    $rows = array();
+    $network = _network_manager_verify_network(variable_get('network_manager_network', array()));
       foreach ($network AS $db) {
-	    $result = db_query("SELECT uid,message,timestamp FROM %s.watchdog WHERE type='%s' ORDER BY timestamp LIMIT %s",$db,$_POST['watchdog_type'],$_POST['watchdog_limit']);
-	    while ($entry = db_fetch_array($result)) {
-	      $rows[] = array($db,$_POST['watchdog_type'],l(t($entry['message']),_network_manager_get_variable($db,'network_connector_path') . $entry['message'],array('attributes' => array('target'=>'_blank'))),theme('username',user_load(array('uid' => $entry['uid']))),date('m/d/y h:i:s',$entry['timestamp']));
-	    }
-	  }
-	  asort($rows);
-	  $output = theme('table',$header,$rows);
-	  drupal_json(array('status' => TRUE, 'data' => $output));
+      $result = db_query("SELECT uid,message,timestamp FROM %s.watchdog WHERE type='%s' ORDER BY timestamp LIMIT %s", $db, $_POST['watchdog_type'], $_POST['watchdog_limit']);
+      while ($entry = db_fetch_array($result)) {
+        $rows[] = array($db, $_POST['watchdog_type'], l(t($entry['message']), variable_get('network_manager_path_'. $db, '') . $entry['message'], array('attributes' => array('target' => '_blank'))), theme('username', user_load(array('uid' => $entry['uid']))), date('m/d/y h:i:s', $entry['timestamp']));
+      }
+    }
+    asort($rows);
+    $output = theme('table', $header, $rows);
+    drupal_json(array('status' => TRUE, 'data' => $output));
     break;
     case 'network_modules':
-	  $on_rows = array();
-	  $off_rows = array();
-	  $attributes = array('attributes' => array('target' => '_blank'));
-	  $path_map = array(
-	    '5' => 'admin/build/modules', 
-	    '6' => 'admin/build/modules', 
-	    '7' => 'admin/config/modules'
-	  );
-	  $header = array('Site Name','Database','Version');
-	  $network = variable_get('network_manager_network',array());
+    $on_rows = array();
+    $off_rows = array();
+    $attributes = array('attributes' => array('target' => '_blank'));
+    $path_map = array(
+      '5' => 'admin/build/modules',
+      '6' => 'admin/build/modules',
+      '7' => 'admin/config/modules'
+    );
+    $header = array('Site Name', 'Database', 'Version');
+    $network = _network_manager_verify_network(variable_get('network_manager_network', array()));
       foreach ($network AS $db) {
-	    $var = db_result(db_query("SELECT name FROM %s.system WHERE status=1 AND name='%s'",$db,$_POST['module']));
-		$path = _network_manager_get_variable($db,'network_connector_path');
-		$version = substr(_network_manager_get_version($db),0,1);
-		if ($var != '') {
-		  if ($path != ''){
-		    $on_rows[] = array(
-		      l(t(_network_manager_get_variable($db,'site_name')), $path .'?q='. $path_map[$version],$attributes), 
-		      l(t($db), $path .'?q='. $path_map[$version],$attributes), 
-		      l(t(_network_manager_get_version($db)), $path .'?q='. $path_map[$version],$attributes), 
-		    );
-		  }
-		  else {
-		    $on_rows[] = array(
-		      t(_network_manager_get_variable($db,'site_name')), 
-		      t($db), 
-		      t(_network_manager_get_version($db)), 
-		    );
-		  }
-		}
-		else {
-		  if ($path != '') {  
-			$off_rows[] = array(
-		      l(t(_network_manager_get_variable($db,'site_name')), $path .'?q='. $path_map[$version],$attributes), 
-		      l(t($db), $path .'?q='. $path_map[$version],$attributes), 
-		      l(t(_network_manager_get_version($db)), $path .'?q='. $path_map[$version],$attributes), 
-		    );
-		  }
-		  else {
-		    $on_rows[] = array(
-		      t(_network_manager_get_variable($db,'site_name')), 
-		      t($db), 
-		      t(_network_manager_get_version($db)), 
-		    );
-		  }
-		}
-	  }
-	  asort($on_rows);
-	  asort($off_rows);
-	  
-	  $form["moduleon"] = array(
-	    '#title' => t('Sites running this module'),
-		'#type' => 'fieldset',
-		'#collapsible' => TRUE,
-		'#collapsed' => FALSE,
-		'#weight' => 0,
-	  );
-	  $form["moduleon"]["table"] = array(
-	   '#value' => theme('table',$header,$on_rows),
-	  );
-	  $form["moduleoff"] = array(
-	    '#title' => t('Sites NOT running this module'),
-		'#type' => 'fieldset',
-		'#collapsible' => TRUE,
-		'#collapsed' => FALSE,
-		'#weight' => 1,
-	  );
-	  $form["moduleoff"]["table"] = array(
-	   '#value' => theme('table',$header,$off_rows),
-	  );
-	  $output = drupal_render($form);
-	  drupal_json(array('status' => TRUE, 'data' => $output));
-	break;
-	case 'variable_get':
-	  $result = db_query("SELECT * FROM {network_manager_variable_map} WHERE variable='%s'",$_POST['variable']);
-	  while ($var = db_fetch_array($result)) {
-	    $variable_name = $var['variable_name'];
-		$tmp_map = '';
-		$map = unserialize($var['map']);
-		if ($map[0] != '') {
-		  $count = 0;
-		  foreach ($map AS $key => $value) {
-		    if ($count!==0){
-		      $tmp_map.="\r\n";
-		    }
-		    $tmp_map.= $key .':'. $value;
-		    $count++;
-		  }
-		}
-		$map = $tmp_map;
-		$link = unserialize($var['link']);
-		$link_default = $link[0];
-		$link5 = $link[5];
-		$link6 = $link[6];
-		$link7 = $link[7];
-	  }
-	  $form["variable_name"] = array(
-		'#type' => 'textfield',
-		'#id' => 'edit-variable-name',
-		'#name' => 'variable_name',
-		'#title' => t("Human Name"),
-		'#value' => $variable_name,
-		'#required' => TRUE,
-		'#weight' => 0,
-		'#description' => t("The Human Readable name of this variable"),
-	  );
-	  $form["map"] = array(
-		'#type' => 'textarea',
-		'#id' => 'edit-map',
-		'#name' => 'map',
-		'#title' => t("Value Map"),
-		'#rows' => 3,
-		'#weight' => 1,
-		'#value' => $map,
-		'#description' => t("This will allow you to map possible values to more meaningful values. Input is value:new_value and one per line.  Example: 0:No 1:Yes"),
-	  );
-	  $form["links"] = array(
-	    '#title' => t('System Paths'),
-		'#type' => 'fieldset',
-		'#collapsible' => TRUE,
-		'#collapsed' => FALSE,
-		'#weight' => 2,
-		'#description' => t("Define the Drupal system path that you want sites hooked up with the Network Connector module to link to. Use <front> to link to the site itself")
-	  );
-	  $form["links"]["link_default"] = array(
-		'#type' => 'textfield',
-		'#id' => 'edit-link-default',
-		'#name' => 'link_default',
-		'#title' => t("Default"),
-		'#rows' => 3,
-		'#weight' => 0,
-		'#value' => $link_default,
-		'#description' => t("This system path will be used if one is not specified below")
-		);
-	  $form["links"]["link5"] = array(
-		'#type' => 'textfield',
-		'#id' => 'edit-link5',
-		'#name' => 'link5',
-		'#title' => t("Drupal 5"),
-		'#rows' => 3,
-		'#weight' => 1,
-		'#value' => $link[5],
-		'#description' => t("Drupal 5 system path")
-		);
-		$form["links"]["link6"] = array(
-		'#type' => 'textfield',
-		'#id' => 'edit-link6',
-		'#name' => 'link6',
-		'#title' => t("Drupal 6"),
-		'#rows' => 3,
-		'#weight' => 2,
-		'#value' => $link[6],
-		'#description' => t("Drupal 6 system path")
-		);
-		$form["links"]["link7"] = array(
-		'#type' => 'textfield',
-		'#id' => 'edit-link7',
-		'#name' => 'link7',
-		'#title' => t("Drupal 7"),
-		'#rows' => 3,
-		'#weight' => 3,
-		'#value' => $link[7],
-		'#description' => t("Drupal 7 system path"),
-		);
-	  $output = drupal_render($form);
-	  drupal_json(array('status' => TRUE, 'data' => $output));
-	break;
-	default:
-	  drupal_json(array('status' => FALSE, 'data' => ''));
-	break;
+      $var = db_result(db_query("SELECT name FROM %s.system WHERE status=1 AND name='%s'", $db, $_POST['module']));
+    $path = variable_get('network_manager_path_'. $db, '');
+    $version = drupal_substr(_network_manager_get_version($db), 0, 1);
+    if ($var != '') {
+      if ($path != '') {
+        $on_rows[] = array(
+          l(t(_network_manager_get_variable($db, 'site_name')), $path . _network_manager_clean_urls($db) . $path_map[$version], $attributes), l(t($db), $path . _network_manager_clean_urls($db) . $path_map[$version], $attributes), l(t(_network_manager_get_version($db)), $path . _network_manager_clean_urls($db) . $path_map[$version], $attributes));
+      }
+      else {
+        $on_rows[] = array(
+          t(_network_manager_get_variable($db, 'site_name')), t($db), t(_network_manager_get_version($db)));
+      }
+    }
+    else {
+      if ($path != '') {
+      $off_rows[] = array(l(t(_network_manager_get_variable($db, 'site_name')), $path . _network_manager_clean_urls($db) . $path_map[$version], $attributes), l(t($db), $path . _network_manager_clean_urls($db) . $path_map[$version], $attributes), l(t(_network_manager_get_version($db)), $path . _network_manager_clean_urls($db) . $path_map[$version], $attributes));
+      }
+      else {
+        $on_rows[] = array(t(_network_manager_get_variable($db, 'site_name')), t($db), t(_network_manager_get_version($db)));
+      }
+    }
+    }
+    asort($on_rows);
+    asort($off_rows);
+
+    $form["moduleon"] = array(
+      '#title' => t('Sites running this module'),
+      '#type' => 'fieldset',
+      '#collapsible' => TRUE,
+      '#collapsed' => FALSE,
+      '#weight' => 0,
+    );
+    $form["moduleon"]["table"] = array(
+     '#value' => theme('table', $header, $on_rows),
+    );
+    $form["moduleoff"] = array(
+      '#title' => t('Sites NOT running this module'),
+      '#type' => 'fieldset',
+      '#collapsible' => TRUE,
+      '#collapsed' => FALSE,
+      '#weight' => 1,
+    );
+    $form["moduleoff"]["table"] = array(
+     '#value' => theme('table', $header, $off_rows),
+    );
+    $output = drupal_render($form);
+    drupal_json(array('status' => TRUE, 'data' => $output));
+  break;
+  case 'variable_get':
+    $result = db_query("SELECT * FROM {network_manager_variable_map} WHERE variable='%s'", $_POST['variable']);
+    while ($var = db_fetch_array($result)) {
+      $variable_name = $var['variable_name'];
+    $tmp_map = '';
+    $map = unserialize($var['map']);
+    if ($map[0] != '') {
+      $count = 0;
+      foreach ($map AS $key => $value) {
+        if ($count!==0) {
+          $tmp_map .="\r\n";
+        }
+        $tmp_map .= $key .':'. $value;
+        $count++;
+      }
+    }
+    $map = $tmp_map;
+    $link = unserialize($var['link']);
+    $link_default = $link[0];
+    $link5 = $link[5];
+    $link6 = $link[6];
+    $link7 = $link[7];
+    }
+    $form["variable_name"] = array(
+    '#type' => 'textfield',
+    '#id' => 'edit-variable-name',
+    '#name' => 'variable_name',
+    '#title' => t("Human Name"),
+    '#value' => $variable_name,
+    '#required' => TRUE,
+    '#weight' => 0,
+    '#description' => t("The Human Readable name of this variable"),
+    );
+    $form["map"] = array(
+    '#type' => 'textarea',
+    '#id' => 'edit-map',
+    '#name' => 'map',
+    '#title' => t("Value Map"),
+    '#rows' => 3,
+    '#weight' => 1,
+    '#value' => $map,
+    '#description' => t("This will allow you to map possible values to more meaningful values. Input is value:new_value and one per line.  Example: 0:No 1:Yes"),
+    );
+    $form["links"] = array(
+      '#title' => t('System Paths'),
+    '#type' => 'fieldset',
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+    '#weight' => 2,
+    '#description' => t("Define the Drupal system path that you want sites to link to. Use <front> to link to the site itself")
+    );
+    $form["links"]["link_default"] = array(
+    '#type' => 'textfield',
+    '#id' => 'edit-link-default',
+    '#name' => 'link_default',
+    '#title' => t("Default"),
+    '#rows' => 3,
+    '#weight' => 0,
+    '#value' => $link_default,
+    '#description' => t("This system path will be used if one is not specified below")
+    );
+    $form["links"]["link5"] = array(
+    '#type' => 'textfield',
+    '#id' => 'edit-link5',
+    '#name' => 'link5',
+    '#title' => t("Drupal 5"),
+    '#rows' => 3,
+    '#weight' => 1,
+    '#value' => $link[5],
+    '#description' => t("Drupal 5 system path")
+    );
+    $form["links"]["link6"] = array(
+    '#type' => 'textfield',
+    '#id' => 'edit-link6',
+    '#name' => 'link6',
+    '#title' => t("Drupal 6"),
+    '#rows' => 3,
+    '#weight' => 2,
+    '#value' => $link[6],
+    '#description' => t("Drupal 6 system path")
+    );
+    $form["links"]["link7"] = array(
+    '#type' => 'textfield',
+    '#id' => 'edit-link7',
+    '#name' => 'link7',
+    '#title' => t("Drupal 7"),
+    '#rows' => 3,
+    '#weight' => 3,
+    '#value' => $link[7],
+    '#description' => t("Drupal 7 system path"),
+    );
+    $output = drupal_render($form);
+    drupal_json(array('status' => TRUE, 'data' => $output));
+  break;
+  default:
+    drupal_json(array('status' => FALSE, 'data' => ''));
+  break;
   }
   exit();
+}
+
+//set URLs nicely on the display page based on clean url status
+function _network_manager_clean_urls($db) {
+  if (_network_manager_get_variable($db, 'clean_url')) {
+    return '';
+  }
+  else {
+    return '?q=';
+  }
+}
+
+//doublecheck that all DBs still exist before running the query's against them so there aren't any DB errors
+function _network_manager_verify_network($network) {
+  foreach ($network AS $db) {
+    $tmp = db_result(db_query("SELECT SCHEMA_NAME FROM {information_schema}.{SCHEMATA} WHERE SCHEMA_NAME='%s'", $db));
+    if ($db != $tmp) {
+      unset($network[$db]);
+    }
+  }
+  return $network;
 }

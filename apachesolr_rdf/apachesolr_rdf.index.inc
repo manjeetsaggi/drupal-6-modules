@@ -1,10 +1,10 @@
 <?php
-// $Id: apachesolr_rdf.index.inc,v 1.1.2.5 2009/08/10 15:30:04 drunkenmonkey Exp $
+// $Id: apachesolr_rdf.index.inc,v 1.1.2.10 2009/11/02 00:08:05 drunkenmonkey Exp $
 
 /**
  * Index the specified resources for the given context.
  */
-function apachesolr_rdf_index_resources($uris, $index, $info) {
+function apachesolr_rdf_index_resources($uris, $info) {
   $server = apachesolr_rdf_server_load($info['server']);
   if (!$server) {
     return FALSE;
@@ -23,7 +23,7 @@ function apachesolr_rdf_index_resources($uris, $index, $info) {
     }
   }
   catch (Exception $e) {
-    watchdog('Apache Solr RDF', nl2br(check_plain($e->getMessage())), NULL,
+    watchdog('Apache Solr RDF', check_plain($e->getMessage()), NULL,
         WATCHDOG_ERROR);
     return FALSE;
   }
@@ -60,13 +60,13 @@ function apachesolr_rdf_index_resources($uris, $index, $info) {
 
         foreach ($docs as $uri => $doc) {
           db_query('UPDATE {apachesolr_rdf_resources} SET changed = 0 ' .
-              "WHERE uri = '%s' AND index_id = %d", $uri, $index);
+              "WHERE uri = '%s' AND index_id = %d", $uri, $info['id']);
         }
       }
       $solr->commit();
     }
     catch (Exception $e) {
-      watchdog('Apache Solr RDF', nl2br(check_plain($e->getMessage())), NULL,
+      watchdog('Apache Solr RDF', check_plain($e->getMessage()), NULL,
           WATCHDOG_ERROR);
       return FALSE;
     }
@@ -92,7 +92,7 @@ function apachesolr_rdf_extract_object_string($object) {
     return array('type' => 'uri', 'string' => $object->uri);
   }
   if ($object instanceof RDF_Literal) {
-    return array('type' => 'literal', 'string' => $object->value);
+    return array('type' => $object->datatype, 'string' => $object->value);
   }
   return FALSE;
 }
@@ -108,26 +108,178 @@ function apachesolr_rdf_extract_object_string($object) {
  */
 function apachesolr_rdf_create_document_dynamic(
     $uri, $predicates, $info) {
-  $fields = _apachesolr_rdf_get_fields_dynamic($info['schema_args']);
+  $fields = _apachesolr_rdf_get_dynamic_fields(
+      apachesolr_rdf_server_load($info['server']));
   $doc = new Apache_Solr_Document;
 
   $doc->id = apachesolr_rdf_create_id($uri, $info['id']);
   $doc->uri = $uri;
   $doc->index = $info['id'];
   $doc->context = $info['resources']['context'];
+  $text = '';
+  $options = array('context' => $info['resources']['context']);
   foreach ($predicates as $predicate => $objects) {
     foreach ($objects as $object) {
       $object = apachesolr_rdf_extract_object_string($object);
       $type = $object['type'];
       $string = $object['string'];
-      $doc->setMultiValue('property_object', "$predicate $string");
-      if (isset($fields[$predicate])) {
-        $doc->setMultiValue($fields[$predicate], $string);
+
+      // Add property_object value, if enabled
+      if (!empty($info['schema_args']['property_object'])) {
+        $doc->setMultiValue('property_object', "$predicate $string");
       }
+      // Add value to "text" string, if enabled
+      if (!empty($info['schema_args']['text'])) {
+        if ($type == 'uri') {
+          // For resource objects, add their label to "text" field
+          $triples = rdf_query($string, APACHESOLR_RDF_LABEL, NULL, $options);
+          $triples = $triples->to_array();
+          $triples = rdf_normalize($triples);
+          if (!empty($triples[$string])) {
+            $triples = $triples[$string];
+            $label = '';
+            foreach ($triples as $pred => $obj) {
+              $obj = apachesolr_rdf_extract_object_string($obj);
+              $label .= "{$obj['string']} ";
+            }
+            $label = trim($label);
+            if ($label) {
+              $text .= "\n$label";
+            }
+          }
+        }
+        else {
+          $text .= "\n$string";
+        }
+      }
+      // Add dynamic field, if applicable
+      $label = isset($label) ? $label : NULL;
+      apachesolr_rdf_dynamic_add_index_fields($info, $doc, $predicate, $string,
+          $fields, $label);
     }
+  }
+  trim($text);
+  if ($text) {
+    $doc->text = $text;
   }
 
   return $doc;
+}
+
+/**
+ * Adds dynamic fields for the predicate/object pair to the document, if
+ * applicable.
+ */
+function apachesolr_rdf_dynamic_add_index_fields(
+    $info, &$doc, $p, $o, $fields, $label = NULL) {
+  $types = array(
+    'text' => 't',
+    'string' => 's',
+    'integer' => 'i',
+    'float' => 'f',
+    'boolean' => 'b',
+  );
+  $context = $info['resources']['context'];
+  foreach (_apachesolr_rdf_get_dynamic_fields_by_uri($fields, $p)
+      as $id => $v) {
+    $t = $v['type'];
+    $mv = empty($v['multiValued']) ? 's' : 'm';
+    if (isset($types[$t])) {
+      $name = "{$types[$t]}{$mv}_$id";
+      if ($v['multiValued']) {
+        $doc->setMultiValue($name, $o);
+      }
+      else {
+        if (!empty($doc->$name)) {
+          $doc->$name = $doc->$name . "\n$o";
+        }
+        else {
+          $doc->$name = $o;
+        }
+      }
+    }
+    else {
+      // Some supported datatypes require a special treatment
+      switch ($t) {
+        case 'date':
+          $time = strtotime($o);
+          if ($time === FALSE) {
+            watchdog('Apache Solr RDF', 'Could not parse date: "@date"',
+                array('@date' => $o), WATCHDOG_WARNING);
+            break;
+          }
+          $name = "i{$mv}_$id";
+          if ($v['multiValued']) {
+            $doc->setMultiValue($name, $time);
+          }
+          else {
+            if (!empty($doc->$name)) {
+              $doc->$name = $doc->$name . "\n$time";
+            }
+            else {
+              $doc->$name = $time;
+            }
+          }
+          break;
+
+        case 'resource':
+          $name = "s{$mv}_$id";
+          if ($v['multiValued']) {
+            $doc->setMultiValue($name, $o);
+          }
+          else {
+            if (!empty($doc->$name)) {
+              $doc->$name = $doc->$name . "\n$o";
+            }
+            else {
+              $doc->$name = $o;
+            }
+          }
+          // Add label
+          if (!isset($label)) {
+            $options = array('context' => $context);
+            $triples = rdf_query($o, APACHESOLR_RDF_LABEL, NULL, $options);
+            $triples = $triples->to_array();
+            $triples = rdf_normalize($triples);
+            if (!empty($triples[$o])) {
+              $triples = $triples[$o];
+              $label = '';
+              foreach ($triples as $pred => $obj) {
+                $obj = apachesolr_rdf_extract_object_string($obj);
+                $label .= "{$obj['string']} ";
+              }
+              $label = trim($label);
+            }
+          }
+          if (!empty($label)) {
+            $name = "t{$mv}_$id";
+            if ($v['multiValued']) {
+              $doc->setMultiValue($name, $label);
+            }
+            else {
+              if (!empty($doc->$name)) {
+                $doc->$name = $doc->$name . "\n$label";
+              }
+              else {
+                $doc->$name = $label;
+              }
+            }
+          }
+          break;
+
+        default:
+          // It has to be a type defined by a hook
+          $f = _apachesolr_rdf_get_dynamic_type_function('add_to_document', $t);
+          if ($f) {
+            $f($doc, $id, $v, $o, $context, isset($label) ? $label : NULL);
+          }
+          else {
+            watchdog('Apache Solr RDF', 'Unknown datatype: @type.',
+                array('@type' => $t), WATCHDOG_WARNING);
+          }
+      }
+    }
+  }
 }
 
 //

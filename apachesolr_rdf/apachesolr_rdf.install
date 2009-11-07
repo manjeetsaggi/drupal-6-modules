@@ -1,5 +1,5 @@
 <?php
-// $Id: apachesolr_rdf.install,v 1.1.2.10 2009/08/08 16:43:06 drunkenmonkey Exp $
+// $Id: apachesolr_rdf.install,v 1.1.2.11 2009/11/01 23:31:38 drunkenmonkey Exp $
 
 /**
  * Implementation of hook_install().
@@ -18,8 +18,8 @@ function apachesolr_rdf_enable() {
 
   // Populate table
   module_load_include('module', 'apachesolr_rdf');
-  foreach (_apachesolr_rdf_indexes(TRUE) as $index => $info) {
-    apachesolr_rdf_update_index_data($index, $info);
+  foreach (_apachesolr_rdf_indexes(TRUE) as $info) {
+    apachesolr_rdf_update_index_data($info);
   }
 }
 
@@ -250,6 +250,61 @@ function apachesolr_rdf_schema() {
     'primary key' => array('id'),
   );
 
+  // Table for fields in the "dynamic fields" schema.
+  $schema['apachesolr_rdf_dynamic_fields'] = array(
+    'description' => t('Stores the dynamic fields defined for each server.'),
+    'fields' => array(
+      'server' => array(
+        'description' => t('The {apachesolr_rdf_servers}.id this field ' .
+            'definition belongs to.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'id' => array(
+        'description' => t("The field's internal identifier, which is also " .
+            'used for constructing the Solr field name.'),
+        'type' => 'varchar',
+        'length' => 50,
+        'not null' => TRUE,
+      ),
+      'name' => array(
+        'description' => t("The field's displayed name."),
+        'type' => 'varchar',
+        'length' => 50,
+      ),
+      'uri' => array(
+        'description' => t("The predicate's URI."),
+        'type' => 'varchar',
+        'length' => 100,
+        'not null' => TRUE,
+      ),
+      'type' => array(
+        'description' => t("The field's type."),
+        'type' => 'varchar',
+        'length' => 50,
+        'not null' => TRUE,
+      ),
+      'facet' => array(
+        'description' => t('Whether to create a facet for this field.'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+      ),
+      'multiValued' => array(
+        'description' => t('Whether this field may have multiple values.'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+      ),
+    ),
+    'indexes' => array(
+      'server' => array('server'),
+      'uri' => array('uri'),
+    ),
+    'primary key' => array('server', 'id'),
+  );
+
   return $schema;
 }
 
@@ -258,6 +313,10 @@ function apachesolr_rdf_schema() {
  */
 function apachesolr_rdf_uninstall() {
   variable_del('apachesolr_rdf_updated_resources');
+  // Delete servers
+  foreach(_apachesolr_rdf_servers() as $server) {
+    apachesolr_rdf_delete_server($server['id']);
+  }
   // Remove tables.
   drupal_uninstall_schema('apachesolr_rdf');
 }
