@@ -1,5 +1,5 @@
 <?php
-// $Id: notifications.node.inc,v 1.1.2.2.2.1 2009/04/28 10:22:01 jareyero Exp $
+// $Id: notifications.node.inc,v 1.1.2.2.2.2 2009/09/22 11:49:07 jareyero Exp $
 /**
  * @file
  * Notifications node API for use by plug-in modules providing node related features
@@ -116,7 +116,7 @@ function _notifications_node_references($string, $match = 'contains', $types = a
   $references = array();
   while ($node = db_fetch_object($result)) {
     $references[$node->nid] = array(
-      'title' => check_plain($node->title),
+      'title' => $node->title,
       'rendered' => check_plain($node->title),
     );
   }

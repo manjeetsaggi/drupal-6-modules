@@ -1,5 +1,5 @@
 <?php
-// $Id: addthis.admin.inc,v 1.1.2.7 2009/04/29 06:40:48 wesku Exp $
+// $Id: addthis.admin.inc,v 1.1.2.8 2009/05/18 16:21:36 wesku Exp $
 
 /**
  * @file
@@ -108,8 +108,8 @@ function addthis_admin_settings() {
   $form['addthis_widget_settings']['addthis_brand'] = array(
     '#type'          => 'textfield',
     '#title'         => t('Brand text'),
-    '#default_value' => variable_get('addthis_brand', 'Your Site'),
-    '#description'   => t('The brand name to display in the drop-down (top right). Example: My Website'),
+    '#default_value' => variable_get('addthis_brand', ''),
+    '#description'   => t('The brand name to display in the drop-down (top right). Example: My Website. Leave blank to use the site_name variable, currently set to !site_name', array('!site_name' => variable_get('site_name', 'Drupal'))),
   );
   $form['addthis_widget_settings']['addthis_options'] = array(
     '#type'          => 'textarea',

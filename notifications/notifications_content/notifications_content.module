@@ -1,5 +1,5 @@
 <?php
-// $Id: notifications_content.module,v 1.4.2.9.2.36.2.10 2009/06/11 16:28:03 jareyero Exp $
+// $Id: notifications_content.module,v 1.4.2.9.2.36.2.16 2009/11/13 14:10:49 jareyero Exp $
 /**
  * @file
  * Subscriptions to content events
@@ -108,7 +108,9 @@ function notifications_content_form_alter(&$form, &$form_state, $form_id) {
       // Load the node which is possibly cached to get the node type
       $node = node_load($form['nid']['#value']);
       if (notifications_content_type_enabled($node->type)) {    
-        _notifications_content_add_disable_field($form);
+        if (notifications_event_enabled('node', 'comment')) {
+          _notifications_content_add_disable_field($form);
+        }
         // If editing the comment, add values to remember
         if (!empty($form['cid']['#value']) && !empty($form['admin']['status'])) {
           $form['notifications_comment_status'] = array('#type' => 'value', '#value' => $form['admin']['status']['#default_value']);
@@ -144,8 +146,10 @@ function notifications_content_form_alter(&$form, &$form_state, $form_id) {
       // Node form. Option to disable notifications
       if (isset($form['type']) && isset($form['#node']) && $form['type']['#value'] .'_node_form' == $form_id) {
         $types = notifications_content_types(NULL);
-        if (notifications_content_type_enabled($form['#node']->type)) {
-          _notifications_content_add_disable_field($form, !empty($form['#node']->notifications_content_disable));
+        $node = $form['#node'];
+        // Do not add if content type disabled, creating and create events disabled, updating and update events disabled
+        if (notifications_content_type_enabled($node->type) && (empty($node->nid) && notifications_event_enabled('node', 'insert') || !empty($node->nid) && notifications_event_enabled('node', 'update'))) {
+          _notifications_content_add_disable_field($form, !empty($node->notifications_content_disable));
         }
       }
   }
@@ -190,7 +194,7 @@ function notifications_content_notifications($op, &$arg0, $arg1 = NULL, $arg2 = 
       if ($subs->event_type == 'node') {
         $subs->type_name = t('Content');
         if (!empty($subs->fields['type'])) {
-          $subs->names['type'] = t('Content type: @type', array('@type' => node_get_types('name', $subs->fields['type'])));
+          $subs->names['type'] = t('Content type: @type', array('@type' => notifications_tt('nodetype:type:'. $subs->fields['type'] .':name', node_get_types('name', $subs->fields['type']))));
         }
         if (!empty($subs->fields['author']) && ($author = user_load(array('uid' => $subs->fields['author'])))) {
           $subs->names['author'] = t('Author: @name', array('@name' => $author->name));
@@ -202,6 +206,8 @@ function notifications_content_notifications($op, &$arg0, $arg1 = NULL, $arg2 = 
       break;
 
     case 'subscription types':
+      // Some types may be globally disabled (for all content types), mark as such
+      $disabled = !variable_get('notifications_content_per_type', 0);
       $types['thread'] = array(
         'event_type' => 'node',
         'title' => t('Thread'),
@@ -209,7 +215,8 @@ function notifications_content_notifications($op, &$arg0, $arg1 = NULL, $arg2 = 
         'page callback' => 'notifications_content_page_thread',
         'user page' => 'user/%user/notifications/thread',
         'fields' => array('nid'),
-        'description' => t('Subscribe to all changes and comments for a thread.')
+        'description' => t('Subscribe to all changes and comments for a thread.'),
+        'disabled' => $disabled && !notifications_content_type_enabled(NULL, 'thread'),
       );
       $types['nodetype'] = array(
         'event_type' => 'node',
@@ -218,7 +225,8 @@ function notifications_content_notifications($op, &$arg0, $arg1 = NULL, $arg2 = 
         'page callback' => 'notifications_content_page_nodetype',
         'user page' => 'user/%user/notifications/nodetype',
         'fields' => array('type'),
-        'description' => t('Subscribe to all content of a given type.')
+        'description' => t('Subscribe to all content of a given type.'),
+        'disabled' => $disabled && !notifications_content_type_enabled(NULL, 'nodetype'),
       );
       $types['author'] = array(
         'event_type' => 'node',
@@ -227,7 +235,8 @@ function notifications_content_notifications($op, &$arg0, $arg1 = NULL, $arg2 = 
         'page callback' => 'notifications_content_page_author',
         'user page' => 'user/%user/notifications/author',
         'fields' => array('author'),
-        'description' => t('Subscribe to all content submitted by a user.')
+        'description' => t('Subscribe to all content submitted by a user.'),
+        'disabled' => $disabled && !notifications_content_type_enabled(NULL, 'author'),
       );
       // This is a complex type, combining two fields
       $types['typeauthor'] = array(
@@ -236,7 +245,8 @@ function notifications_content_notifications($op, &$arg0, $arg1 = NULL, $arg2 = 
         'access' => 'subscribe to content type and author',
         //'page callback' => 'notifications_content_page_author',
         'fields' => array('author', 'type'),
-        'description' => t('Subscribe to all content of a given type submitted by a user.')
+        'description' => t('Subscribe to all content of a given type submitted by a user.'),
+        'disabled' => $disabled && !notifications_content_type_enabled(NULL, 'typeauthor'),
       );      
       return $types;
 
@@ -260,7 +270,7 @@ function notifications_content_notifications($op, &$arg0, $arg1 = NULL, $arg2 = 
         'field' => 'author',
         'type' => 'int',
         'autocomplete path' => 'user/autocomplete',
-        'autocomplete callback' => 'notifications_content_author_name',
+        'autocomplete callback' => 'notifications_content_author_name_callback',
         'format callback' => 'notifications_content_author_name',
         'value callback' => 'notifications_content_author_uid',
       );
@@ -268,7 +278,7 @@ function notifications_content_notifications($op, &$arg0, $arg1 = NULL, $arg2 = 
         'name' => t('Node type'),
         'field' => 'type',
         'type' => 'string',
-        'options callback' => 'notifications_content_types',
+        'options callback' => 'notifications_content_types_callback',
       );
       return $fields;
 
@@ -373,20 +383,32 @@ function notifications_content_notifications($op, &$arg0, $arg1 = NULL, $arg2 = 
         $access = TRUE;
         if (!empty($object->fields['nid'])) {
           if ($node = node_load($object->fields['nid'])) {
-            $access =  notifications_content_node_allow($account, $node);
+            $access =  notifications_content_node_allow($account, $node) && notifications_content_type_enabled($node->type, $object->type);
           }
           else {
             $access = FALSE;
           }
         }
         if (!empty($object->fields['type'])) {
-          $access = $access && array_key_exists($object->fields['type'], notifications_content_types());
+          $access = $access && notifications_content_type_enabled($object->fields['type'], $object->type);
         } 
       }
       // We return an array that will be merged with the ones from other modules
       return array($access);      
       break;
   }
+}
+
+/**
+ * Wrapper for author autocomplete callback.
+ *
+ * @param $uid
+ *   uid of the author for which to return the name.
+ * @param $subs_type
+ *   Optional type of subscription for which to find allowed content types. Defaults to nodetype, can be any subscription type with event-type=node for which notifications_content handles content type settings.
+ */
+function notifications_content_author_name_callback($uid, $subs_type = '') {
+  return notifications_content_author_name($uid);
 }
 
 /**
@@ -537,7 +559,7 @@ function notifications_content_messaging($op, $arg1 = NULL, $arg2 = NULL, $arg3 
       }
       break;
     case 'tokens':
-      $type = explode('-', $arg1);
+      $type = explode('-', $arg1) + array(2 => '', 3 => '');
       $tokens = array();
       // These are the token groups that will be used for this module's messages
       if ($type[0] == 'notifications' && $type[2] == 'node') {
@@ -579,7 +601,7 @@ function _notifications_content_node_options($account, $node) {
   // Content type
   if (notifications_content_type_enabled($node->type, 'nodetype')) { 
     $options[] = array(
-      'name' => t('Posts of type @type', array('@type' => node_get_types('name', $node->type))),
+      'name' => t('Posts of type @type', array('@type' => notifications_tt("nodetype:type:$node->type:name", node_get_types('name', $node->type)))),
       'type' => 'nodetype',
       'fields' => array('type' => $node->type),
     );
@@ -739,14 +761,27 @@ function notifications_content_node_type($op, $info) {
  * @ TODO See if this may be some use, or drop
  */
 function notifications_content_comment_load($cid) {
-  static $cache;
-  if (!isset($cache[$cid])) {
+  static $cache = array();
+
+  if (!array_key_exists($cid, $cache)) {
     $comment = db_fetch_object(db_query('SELECT c.*, u.uid, u.name AS registered_name, u.data FROM {comments} c INNER JOIN {users} u ON c.uid = u.uid WHERE c.cid = %d', $cid));
-    $comment = drupal_unpack($comment);
-    $comment->name = $comment->uid ? $comment->registered_name : $comment->name;
+    if ($comment) {
+      $comment = drupal_unpack($comment);
+      $comment->name = $comment->uid ? $comment->registered_name : $comment->name;
+    }
     $cache[$cid] = $comment;
   }
   return $cache[$cid];
+}
+
+/**
+ * Wrapper for options callback based on subscription type.
+ *
+ * @param $subs_type
+ *   Optional type of subscription for which to find allowed content types. Defaults to nodetype, can be any subscription type with event-type=node for which notifications_content handles content type settings.
+ */
+function notifications_content_types_callback($subs_type = 'nodetype') {
+  return notifications_content_types('name', $subs_type);
 }
 
 /**
@@ -754,6 +789,8 @@ function notifications_content_comment_load($cid) {
  * 
  * @param $field
  *   Optional field to return as array value. If none it will return the full objects.
+ * @param $subs_type
+ *   Optional type of subscription for which to find allowed content types. Defaults to nodetype, can be any subscription type with event-type=node for which notifications_content handles content type settings.
  */
 function notifications_content_types($field = 'name', $subs_type = 'nodetype') {
   // Get list of available node types, all of them will be allowed by default
@@ -774,8 +811,13 @@ function notifications_content_types($field = 'name', $subs_type = 'nodetype') {
 
 /**
  * Get subscription options for this content type
- * - All enabled options if ($option = NULL)
- * - TRUE / FALSE for a given $option
+ * 
+ * PHP Note: We need to use strict checking for in_array(), http://es.php.net/manual/en/function.in-array.php#91911
+ * 
+ * @param $type
+ *   Optional content type to return info for, global notifications defaults if none.
+ * @param $option
+ *   Optional option to return for the given content type or the defaults, defaults to returning all settings for the type.
  */
 function notifications_content_type_enabled($type = NULL, $option = NULL) {
   $defaults = variable_get('notifications_content_type', array());
@@ -788,7 +830,8 @@ function notifications_content_type_enabled($type = NULL, $option = NULL) {
     return in_array($option, $settings, TRUE);
   }
   else {
-    return $settings;
+    // We filter the array to return an empty one when no option enabled
+    return array_filter($settings);
   }
 }
 
@@ -819,11 +862,11 @@ function notifications_content_token_values($type, $object = NULL, $options = ar
   switch ($type) {
     case 'node':
       if ($node = $object) {
-        $values['node-teaser'] = $node->teaser ? check_markup($node->teaser, $node->format, FALSE) : '';
-        $values['node-body'] = $node->body ? check_markup($node->body, $node->format, FALSE) : '';
+        $values['node-teaser'] = !empty($node->teaser) ? check_markup($node->teaser, $node->format, FALSE) : '';
+        $values['node-body'] = !empty($node->body) ? check_markup($node->body, $node->format, FALSE) : '';
         $values['node-url'] = url('node/'. $node->nid, array('absolute' => TRUE));
-        $values['node-teaser-raw'] = $node->teaser ? $node->teaser : '';
-        $values['node-body-raw'] = $node->body ? $node->body : '';
+        $values['node-teaser-raw'] = !empty($node->teaser) ? $node->teaser : '';
+        $values['node-body-raw'] = !empty($node->body) ? $node->body : '';
         return $values;
       }
       break;

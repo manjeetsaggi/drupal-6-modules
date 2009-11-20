@@ -1,5 +1,5 @@
 <?php
-// $Id: feedapi_mapper.module,v 1.2.2.27 2009/09/29 18:47:12 alexb Exp $
+// $Id: feedapi_mapper.module,v 1.2.2.28 2009/11/18 19:26:19 alexb Exp $
 
 /**
  * Implementation of hook_help().
@@ -597,6 +597,10 @@ function _feedapi_mapper_get_feed_elements($merged_item) {
     $path = _feedapi_mapper_next_element_path($merged_item, $path, TRUE);
     if ($path == FALSE) {
       break;
+    }
+    // Filter path elements for output.
+    foreach ($path as $k => $v) {
+      $path[$k] = check_plain($v);
     }
     $elements[implode('->', $path)] = serialize($path);
   }

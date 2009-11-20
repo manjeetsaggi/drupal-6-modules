@@ -1,5 +1,5 @@
 <?php
-// $Id: feedapi_delete.test,v 1.1.2.1 2009/08/20 19:08:26 aronnovak Exp $
+// $Id: feedapi_delete.test,v 1.1.2.2 2009/10/02 14:15:20 aronnovak Exp $
 
 require_once(dirname(__FILE__) .'/feedapi_test_case.tinc');
 
@@ -24,7 +24,7 @@ class FeedAPIDeleteTestsCase extends FeedAPITestCase {
     foreach ($parsers as $parser) {
       $this->create_type($parser);
       $this->feedapi_user();
-      $feed_url = "http://novaak.net/test_feed.rss?". $this->randomName();
+      $feed_url = $this->testFileURL('test_feed.rss');
       $edit = array(
         'feedapi[feedapi_url]' => $feed_url,
       );

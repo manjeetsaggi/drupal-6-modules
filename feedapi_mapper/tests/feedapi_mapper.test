@@ -1,5 +1,5 @@
 <?php
-// $Id: feedapi_mapper.test,v 1.2.2.7 2009/09/29 18:47:12 alexb Exp $
+// $Id: feedapi_mapper.test,v 1.2.2.8 2009/09/29 20:35:18 alexb Exp $
 
 require_once(drupal_get_path('module', 'feedapi_mapper') .'/tests/feedapi_mapper_test.inc');
 
@@ -77,12 +77,12 @@ class FeedApiMapperBasicTestCase extends FeedApiMapperTestCase {
     // Test unique UI.
     $this->drupalGet($feed_url . '/map');
     $this->assertText('N/A', 'Some of the targets do not support unique bit.');
-    $this->assertText('No', 'One of the targets supports unique bit.');
-    $this->assertNoText('Yes', 'None of the targets marked unique yet.');
+    $this->assertPattern('/<a(.*?)>no<\/a>/i', 'One of the targets supports unique bit.');
+    $this->assertNoPattern('/<a(.*?)>yes<\/a>/i', 'None of the targets marked unique yet.');
     // Toggle unique flag.
     $this->clickLink('No');
     $this->drupalGet($feed_url . '/map');
-    $this->assertText('Yes', 'One of the targets marked unique.');
+    $this->assertPattern('/<a(.*?)>yes<\/a>/i', 'One of the targets marked unique.');
     // Check database.
     $mapper_rows = db_result(db_query("SELECT COUNT(*) FROM {feedapi_mapper}"));
     $unique = unserialize(db_result(db_query("SELECT unique_elements FROM {feedapi_mapper}")));

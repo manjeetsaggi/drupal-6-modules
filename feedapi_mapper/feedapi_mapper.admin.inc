@@ -1,5 +1,5 @@
 <?php
-// $Id: feedapi_mapper.admin.inc,v 1.1.2.12 2009/09/29 18:47:12 alexb Exp $
+// $Id: feedapi_mapper.admin.inc,v 1.1.2.14 2009/11/18 19:26:19 alexb Exp $
 /**
  * @file
  * Administration-related functions for FeedAPI Mapper
@@ -23,47 +23,22 @@ function theme_feedapi_mapper_descriptions($descriptions) {
 }
 
 /**
- * Theming function for showing the current mapping.
+ * Theming function for feedapi_mapper_form().
  */
 function theme_feedapi_mapper_form($form) {
   $output = '';
-  _feedapi_mapper_load_mappers();
-  $type_url_str = str_replace('_', '-', $form['#node']->type);
-  if (isset($form['#node']->nid)) {
-    $delete_path = 'node/' . $form['#node']->nid .'/map/delete/';
-    $toggle_unique_path = 'feedapi-mapper/' . $form['#node']->nid .'/unique/';
-  }
-  else {
-    $delete_path = 'admin/content/node-type/'. $type_url_str .'/map/delete/';
-    $toggle_unique_path = 'feedapi-mapper/'. $type_url_str .'/unique/';
-  }
+
+  // Build and render table.
   if (isset($form['#mapping']['mapping'])) {
-    $active_processors = _feedapi_mapper_get_active_processors($form['#node']->type);
     foreach ($form['#mapping']['mapping'] as $feed_path => $node_path) {
-      $target = unserialize($node_path);
-      if (function_exists($target[0] .'_feedapi_mapper')) {
-        $unique_supported = FALSE;
-        foreach ($active_processors as $processor) {
-          $unique_supported = ($unique_supported | call_user_func($target[0] .'_feedapi_mapper', 'unique supported', $form['#node'], $processor, NULL, $target[1]));
-        }
-        if ($unique_supported == TRUE) {
-          $unique = $form['#mapping']['unique'][$feed_path] ? t('Yes') : t('No');
-          $unique = l($unique, $toggle_unique_path . base64_encode($feed_path) .'/'. drupal_get_token($feed_path));
-        }
-        else {
-          $unique = t('N/A');
-        }
-      }
       $rows[] = array(
-        // @todo: Set proper messages.
         isset($form['#feed_map'][$feed_path]) ? $form['#feed_map'][$feed_path] : '',
-        isset($form['#field_map'][$node_path]) ? $form['#field_map'][$node_path] : t('<em>Error: missing target.</em>'),
-	      $unique,
+        isset($form['#field_map'][$node_path]) ? $form['#field_map'][$node_path] : '',
+	      isset($form['#unique_map'][$node_path]) ? $form['#unique_map'][$node_path] : '',
         l(t('Delete'), $delete_path . base64_encode($feed_path)),
       );
     }
   }
-
   $rows[] = array(
     drupal_render($form['source']),
     drupal_render($form['target']),
@@ -73,6 +48,7 @@ function theme_feedapi_mapper_form($form) {
 
   $form['mapping']['table']['#value'] = theme('table', array(t('Source'), t('Target'), t('Unique')), $rows);
 
+  // Render rest of form.
   $output .= drupal_render($form);
 
   return $output;
@@ -273,6 +249,55 @@ function feedapi_mapper_form($form_state, $feed_node) {
   }
   $form['#mapping'] = $mapping;
 
+  // Create the toggle unique path, we will need this later.
+  $type_url_str = str_replace('_', '-', $feed_node->type);
+  if (isset($feed_node->nid)) {
+    $delete_path = 'node/' . $form['#node']->nid .'/map/delete/';
+    $toggle_unique_path = 'feedapi-mapper/' . $form['#node']->nid .'/unique/';
+  }
+  else {
+    $delete_path = 'admin/content/node-type/'. $type_url_str .'/map/delete/';
+    $toggle_unique_path = 'feedapi-mapper/'. $type_url_str .'/unique/';
+  }
+
+  // Retrieve an array of targets that support "Unique" settings.
+  $unique_supporters = array();
+  $active_processors = _feedapi_mapper_get_active_processors($form['#node']->type);
+  foreach ($field_map as $node_path => $name) {
+    $target = unserialize($node_path);
+    $supported = FALSE;
+    // @todo: avoid this hack.
+    foreach ($active_processors as $processor) {
+      $supported = ($unique_supported | call_user_func($target[0] .'_feedapi_mapper', 'unique supported', $feed_node, $processor, NULL, $target[1]));
+    }
+    if ($supported) {
+      $unique_supporters[$node_path] = $name;
+    }
+  }
+
+  // Gather the "Unique" status of existing mappings.
+  $form['#unique_map'] = array();
+  foreach ($mapping['mapping'] as $feed_path => $node_path) {
+    $target = unserialize($node_path);
+    if (function_exists($target[0] .'_feedapi_mapper')) {
+      if (!empty($unique_supporters[$node_path])) {
+        $unique = $form['#mapping']['unique'][$feed_path] ? t('Yes') : t('No');
+        $unique = l($unique, $toggle_unique_path . base64_encode($feed_path) .'/'. drupal_get_token($feed_path));
+      }
+      else {
+        $unique = t('N/A');
+      }
+      $form['#unique_map'][$node_path] = $unique;
+    }
+  }
+
+  // Show the user a warning if there is no mapping is defined unique.
+  if (!count(array_filter($form['#mapping']['unique_elements']))) {
+    drupal_set_message(t('In order to avoid duplicates, it is recommended to define at least one mapping where Unique is set to "Yes".'));
+    $supporters = implode(', ', $unique_supporters);
+    drupal_set_message(t('Targets that support "Unique" setting: !supporters.', array('!supporters' => $supporters)));
+  }
+
   // Scope settings: if there is is a node we are on and there is no mapping at all,
   // we are operating on the content-type defaults. If not it's per-node.
   if ($feed_node->nid && _feedapi_mapper_scope($feed_node->nid)) {
@@ -372,7 +397,7 @@ function feedapi_mapper_form($form_state, $feed_node) {
     );
     $form['feed_item']['item'] = array(
       '#type' => 'markup',
-      '#value' => '<pre>'. print_r(_feedapi_mapper_truncate_array($merged_item), TRUE) .'</pre>',
+      '#value' => '<pre>'. check_plain(print_r(_feedapi_mapper_truncate_array($merged_item), TRUE)) .'</pre>',
     );
   }
 

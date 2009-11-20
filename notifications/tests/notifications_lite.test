@@ -1,5 +1,5 @@
 <?php
-// $Id: notifications_lite.test,v 1.1.2.1 2009/04/24 00:10:28 jareyero Exp $
+// $Id: notifications_lite.test,v 1.1.2.2 2009/09/22 11:49:07 jareyero Exp $
 /**
  * Class for testing notifications lite.
  * 
@@ -33,7 +33,7 @@ class NotificationsLiteTests extends NotificationsTestCase {
    */
   function testNotificationsLite() {
     $user = $this->drupalCreateUser();
-    // Test inmediate sending
+    // Test immediate sending
     foreach (array(1, 2) as $index) {
       notifications_lite_send($user->uid, "Subject $index", "Body $index");
     }

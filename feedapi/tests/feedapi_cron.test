@@ -1,5 +1,5 @@
 <?php
-// $Id: feedapi_cron.test,v 1.1.2.2 2009/09/18 16:21:03 alexb Exp $
+// $Id: feedapi_cron.test,v 1.1.2.3 2009/10/02 14:15:20 aronnovak Exp $
 
 require_once(dirname(__FILE__) .'/feedapi_test_case.tinc');
 
@@ -26,13 +26,13 @@ class FeedAPICronTestsCase extends FeedAPITestCase {
     $this->create_type(array_pop($this->get_parsers()));
     $this->feedapi_user();
     $feed_urls = array();
-    $feed_urls[0] = "http://novaak.net/test_feed.rss?". $this->randomName();
+    $feed_urls[0] = $this->testFileURL('test_feed.rss');
     $edit = array(
       'feedapi[feedapi_url]' => $feed_urls[0],
       'feedapi[refresh_time]' => FEEDAPI_CRON_ALWAYS_REFRESH,
     );
     $this->drupalPost('node/add/'. $this->info->type, $edit, 'Save');
-    $feed_urls[1] = "http://novaak.net/test_feed_2.rss?". $this->randomName();
+    $feed_urls[1] = $this->testFileURL('test_feed2.rss');
     $edit = array(
       'feedapi[feedapi_url]' => $feed_urls[1],
       'feedapi[refresh_time]' => FEEDAPI_CRON_NEVER_REFRESH,

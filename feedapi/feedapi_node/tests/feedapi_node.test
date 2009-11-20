@@ -1,5 +1,5 @@
 <?php
-// $Id: feedapi_node.test,v 1.1.2.3 2009/09/23 14:14:03 aronnovak Exp $
+// $Id: feedapi_node.test,v 1.1.2.4 2009/10/02 14:15:21 aronnovak Exp $
 
 require_once(drupal_get_path('module', 'feedapi') .'/tests/feedapi_test_case.tinc');
 
@@ -43,7 +43,7 @@ class FeedAPINodeTestsCase extends FeedAPITestCase {
 
       // Create the feed node
       // Make the URL unique. It's not impossible that someone add this feed URL to the DB prior.
-      $feed_url = "http://novaak.net/test_feed.rss?". $this->randomName();
+      $feed_url = $this->testFileURL('test_feed.rss');
       $edit = array(
         'feedapi[feedapi_url]' => $feed_url,
       );
@@ -137,7 +137,6 @@ class FeedAPINodeTestsCase extends FeedAPITestCase {
       $this->assertText(t('Feed URL'), 'The block is showing up');
 
       // Submit feed via simplified block
-      $feed_url = "http://novaak.net/test_feed.rss?". $this->randomName();
       $edit = array(
         'url' => $feed_url,
       );
@@ -192,7 +191,7 @@ class FeedAPINodeTestsCase extends FeedAPITestCase {
     $this->create_type(array_pop($this->get_parsers()));
     $settings = feedapi_get_settings($this->info->type);
     $this->feedapi_user();
-    $feed_url = "http://novaak.net/test_feed.php";
+    $feed_url = $this->testFileURL('test_feed.rss');
     $edit = array(
       'feedapi[feedapi_url]' => $feed_url,
     );
@@ -204,8 +203,8 @@ class FeedAPINodeTestsCase extends FeedAPITestCase {
     $notification = str_replace('</em>', '', $notification);
     $this->assertText($notification, 'The proper number of items were created');
     
-    $title = $this->randomName(20);
-    $feed_url_new = "http://novaak.net/test_feed.php?title=$title";
+    $title = 'xFgfsfdfsRDFGFes';
+    $feed_url_new = $this->testFileURL('test_feed_mod_title.rss');
 
     $sticky = db_result(db_query("SELECT COUNT(*) FROM {node} WHERE sticky = 1"));
     $this->assertTrue($sticky == 0, 'The sticky bit is off by default.');

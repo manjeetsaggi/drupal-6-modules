@@ -1,5 +1,5 @@
 <?php
-// $Id: views_cloud.module,v 1.3 2008/09/17 16:02:42 eaton Exp $
+// $Id: views_cloud.module,v 1.8 2009/11/18 01:54:03 quicksketch Exp $
 
 /**
  * @file
@@ -22,18 +22,24 @@ function template_preprocess_views_cloud_style(&$vars) {
 
   $view = $vars['view'];
 
-  $result   = $vars['rows'];
+  $result = $vars['rows'];
   $vars['rows'] = array();
 
-  $handler  = $view->style_plugin;
+  $handler = $view->style_plugin;
   $weight_field = $view->style_plugin->options['weight_field'];
   $hide = $view->style_plugin->options['hide_weight_field'];
-  $fields   = &$view->field;
+  $fields = &$view->field;
+
+  // A quick error check. If no weight field is set, do not display anything.
+  if (empty($weight_field) || !isset($fields[$weight_field])) {
+    drupal_set_message(t('The cloud style could not be shown because a weight field is not set.'), 'error');
+    return;
+  }
+
   $weight_field_alias = $fields[$weight_field]->field_alias;
 
-
-  $min = 1000;
-  $max = -1000;  
+  $min = PHP_INT_MAX;
+  $max = -PHP_INT_MAX;
   foreach ($result as $row) {
     $cur = intval($row->{$weight_field_alias});
     if ($min > $cur) {
@@ -53,12 +59,17 @@ function template_preprocess_views_cloud_style(&$vars) {
       }
     }
   }
-  
+
+  $sizes = $view->style_plugin->options['sizes'];
+  $algorithm = $view->style_plugin->options['algorithm'];
   foreach ($vars['rows'] as $num => $row) {
-    $vars['rows'][$num]['cloud_size'] = _views_cloud_size_helper($result[$num]->{$weight_field_alias}, $min, $max);
+    $vars['rows'][$num]['cloud_size'] = views_cloud_size_helper($result[$num]->{$weight_field_alias}, $min, $max, $sizes, $algorithm);
     $vars['rows'][$num] = (object)$vars['rows'][$num];
   }
 
+  if (!empty($view->style_plugin->options['font_size'])) {
+    $vars['font_size'] = $view->style_plugin->options['font_size'];
+  }
   if (!empty($view->style_plugin->options['randomize'])) {
     shuffle($vars['rows']);
   }
@@ -81,8 +92,8 @@ function template_preprocess_views_cloud_summary_style(&$vars) {
   }
   
   // First we take a quick pass through to find the ceiling and floor
-  $min = 1000;
-  $max = -1000;
+  $min = PHP_INT_MAX;
+  $max = -PHP_INT_MAX;
   foreach ($vars['rows'] as $id => $row) {
     $vars['rows'][$id]->link = $argument->summary_name($row);
     $args = $view->args;
@@ -105,19 +116,37 @@ function template_preprocess_views_cloud_summary_style(&$vars) {
     }
   }
 
+  $sizes = $view->style_plugin->options['sizes'];
+  $algorithm = $view->style_plugin->options['algorithm'];
   foreach ($vars['rows'] as $id => $row) {
-    $vars['rows'][$id]->cloud_size = _views_cloud_size_helper($vars['rows'][$id]->count, $min, $max);
+    $vars['rows'][$id]->cloud_size = views_cloud_size_helper($vars['rows'][$id]->count, $min, $max, $sizes, $algorithm);
   }
 
+  if (!empty($view->style_plugin->options['font_size'])) {
+    $vars['font_size'] = $view->style_plugin->options['font_size'];
+  }
   if (!empty($view->style_plugin->options['randomize'])) {
     shuffle($vars['rows']);
   }
 }
 
-
-function _views_cloud_size_helper($value, $min, $max, $sizes = 7) {
+/**
+ * Algorithm for calculating relative size.
+ */
+function views_cloud_size_helper($value, $min, $max, $sizes = 7, $algorithm = 'log') {
   if ($min == $max) return 1;
-  $range = ($sizes - 1) / ($max - $min);
-  $value = ($value - $min) * $range;
-  return (intval($value + 1));
+
+  if ($algorithm == 'linear') {
+    $range = ($sizes - 1) / ($max - $min);
+    $value = ($value - $min) * $range;
+    return (intval($value + 1));
+  }
+  else {
+    $value = log($value == 0 ? ++$value : $value);
+    $min = log($min == 0 ? ++$min : $min);
+    $max = log($max);
+    $range = ($sizes - 1) / ($max - $min);
+    $value = ($value - $min) * $range;
+    return (intval($value + 1));
+  }
 }

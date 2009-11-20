@@ -1,5 +1,5 @@
 <?php
-// $Id: feedapi_node.module,v 1.1.2.18.2.43 2009/09/23 14:14:03 aronnovak Exp $
+// $Id: feedapi_node.module,v 1.1.2.18.2.47 2009/10/31 16:04:00 aronnovak Exp $
 
 /**
  * @file
@@ -95,7 +95,7 @@ function feedapi_node_link($type, $node = NULL) {
       }
     }
     if (isset($node->feedapi_node)) {
-      $result = db_query("SELECT n.title, n.nid FROM {node} n WHERE n.nid IN (". db_placeholders($node->feedapi_node->feed_nids, 'int') .") ORDER BY title DESC",  $node->feedapi_node->feed_nids);
+      $result = db_query(db_rewrite_sql("SELECT n.title, n.nid FROM {node} n WHERE n.nid IN (". db_placeholders($node->feedapi_node->feed_nids, 'int') .") ORDER BY title DESC"),  $node->feedapi_node->feed_nids);
       $owner_feeds_num = count($node->feedapi_node->feed_nids);
       while ($feed = db_fetch_object($result)) {
         $links['feedapi_feed'. ($owner_feeds_num == 1 ? '' : '_'. $feed->nid)] = array(
@@ -167,7 +167,7 @@ function feedapi_node_feedapi_settings_form($type) {
   switch ($type) {
     case 'processors':
       $ct_types = node_get_types();
-      $ct_options = array();
+      $ct_options = array('' => t('Select type'));
       if (is_array($ct_types)) {
         foreach ($ct_types as $key => $data) {
           if (!feedapi_enabled_type($key)) {
@@ -175,20 +175,14 @@ function feedapi_node_feedapi_settings_form($type) {
           }
         }
       }
-      if (array_key_exists('story', $ct_options)) {
-        $default_type = 'story';
-      }
-      else {
-        $default_type = current(array_keys($ct_options));
-      }
       $form['content_type'] = array(
         '#type' => 'select',
         '#title' => t('Node type of feed items'),
-        '#default_value' => $default_type,
+        '#default_value' => '',
         '#options' => $ct_options,
         '#description' => t('Choose the node type for feed item nodes created by this feed.'),
       );
-      $format_options = array();
+      $format_options = array(FILTER_FORMAT_DEFAULT => t('Default format'));
       $formats = filter_formats();
       foreach ($formats as $format) {
         $format_options[$format->format] = $format->name;
@@ -283,6 +277,23 @@ function _feedapi_node_save($feed_item, $feed_nid, $settings = array()) {
       return $feed_item;
     }
   }
+
+  // If there are dupes on other feeds, don't create new feed item, but link this feed
+  // to existing feed item.
+  // Heads up: if there is a duplicate on the SAME feed,
+  // _feedapi_node_save() won't even be called.
+  if (isset($feed_item->feedapi_node->duplicates)) {
+    foreach ($feed_item->feedapi_node->duplicates as $fi_nid => $f_nids) {
+      $feed_item_node = node_load($fi_nid);
+      $feed_item_node->feedapi_node->feed_nids[$feed_nid] = $feed_nid;
+      node_object_prepare($feed_item_node);
+      node_save($feed_item_node);
+    }
+    //mark this item as updated.
+    $feed_item->is_updated = TRUE;
+    return FALSE;
+  }
+
   // Constructs the node object.
   $node = new stdClass();
   if (isset($feed_item->nid)) {
@@ -328,12 +339,15 @@ function _feedapi_node_save($feed_item, $feed_nid, $settings = array()) {
     $node->status = 1;
   }
   $feed_node = node_load($feed_nid);
+  $type = node_get_types('type', $node->type);
   // Use feedapi_mapper_map() if FeedAPI Mapper is version 2.x (= feedapi_mapper_unique() is present)
   if (function_exists('feedapi_mapper_map') && function_exists('feedapi_mapper_unique')) {
     $node = feedapi_mapper_map($feed_node, 'feedapi_node', $feed_item, $node);
+    if (empty($node->teaser) && $type->has_body) {
+      $node->teaser = node_teaser($node->body);
+    }
   }
   else {
-    $type = node_get_types('type', $node->type);
     if ($type->has_title) {
       $node->title = $feed_item->title;
     }
@@ -360,21 +374,7 @@ function _feedapi_node_save($feed_item, $feed_nid, $settings = array()) {
   }
   $node->uid = $feed_node->uid;
 
-  // If there are dupes on other feeds, don't create new feed item, but link this feed
-  // to existing feed item.
-  // Heads up: if there is a duplicate on the SAME feed,
-  // _feedapi_node_save() won't even be called.
-  if (isset($feed_item->feedapi_node->duplicates)) {
-    foreach ($feed_item->feedapi_node->duplicates as $fi_nid => $f_nids) {
-      $feed_item_node = node_load($fi_nid);
-      $feed_item_node->feedapi_node->feed_nids[$feed_nid] = $feed_nid;
-      node_object_prepare($feed_item_node);
-      node_save($feed_item_node);
-    }
-  }
-  else {
-    node_save($node);
-  }
+  node_save($node);
   return $feed_item;
 }
 

@@ -1,5 +1,5 @@
 <?php
-// $Id: feedapi_revision.test,v 1.1.2.1 2009/08/20 19:08:26 aronnovak Exp $
+// $Id: feedapi_revision.test,v 1.1.2.2 2009/10/02 14:15:20 aronnovak Exp $
 
 require_once(dirname(__FILE__) .'/feedapi_test_case.tinc');
 
@@ -33,7 +33,7 @@ class FeedAPIRevisionTestsCase extends FeedAPITestCase {
     $settings = feedapi_get_settings($this->info->type);
 
     // Create the initial revision, first submission
-    $feed_url = "http://novaak.net/test_feed.rss?". $this->randomName();
+    $feed_url = $this->testFileURL('test_feed.rss');
     $edit = array(
       'feedapi[processors][feedapi_node][node_date]' => 'current',
       'feedapi[feedapi_url]' => $feed_url,

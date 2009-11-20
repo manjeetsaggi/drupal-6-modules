@@ -1,5 +1,5 @@
 <?php
-// $Id: feedapi.module,v 1.23.2.119.2.80 2009/09/24 22:54:44 alexb Exp $
+// $Id: feedapi.module,v 1.23.2.119.2.82 2009/11/05 18:07:10 aronnovak Exp $
 
 /**
  * @file
@@ -986,7 +986,7 @@ function _feedapi_update(&$node) {
       isset($node->feed->feed_type) ? $node->feed->feed_type : '',
       isset($node->feed->processors) ? serialize($node->feed->processors) : serialize($old_config->feed->processors),
       isset($node->feed->parsers) ? serialize($node->feed->parsers) : serialize($old_config->feed->parsers),
-      isset($node->feed->options->link) ? $node->feed->options->link : '',
+      isset($node->feed->link) ? $node->feed->link : '',
       $next_refresh_time,
       $node->vid
     );
@@ -1326,6 +1326,13 @@ function _feedapi_invoke_purge(&$feed, $param) {
     // FIXME: it's possible now to accidentally delete an item from another processor
     module_invoke($processor, 'feedapi_item', 'purge', $feed);
   }
+
+  // Closing step: Call after purge hook
+  foreach (module_implements('feedapi_after_purge') as $module) {
+    $func = $module .'_feedapi_after_purge';
+    $func($feed);
+  }
+
   // Reset hash.
   db_query("UPDATE {feedapi} SET hash = 0 WHERE nid = %d", $feed->nid);
 }

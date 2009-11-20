@@ -6,7 +6,9 @@
  */
 function imagefield_crop_file_insert($file) {
   // we copy the file as is, for quality cropping.
-  if (imagefield_file_is_image($file)) { 
+  if ((isset($file->field['widget']) &&
+       $file->field['widget']['module'] == 'imagefield_crop') &&
+      imagefield_file_is_image($file)) {
     $newfile = drupal_clone($file);
     file_copy($newfile->filepath, imagefield_crop_file_admin_crop_display_path($newfile));
   }
@@ -39,5 +41,10 @@ function imagefield_crop_file_admin_crop_display_path($file) {
 // Original file to crop from
 function imagefield_crop_file_admin_original_path($file) {
   // the displayed and original are the same. Yay Jcrop!
-  return imagefield_crop_file_admin_crop_display_path($file);
+  $original_path = imagefield_crop_file_admin_crop_display_path($file);
+  if (!file_exists($original_path)) {
+    // orig file does not exist, use what we have as original
+    file_copy($file['filepath'], $original_path);
+  }
+  return $original_path;
 }

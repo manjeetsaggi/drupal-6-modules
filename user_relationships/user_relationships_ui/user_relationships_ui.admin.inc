@@ -1,5 +1,5 @@
 <?php
-// $Id: user_relationships_ui.admin.inc,v 1.1.2.16 2009/08/14 20:08:47 alexk Exp $
+// $Id: user_relationships_ui.admin.inc,v 1.1.2.20 2009/11/07 21:24:54 alexk Exp $
 
 /**
  * @file
@@ -54,7 +54,6 @@ function user_relationships_ui_settings() {
       $form['privatemsg'] = array(
         '#type'   => 'fieldset',
         '#title'  => t('Private messages'),
-        '#weight' => -10,
       );
       $form['privatemsg']['user_relationships_restrict_privatemsg'] = array(
         '#type'           => 'radios',
@@ -80,6 +79,12 @@ function user_relationships_ui_settings() {
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
     '#description' => t('Some themes may require repositioning of AJAX confirmation dialogs. You may use these controls to set where the popup appears on the page or in relation to the mouse cursor.')
+  );
+  $form['positioning']['user_relationships_enable_ajax_popups'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Show AJAX confirmation popups'),
+    '#default_value' => variable_get('user_relationships_enable_ajax_popups', 1),
+    '#description' => t('Other popup settings below will only take effect if popups are enabled.')
   );
   $form['positioning']['user_relationships_position'] = array(
     '#type' => 'select',
@@ -156,13 +161,6 @@ function user_relationships_ui_type_edit(&$form_state, $relationship_type = NULL
     '#description'    => t("Example: buddies, friends, coworkers, spouses."),
     '#weight'         => -9,
   );
-  $form['is_oneway'] = array(
-    '#type'           => 'checkbox',
-    '#title'          => t('This is a one-way relationship'),
-    '#default_value'  => $relationship_type->is_oneway,
-    '#description'    => t('Check this if this relationship should only go one way (ex Manager, Subscriber)'),
-    '#weight'         => -8,
-  );
   $form['requires_approval'] = array(
     '#type'           => 'checkbox',
     '#title'          => t('Requires Approval'),
@@ -177,7 +175,21 @@ function user_relationships_ui_type_edit(&$form_state, $relationship_type = NULL
     '#size'           => 4,
     '#default_value'  => isset($relationship_type->expires_val) ? $relationship_type->expires_val : 0,
     '#description'    => t('After how many days should a request of this type be removed? (0 for never)'),
-    '#weight'         => -8,
+    '#weight'         => -7,
+  );
+  $form['is_oneway'] = array(
+    '#type'           => 'checkbox',
+    '#title'          => t('This is a one-way relationship'),
+    '#default_value'  => $relationship_type->is_oneway,
+    '#description'    => t('Check this if this relationship should only go one way (ex Manager, Subscriber)'),
+    '#weight'         => -6,
+  );
+  $form['is_reciprocal'] = array(
+    '#type'           => 'checkbox',
+    '#title'          => t('This one-way relationship can be reciprocated'),
+    '#default_value'  => $relationship_type->is_reciprocal,
+    '#description'    => t('Check if this one-way relationship can go either way'),
+    '#weight'         => -5,
   );
   $form['roles'] = array(
     '#title' => t('Role access'),
@@ -220,7 +232,7 @@ function user_relationships_ui_type_delete(&$form_state, $relationship_type = NU
 
     return confirm_form(
       $form,
-      t('Are you sure you want to delete %name?', array('%name' => $relationship_type->name)),
+      t('Are you sure you want to delete %name?', array('%name' => ur_tt("user_relationships:rtid:$relationship_type->rtid:name", $relationship_type->name))),
       'admin/user/relationships',
       t('This action cannot be undone.'),
       t('Delete'), t('Cancel')

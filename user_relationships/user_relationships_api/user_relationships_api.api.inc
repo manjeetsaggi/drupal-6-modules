@@ -1,5 +1,5 @@
 <?php
-// $Id: user_relationships_api.api.inc,v 1.1.2.15 2009/07/06 15:55:04 alexk Exp $
+// $Id: user_relationships_api.api.inc,v 1.1.2.17 2009/11/08 17:32:35 alexk Exp $
 
 /**
  * @file
@@ -155,7 +155,20 @@ function user_relationships_type_delete($rtid) {
  * @return
  *    object of the newly created relationship
  */
-function user_relationships_request_relationship($requester, $requestee, $type, $approved = FALSE) {
+function user_relationships_request_relationship($requester, $requestee = NULL, $type = NULL, $approved = FALSE) {
+  //#578372 check if this is a "new" type of invocation, where first argument is a relationship object
+  if (is_object($requester) && isset($requester->requester) && isset($requester->requestee) && isset($requester->type)) {
+    $relationship = $requester;
+    $requester = $relationship->requester;
+    $requestee = $relationship->requestee;
+    $type = $relationship->type;
+    if (isset($relationship->approved)) {
+      $approved = $relationship->approved;
+    }
+  }
+  else {
+    $relationship = new stdClass;
+  }
   // translate an ID into an object
   foreach (array('requester' => $requester, 'requestee' => $requestee, 'type' => $type) as $key => $value) {
     if (!is_object($value)) {
@@ -169,14 +182,20 @@ function user_relationships_request_relationship($requester, $requestee, $type, 
     //it would be good to return a reason why save is denied, but it's the API portion, it does not expose anything user-visible
     return FALSE;
   }
+
+  // check whether this relationship aleady exists
+  if (!$type->is_oneway || !$type->is_reciprocal) {
+    $existing = user_relationships_load(array('between' => array($requester->uid, $requestee->uid), 'rtid' => $type->rtid), array('count' => TRUE));
+  }
+  else {
+    $existing = user_relationships_load(array('requester_id' => $requester->uid, 'requestee_id' => $requestee->uid, 'rtid' => $type->rtid), array('count' => TRUE));
+  }
   
-  if (!user_relationships_load(array('between' => array($requester->uid, $requestee->uid), 'rtid' => $type->rtid), array('count' => TRUE))) {
-    $relationship = (object)array(
-      'requester_id'  => $requester->uid,
-      'requestee_id'  => $requestee->uid,
-      'approved'      => $approved || !$type->requires_approval || (isset($requestee->user_relationships_ui_auto_approve) && $requestee->user_relationships_ui_auto_approve[$type->rtid]),
-      'rtid'          => $type->rtid,
-    );
+  if (!$existing) {
+    $relationship->requester_id = $requester->uid;
+    $relationship->requestee_id = $requestee->uid;
+    $relationship->approved = $approved || !$type->requires_approval || (isset($requestee->user_relationships_ui_auto_approve) && $requestee->user_relationships_ui_auto_approve[$type->rtid]);
+    $relationship->rtid = $type->rtid;
 
     return user_relationships_save_relationship($relationship);
   }

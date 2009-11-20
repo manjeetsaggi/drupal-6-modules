@@ -1,5 +1,5 @@
 <?php
-// $Id: messaging.module,v 1.7.2.8.2.27.2.6 2009/04/30 10:42:35 jareyero Exp $
+// $Id: messaging.module,v 1.7.2.8.2.27.2.8 2009/11/13 19:07:10 jareyero Exp $
 /**
  * Drupal Messaging Framework
  *
@@ -773,15 +773,12 @@ function messaging_filter($op, $delta = 0, $format = -1, $text = '') {
       $info[1] = t('HTML to text');
       return $info;
 
-    case 'no cache':
-      return TRUE; // No caching at all, at least for development
-
     case 'description':
       switch ($delta) {
         case 0:
           return t('Filters out all HTML tags and replaces HTML entities by characters, respects HTML line breaks.');
         case 1:
-          return t('Replaces HTML tags and entities with plain text formatting, moving links at the end.');
+          return t('Replaces HTML tags and entities with plain text formatting, moving links at the end. This filter is just for text messages and it isn\'t safe for rendering content on a web page.');
       }
 
     case 'process':

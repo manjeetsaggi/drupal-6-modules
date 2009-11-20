@@ -1,10 +1,11 @@
 <?php
-// $Id: views-cloud-style.tpl.php,v 1.2 2008/09/15 23:02:36 eaton Exp $
+// $Id: views-cloud-style.tpl.php,v 1.4 2009/11/18 02:08:20 quicksketch Exp $
 /**
  * @file views-cloud-style.tpl.php
  * Outputs a view as a weighted cloud.
  *
  * - $view: The view in use.
+ * - $font_size: The amount to adjust the font size as a decimal.
  * - $fields: an array of $field objects. Each one contains:
  *   - $field->content: The output of the field.
  *   - $field->raw: The raw data for the field, if it exists. This is NOT output safe.
@@ -19,10 +20,8 @@
  * @ingroup views_templates
  */
 ?>
-<div class="views-cloud">
+<div class="views-cloud"<?php print $font_size ? ' style="font-size: ' . $font_size . 'em"' : '' ?>>
   <?php foreach ($rows as $row): ?>
-    <div class="views-cloud-size-<?php print $row->cloud_size; ?>">
-      <?php print $row->output; ?>
-    </div>
+    <span class="views-cloud-size-<?php print $row->cloud_size; ?>"><?php print $row->output; ?></span>
   <?php endforeach; ?>
 </div>

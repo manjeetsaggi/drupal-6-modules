@@ -1,5 +1,5 @@
 <?php
-// $Id: addthis.module,v 1.13.2.15 2009/04/29 06:40:48 wesku Exp $
+// $Id: addthis.module,v 1.13.2.20 2009/10/22 17:57:50 wesku Exp $
 
 /**
  * @file
@@ -41,8 +41,8 @@ function addthis_menu() {
   $items = array();
 
   $items['admin/settings/addthis'] = array(
-    'title'            => t('AddThis'),
-    'description'      => t('Set username and customize look and feel for <a href="http://www.addthis.com/">AddThis</a> button.'),
+    'title'            => 'AddThis',
+    'description'      => 'Set username and customize look and feel for <a href="http://www.addthis.com/">AddThis</a> button.',
     'page callback'    => 'drupal_get_form',
     'page arguments'   => array('addthis_admin_settings'),
     'access arguments' => array('administer addthis'),
@@ -96,6 +96,16 @@ function addthis_theme() {
 }
 
 /**
+ * Implementation of hook_views_api().
+ */
+function addthis_views_api() {
+  return array(
+    'api' => 2,
+    'path' => drupal_get_path('module', 'addthis'),
+  );
+}
+
+/**
  * Internal function to generate code for AddThis button
  *
  * @return
@@ -104,6 +114,10 @@ function addthis_theme() {
 function _addthis_create_button($node=NULL, $teaser = FALSE) {
   global $_addthis_counter;
   $_addthis_counter++;
+  $brand = variable_get('addthis_brand', '');
+  if ($brand == '') {
+    $brand = variable_get('site_name', 'Drupal');
+  }
   if ($_addthis_counter == 1) {
       drupal_add_css((drupal_get_path('module', 'addthis') .'/addthis.css'));
       drupal_add_js(sprintf('
@@ -119,7 +133,7 @@ function _addthis_create_button($node=NULL, $teaser = FALSE) {
         addslashes(variable_get('addthis_logo', 'http://www.addthis.com/images/yourlogo.png')),
         addslashes(variable_get('addthis_logo_background', 'EFEFFF')),
         addslashes(variable_get('addthis_logo_color', '666699')),
-        addslashes(variable_get('addthis_brand', 'Your Site')),
+        addslashes($brand),
         addslashes(variable_get('addthis_options', 'favorites, email, digg, delicious, myspace, facebook, google, live, more')),
         variable_get('addthis_options', FALSE) ? 'true' : 'false'
       ), 'inline');
@@ -132,9 +146,18 @@ function _addthis_create_button($node=NULL, $teaser = FALSE) {
  * Theme the AddThis button.
  */
 function theme_addthis_button($node, $teaser) {
+  // Fix IE's bug.
+  if (strpos($_SERVER['HTTP_USER_AGENT'], 'MSIE') !== FALSE) {
+    drupal_add_link(array(
+      'rel' => 'stylesheet',
+      'type' => 'text/css',
+      'href' => "http://s7.addthis.com/static/r07/widget02.css",
+    ));
+  }
+
   if (variable_get('addthis_dropdown_disabled', '0')) {
     return ( sprintf('
-      <a href="http://www.addthis.com/bookmark.php"
+      <a class="addthis-button" href="http://www.addthis.com/bookmark.php"
         onclick="addthis_url   = location.href; addthis_title = document.title; return addthis_click(this);">
       <img src="%s" width="%d" height="%d" %s /></a>
       ',
@@ -146,7 +169,7 @@ function theme_addthis_button($node, $teaser) {
   }
   else {
     return ( sprintf('
-      <a href="http://www.addthis.com/bookmark.php"
+      <a class="addthis-button" href="http://www.addthis.com/bookmark.php"
         onmouseover="return addthis_open(this, \'\', \'%s\', \'%s\')"
         onmouseout="addthis_close()"
         onclick="return addthis_sendto()"><img src="%s" width="%d" height="%d" %s /></a>

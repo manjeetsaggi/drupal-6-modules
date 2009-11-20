@@ -1,5 +1,5 @@
 <?php
-// $Id: agreement.module,v 1.1.2.1 2009/07/21 05:45:26 yuriybabenko Exp $
+// $Id: agreement.module,v 1.1.2.2 2009/11/13 02:03:50 yuriybabenko Exp $
 
 /**
  * @file
@@ -32,7 +32,7 @@ function agreement_init() {
   global $user;
   
   // Get the user role the agreement is restricted to.
-  $role = variable_get('agreement_role', -1);
+  $role = check_plain(variable_get('agreement_role', -1));
 
   // Check to make sure the user belongs to the above role.
   if (array_key_exists($role, $user->roles)) {
@@ -40,29 +40,49 @@ function agreement_init() {
   
     // We will not redirect to the agreement page from these URLs.
     $exceptions = array(
-      variable_get('agreement_page_url', AGREEMENT_PAGE_URL),
-      variable_get('site_frontpage', ''),
+      check_plain(variable_get('agreement_page_url', AGREEMENT_PAGE_URL)),
+      check_plain(variable_get('site_frontpage', 'node')),
       'logout',
     );
-  
+
     if ((!isset($account->agreed) || !$account->agreed) && !in_array($_GET['q'], $exceptions)) {
       // Check for enforceable URLs.
-      $enforceable = variable_get('agreement_enforceable_pages', '');	
+      $enforceable = check_plain(variable_get('agreement_enforceable_pages', ''));	
 	
 	  // Flag to enable or disable the agreement restriction.	
-	  $restrict = TRUE;	
-		
+	  $restrict = FALSE;	
+
 	  // We check the current page URI against those in the enforceable URIs list; if no match we disable the restriction
       if(!empty($enforceable)) {
-	  	$enforceable = explode("\n", $enforceable);	
+	  	$enforceable = array_map('trim', explode("\n", $enforceable));	
 		
-		if(!in_array($_GET['q'], $enforceable)) {
-			$restrict = FALSE;	
+		$get_q = explode('/', $_GET['q']);
+
+		// Wildcard matching. TODO: REGEX-ify this
+		foreach($enforceable as $uri) {
+		  $uri_parts 		= explode('/', $uri);
+		  $restrict_parts = array();
+
+		  if(sizeof($get_q) >= sizeof($uri_parts)) {			  
+			foreach($uri_parts as $key => $part) {
+			  if($part != $get_q[$key] && $part != '*') {
+				$restrict_parts[] = 0;
+				break;
+			  }
+			  else {
+				$restrict_parts[] = 1;
+			  }
+			}
+	      }
+			
+		  if(!empty($restrict_parts) && !in_array(0, $restrict_parts)) {
+			$restrict = TRUE;	
+		  }
 		}
   	  }
-	  
+
 	  if($restrict) {
-	  	drupal_goto(variable_get('agreement_page_url', AGREEMENT_PAGE_URL));
+	  	drupal_goto(check_plain(variable_get('agreement_page_url', AGREEMENT_PAGE_URL)));
         exit();
 	  }
     }
@@ -84,11 +104,11 @@ function agreement_menu() {
     'type' => MENU_NORMAL_ITEM,
   );
     
-  $items[variable_get('agreement_page_url', AGREEMENT_PAGE_URL)] = array(
+  $items[check_plain(variable_get('agreement_page_url', AGREEMENT_PAGE_URL))] = array(
     'access arguments' => array('access content'),
     'description' => 'The agreement page.',
     'page callback' => 'agreement_page',
-    'title' => variable_get('agreement_page_title', AGREEMENT_PAGE_TITLE),
+    'title' => check_plain(variable_get('agreement_page_title', AGREEMENT_PAGE_TITLE)),
     'type' => MENU_CALLBACK,
   );
     
@@ -100,14 +120,14 @@ function agreement_menu() {
  */
 function agreement_user($op, &$edit, &$account, $category = NULL) {
   if ($op == 'login') {
-    $role = variable_get('agreement_role', -1);
+    $role = check_plain(variable_get('agreement_role', -1));
 
     if (array_key_exists($role, $account->roles)) {
       $user = _agreement_user();
       
       if (!isset($user->agreed) || !$user->agreed) {
         // drupal_goto() may not always work.
-        header('Location: '.variable_get('agreement_page_url', AGREEMENT_PAGE_URL));
+        header('Location: '.check_plain(variable_get('agreement_page_url', AGREEMENT_PAGE_URL)));
         exit();
       }
     }
@@ -143,10 +163,13 @@ function agreement_settings() {
   
   $form = array();
   
+  $roles = array_merge(array(-1 => ''), user_roles());
+  unset($roles[1]);
+  
   $form['agreement_role'] = array(
     '#description' => t('To users of which role should this agreement be displayed?'),
     '#default_value' => variable_get('agreement_role', -1),
-    '#options' => array_merge(array(-1 => ''), user_roles()),
+    '#options' => $roles,
     '#required' => TRUE,
     '#title' => t('User role'),
     '#type' => 'select',
@@ -228,7 +251,7 @@ function agreement_page() {
   
   $account = _agreement_user();
   
-  $text = variable_get('agreement_text', '');
+  $text = check_plain(variable_get('agreement_text', ''));
   $data = drupal_get_form('agreement_form', $text, $account->agreed, $account->uid);
   
   $output = theme('agreement_page', $data);
@@ -278,13 +301,13 @@ function agreement_form($form, $text, $status = 0, $uid = -1) {
   if (!$status) {
     $form['agree'] = array(
       '#default_value' => $status,
-      '#title' => t(variable_get('agreement_checkbox_text', AGREEMENT_CHECKBOX_TEXT)),
+      '#title' => check_plain(t(variable_get('agreement_checkbox_text', AGREEMENT_CHECKBOX_TEXT))),
       '#type' => 'checkbox',    
     );
     
     $form['submit'] = array(
       '#type' => 'submit',
-      '#value' => t(variable_get('agreement_submit_text', AGREEMENT_SUBMIT_TEXT)),
+      '#value' => check_plain(t(variable_get('agreement_submit_text', AGREEMENT_SUBMIT_TEXT))),
     );
   }
   

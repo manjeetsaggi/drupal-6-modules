@@ -1,5 +1,5 @@
 <?php
-// $Id: parser_common_syndication.inc,v 1.1.2.2 2009/09/18 14:31:24 aronnovak Exp $
+// $Id: parser_common_syndication.inc,v 1.1.2.3 2009/10/31 16:04:00 aronnovak Exp $
 
 /**
  * @file
@@ -129,6 +129,7 @@ function _parser_common_syndication_feedapi_get($url, $username = NULL, $passwor
     curl_setopt($download, CURLOPT_HTTPHEADER, $headers);
     curl_setopt($download, CURLOPT_HEADER, TRUE);
     curl_setopt($download, CURLOPT_RETURNTRANSFER, TRUE);
+    curl_setopt($download, CURLOPT_ENCODING, '');
     if ($accept_invalid_cert) {
       curl_setopt($download, CURLOPT_SSL_VERIFYPEER, 0);
     }

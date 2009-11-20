@@ -1,5 +1,5 @@
 <?php
-// $Id: services_keyauth.inc,v 1.1.2.8.2.7 2009/11/04 21:37:01 heyrocker Exp $
+// $Id: services_keyauth.inc,v 1.1.2.8.2.8 2009/11/10 18:53:18 heyrocker Exp $
 
 /**
  * @file
@@ -51,35 +51,35 @@ function _services_keyauth_alter_methods(&$methods) {
 
   // sessid arg
   $arg_sessid = array(
-    '#name' => 'sessid',
-    '#type' => 'string',
-    '#description' => t('A valid sessid.'),
+    'name' => 'sessid',
+    'type' => 'string',
+    'description' => t('A valid sessid.'),
   );
 
   $arg_domain_time_stamp = array(
-    '#name' => 'domain_time_stamp',
-    '#type' => 'string',
-    '#description' => t('Time stamp used to hash key.'),
+    'name' => 'domain_time_stamp',
+    'type' => 'string',
+    'description' => t('Time stamp used to hash key.'),
   );
 
   $arg_nonce = array(
-    '#name' => 'nonce',
-    '#type' => 'string',
-    '#description' => t('One time use nonce also used hash key.'),
+    'name' => 'nonce',
+    'type' => 'string',
+    'description' => t('One time use nonce also used hash key.'),
   );
 
   // domain arg
   $arg_domain_name = array(
-    '#name' => 'domain_name',
-    '#type' => 'string',
-    '#description' => t('A valid domain for the API key.'),
+    'name' => 'domain_name',
+    'type' => 'string',
+    'description' => t('A valid domain for the API key.'),
   );
 
   // api_key arg
   $arg_api_key = array(
-    '#name' => 'hash',
-    '#type' => 'string',
-    '#description' => t('A valid API key.'),
+    'name' => 'hash',
+    'type' => 'string',
+    'description' => t('A valid API key.'),
   );
 
   foreach ($methods as $key => &$method) {

@@ -1,5 +1,5 @@
 <?php
-// $Id: user_relationship_blocks.module,v 1.1.2.9 2009/07/06 12:40:04 alexk Exp $
+// $Id: user_relationship_blocks.module,v 1.1.2.14 2009/10/25 16:46:20 alexk Exp $
 /**
  * @file
  * User Relationship Blocks implementation
@@ -65,19 +65,16 @@ function user_relationship_blocks_theme() {
 
     'user_relationships_block' => array(
       'arguments' => array('account' => NULL, 'settings' => NULL, 'extra' => NULL),
-      'file'      => 'user_relationship_blocks.templates.inc',
       'path'      => drupal_get_path('module', 'user_relationship_blocks') .'/templates',
       'template'  => 'user_relationships-block',
     ),
     'user_relationships_pending_block' => array(
       'arguments' => array('account' => NULL, 'settings' => NULL),
-      'file'      => 'user_relationship_blocks.templates.inc',
       'path'      => drupal_get_path('module', 'user_relationship_blocks') .'/templates',
       'template'  => 'user_relationships-pending_block',
     ),
     'user_relationships_actions_block' => array(
       'arguments' => array('account' => NULL, 'settings' => NULL) ,
-      'file'      => 'user_relationship_blocks.templates.inc',
       'path'      => drupal_get_path('module', 'user_relationship_blocks') .'/templates',
       'template'  => 'user_relationships-actions_block',
     ),
@@ -101,23 +98,24 @@ function theme_user_relationship_block_subject($bid, $account, $rtid, $extra) {
     global $user;
     $rtype = user_relationships_type_load($rtid);
     if ($account->uid == $user->uid) {
-      return t('I am a @rel_name of', array('@rel_name' => $rtype->name, '@rel_plural_name' => $rtype->plural_name));
+      return t('I am a @rel_name of', array('@rel_name' => ur_tt("user_relationships:rtid:$rtid:name", $rtype->name), '@rel_plural_name' => $rtype->plural_name));
     }
     else {
-      return t('@username is a @rel_name of', array('@username' => $account->name, '@rel_name' => $rtype->name, '@rel_plural_name' => $rtype->plural_name));
+      return t('@username is a @rel_name of', array('@username' => $account->name, '@rel_name' => ur_tt("user_relationships:rtid:$rtid:name", $rtype->name), '@rel_plural_name' => $rtype->plural_name));
     }
   }
   else {
     global $user;
     $user_name = ($account->uid == $user->uid) ? 'My' : t("@username's", array('@username' => $account->name));
     if ($rtid == UR_BLOCK_ALL_TYPES) {
-      $type_name = 'Relationships';
+      $output = ($account->uid == $user->uid) ? t('My relationships') : t("@username's relationships", array('@username' => $account->name));
     }
     else {
-      $rtype      = user_relationships_type_load($rtid);
-      $type_name  = $rtype->plural_name;
+      $rtype = user_relationships_type_load($rtid);
+      $output = ($account->uid == $user->uid) 
+                ? t('My @relationships', array('@relationships' => ur_tt("user_relationships:rtid:$rtid:plural_name", $rtype->plural_name))) 
+                : t("@username's @relationships", array('@username' => $account->name, '@relationships' => ur_tt("user_relationships:rtid:$rtid:plural_name", $rtype->plural_name)));
     }
-    $output = t('@user @type', array('@user' => $user_name, '@type' => $type_name));
     return $output;
   }
 }
@@ -147,11 +145,11 @@ function _user_relationship_blocks_form($block, $rtid, $extra, $bid) {
   
   if ($block != 'actions') {
     if ($rtid == UR_BLOCK_ALL_TYPES) {
-      $relationship_name = 'All';
+      $relationship_name = t('All');
     }
     else {
       $type = user_relationships_type_load($rtid);
-      $relationship_name = $type->name;
+      $relationship_name = ur_tt("user_relationships:rtid:$rtid:name", $type->name);
     }
 
     $form['size'] = array(
@@ -168,7 +166,7 @@ function _user_relationship_blocks_form($block, $rtid, $extra, $bid) {
     );
 
     $user_identifier = ($block == UR_BLOCK_MY) ? t('currently logged in user') : t('author whose node is being viewed');
-    $msg = t("NOTE: This block displays @relationship_name relationships of the @user_identifier.", array('@relationship_name' => $relationship_name, '@user_identifier' => $user_identifier));
+    $msg = t("NOTE: This block displays @relationship_name relationships of the @user_identifier.", array('@relationship_name' => ur_tt("user_relationships:rtid:$rtid:name", $relationship_name), '@user_identifier' => $user_identifier));
 
     if ($extra) {
       $relation = $extra == 'you_to_them' ? t('requester') : t('requestee');
@@ -351,4 +349,59 @@ function _user_relationship_blocks_insert_defaults() {
       );
     }
   }
+}
+
+/**
+ * Template pre processor for the main block view
+ */
+function template_preprocess_user_relationships_block(&$variables) {
+  $user     =& $variables['user'];
+  $account  =& $variables['account'];
+  $settings =& $variables['settings'];
+  $extra    =& $variables['extra'];
+
+  $query_opts = array('include_user_info' => TRUE);
+
+  // select the appropriate set of relationships based on admin's configuration settings
+  switch ($settings->sort) {
+    case 'newest': $query_opts['order'] = 'updated_at DESC'; break;
+    case 'oldest': $query_opts['order'] = 'updated_at ASC'; break;
+    case 'random': $query_opts['order'] = 'RAND()'; break;
+  }
+
+  $query_opts['limit'] = $settings->size;
+  
+  $key = $extra ? ($extra == 'you_to_them' ? 'requester_id' : 'requestee_id') : 'user';
+  $args = array($key => $account->uid, 'approved' => TRUE);
+
+  if ($settings->rtid != UR_BLOCK_ALL_TYPES) {
+    $args['rtid'] = $settings->rtid;
+  }
+
+  $variables['relationships'] = user_relationships_load($args, $query_opts);
+}
+
+
+/**
+ * Template pre processor for the pending relationships block
+ */
+function template_preprocess_user_relationships_pending_block(&$variables) {
+  $account =& $variables['account'];
+
+  $variables['relationships'] = user_relationships_load(array('user' => $account->uid, 'approved' => FALSE), array('include_user_info' => TRUE));
+}
+
+
+/**
+ * Template pre processor for the relationship actions block
+ */
+function template_preprocess_user_relationships_actions_block(&$variables) {
+  $user     =& $variables['user'];
+  $account  =& $variables['account'];
+
+  if ($user != $account) {
+    $variables['current_relationships'] = _user_relationships_ui_between($user, $account);
+  }
+
+  $variables['actions'] = _user_relationships_ui_actions_between($user, $account);
 }
