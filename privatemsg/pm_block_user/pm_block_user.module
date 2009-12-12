@@ -1,5 +1,5 @@
 <?php
-// $Id: pm_block_user.module,v 1.1.2.9 2009/10/04 22:48:42 litwol Exp $
+// $Id: pm_block_user.module,v 1.1.2.14 2009/11/23 19:52:40 berdir Exp $
 
 /**
  * @file
@@ -17,7 +17,7 @@ define('PM_BLOCK_USER_DISALLOW_BLOCKING', 0);
 define('PM_BLOCK_USER_DISALLOW_SENDING', 1);
 
 /**
- * Implementation of hook_help().
+ * Implements hook_help().
  */
 function pm_block_user_help($path) {
   switch ($path) {
@@ -27,7 +27,7 @@ function pm_block_user_help($path) {
 }
 
 /**
- * Implementation of hook_menu().
+ * Implements hook_menu().
  */
 function pm_block_user_menu() {
   $items['messages/block/%user'] = array(
@@ -50,7 +50,7 @@ function pm_block_user_menu() {
   );
 
   $items['messages/block/js'] = array(
-    'title' => 'Javascript Block Actions Form',
+    'title' => 'Javascript block actions form',
     'page callback' => 'pm_block_user_js',
     'access arguments' => array('administer privatemsg settings'),
     'type' => MENU_CALLBACK,
@@ -163,7 +163,7 @@ function _pm_block_user_actions_form($details, $blacklist = TRUE) {
     $default_value = (isset($details['action']) ? $details['action'] : PM_BLOCK_USER_DISALLOW_BLOCKING);
   }
   else {
-    // TODO: add whitelist options/default_value here.
+    // @todo: add whitelist options/default_value here.
   }
   $form['action']  = array(
     '#type' => 'radios',
@@ -179,7 +179,7 @@ function _pm_block_user_actions_form($details, $blacklist = TRUE) {
   $form['remove'] = array(
     '#type' => 'submit',
     '#submit' => array('pm_block_user_remove_submit'),
-    '#value' => t('Remove_' . $delta),
+    '#value' => t('Remove'),
     '#attributes' => array('class' => 'remove-action'),
     '#prefix' => '<div id="remove-rule-button">',
     '#suffix' => '<label for="edit-remove">' . t('Remove rule') . '</label></div>',
@@ -250,14 +250,13 @@ function pm_block_user_settings_submit($form, &$form_state) {
 
 /**
  * Takes an array of settings and filters out anything that's un-needed.
+ *
  * Leaving only settings to be saved.
  *
  * @param $settings
  *   The array of settings to filter.
- *
  * @return
  *   Array of settings, ready to be stored in the database.
- *
  * @see pm_block_user_settings_submit()
  */
 function _pm_block_user_settings_filter($settings) {
@@ -307,7 +306,7 @@ function pm_block_user_js() {
 }
 
 /**
- * Implementation of hook_theme().
+ * Implements hook_theme().
  */
 function pm_block_user_theme() {
   return array(
@@ -482,7 +481,7 @@ function pm_block_user_form($form_state, $author) {
 }
 
 /**
- * Implementation of hook_form_submit().
+ * Implements hook_form_submit().
  */
 function pm_block_user_form_submit($form, &$form_state) {
   if ($form_state['values']['confirm']) {
@@ -501,7 +500,7 @@ function pm_block_user_form_submit($form, &$form_state) {
 }
 
 /**
- * Implementation of hook_privatemsg_block_message.
+ * Implements hook_privatemsg_block_message().
  */
 function pm_block_user_privatemsg_block_message($author, $recipients) {
   $blocked = array();
@@ -542,13 +541,12 @@ function pm_block_user_privatemsg_block_message($author, $recipients) {
 
 function pm_block_user_privatemsg_sql_load_alter(&$fragments, $pmid, $uid) {
   $fragments['select'][] = 'pmbu.recipient AS is_blocked';
-  $fragments['select'][] = 'pmi.thread_id';
 
   $fragments['inner_join'][] = 'LEFT JOIN {pm_block_user} pmbu ON (pm.author = pmbu.author AND pmi.uid = pmbu.recipient)';
 }
 
 /**
- * Implementation of hook_privatemsg_message_view_alter.
+ * Implements hook_privatemsg_message_view_alter().
  */
 function pm_block_user_privatemsg_message_view_alter(&$vars) {
   global $user;
@@ -565,10 +563,22 @@ function pm_block_user_privatemsg_message_view_alter(&$vars) {
 
   if ($user->uid <> $author->uid) {
     if ($vars['message']['is_blocked']) {
-      $vars['message_actions'][] = array('title' => t('Unblock author'), 'href' => 'messages/block/'. $author->uid, 'query' => 'destination=messages/view/' . $thread_id);
+      $vars['message_actions']['unblock_author'] = array('title' => t('Unblock author'), 'href' => 'messages/block/'. $author->uid, 'query' => 'destination=messages/view/' . $thread_id);
     }
     else {
-      $vars['message_actions'][] = array('title' => t('Block author'), 'href' => 'messages/block/'. $author->uid, 'query' => 'destination=messages/view/' . $thread_id);
+      $vars['message_actions']['block_author'] = array('title' => t('Block author'), 'href' => 'messages/block/'. $author->uid, 'query' => 'destination=messages/view/' . $thread_id);
     }
+  }
+}
+
+/**
+ * Implement hook_user().
+ */
+function pm_block_user_user($op, &$edit, &$account, $category = NULL) {
+  switch ($op) {
+      case 'delete':
+      // Delete blocking rules which involve this user.
+      db_query("DELETE FROM {pm_block_user} WHERE author = %d OR recipient = %d", $account->uid, $account->uid);
+      break;
   }
 }

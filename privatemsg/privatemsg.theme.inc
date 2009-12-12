@@ -1,5 +1,5 @@
 <?php
-// $Id: privatemsg.theme.inc,v 1.1.2.8 2009/10/08 21:09:25 berdir Exp $
+// $Id: privatemsg.theme.inc,v 1.1.2.10 2009/11/10 19:48:17 berdir Exp $
 
 /**
  * @file
@@ -45,10 +45,9 @@
  * $form['#data']['thread_id'] = $data // Raw data of that thread
  * $form['#rows']['thread_id'] = $row // Themed fields of that thread
  * @endcode
- * 
+ *
  * Note that the information in #data can be used to populate #rows, but it will
  * not be used by the default theme function theme_privatemsg_list().
- *
  */
 
 /**
@@ -113,7 +112,7 @@ function phptemplate_privatemsg_list_field__count($thread) {
   $options = array();
   if (!empty($thread['is_new']) && $thread['is_new'] < $thread['count']) {
     $options['fragment'] = 'new';
-    $field['data'] .= '<br />' . l((format_plural($thread['is_new'], '(1 new)', '(@count new)')),'messages/view/' . $thread['thread_id'], $options);
+    $field['data'] .= '<br />' . l((format_plural($thread['is_new'], '(1 new)', '(@count new)')), 'messages/view/' . $thread['thread_id'], $options);
   }
   $field['class'] = 'privatemsg-list-count';
   return $field;
@@ -239,18 +238,24 @@ function phptemplate_privatemsg_list_header__thread_started() {
  * by the header and field theme patterns.
  */
 function theme_privatemsg_list($form) {
-  $has_posts = !empty($form['#rows']);
+  $has_posts = !empty($form['#data']);
 
   drupal_add_css(drupal_get_path('module', 'privatemsg') .'/styles/privatemsg-list.css');
 
+  // Load the table columns.
+  $columns = array_merge(array('subject', 'last_updated'), array_filter(variable_get('privatemsg_display_fields', array('participants'))));
+
+  // Load the themed list headers based on the available data.
+  $headers = _privatemsg_list_headers(!empty($form['#data']), $columns);
   // sort the headers array based on the #weight property.
-  $headers = $form['#headers'];
   usort($headers, 'element_sort');
 
   $themed_rows = array();
   // Check if there is atleast a single thread.
   if ($has_posts) {
-    foreach ($form['#rows'] as $thread_id => $row) {
+    foreach ($form['#data'] as $thread_id => $data) {
+      // Theme the row.
+      $row = _privatemsg_list_thread($data);
       $data = array();
       // Render the checkbox.
       $data[] = array('data' => drupal_render($form['threads'][$thread_id]), 'class' => 'privatemsg-list-select');

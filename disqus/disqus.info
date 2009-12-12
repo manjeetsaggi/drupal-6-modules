@@ -3,9 +3,9 @@ name = Disqus
 description = Uses the Disqus web service to enhance comments.
 core = 6.x
 
-; Information added by drupal.org packaging script on 2009-10-05
-version = "6.x-1.5-rc1"
+; Information added by drupal.org packaging script on 2009-12-03
+version = "6.x-1.5"
 core = "6.x"
 project = "disqus"
-datestamp = "1254707717"
+datestamp = "1259864129"
 

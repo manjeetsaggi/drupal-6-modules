@@ -1,7 +1,7 @@
 <?php
-// $Id: file_service.inc,v 1.1.2.7.2.1 2009/10/15 02:54:23 marcingy Exp $
+// $Id: file_service.inc,v 1.1.2.7.2.3 2009/12/05 01:42:38 heyrocker Exp $
+
 /**
- * @author Services Dev Team
  * @file
  *  Link general file functionalities to services module.
  */
@@ -101,7 +101,7 @@ function file_service_save($file) {
   }
 
   //The filepath that ends up in the node must contain the filename
-  $file->filepath .= '/' . $file->filename;
+  $file->filepath .= '/'. $file->filename;
 
   // Write the file
   if (!file_save_data(base64_decode($file->file), $file->filepath)) {

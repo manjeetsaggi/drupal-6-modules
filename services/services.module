@@ -1,10 +1,11 @@
 <?php
-// $Id: services.module,v 1.8.2.88.2.10 2009/11/04 21:37:01 heyrocker Exp $
+// $Id: services.module,v 1.8.2.88.2.14 2009/12/11 14:32:42 heyrocker Exp $
+
 /**
- * @author Services Dev Team
  * @file
- *  Provides a generic by powerful API for web services.
+ *  Provides a generic but powerful API for exposing web services.
  */
+
 /**
  * Implementation of hook_help().
  */
@@ -157,6 +158,13 @@ function services_crossdomain_xml() {
   services_xml_output($output);
 }
 
+/**
+ * Helper function for sending xml output. This method outputs a xml
+ * processing instruction and the necessary headers and then exits.
+ *
+ * @param string $xml
+ * @return void
+ */
 function services_xml_output($xml) {
   $xml = '<?xml version="1.0"?>'."\n". $xml;
   header('Connection: close');
@@ -167,6 +175,15 @@ function services_xml_output($xml) {
   exit;
 }
 
+/**
+ * Sets information about which server implementation that is used for the
+ * call.
+ *
+ * @param string $module
+ *  The server module that's handling the call.
+ * @return object
+ *  Server info object.
+ */
 function services_set_server_info($module) {
   $server_info = new stdClass();
   $server_info->module = $module;
@@ -174,6 +191,15 @@ function services_set_server_info($module) {
   return services_get_server_info($server_info);
 }
 
+/**
+ * Returns or sets the server info object.
+ *
+ * @param object $server_info
+ *  Optional. Pass a object to set the server info object. Omit to just
+ *  retrieve the server info.
+ * @return object
+ *  Server info object.
+ */
 function services_get_server_info($server_info = NULL) {
   static $info;
   if (!$info && $server_info) {
@@ -182,11 +208,23 @@ function services_get_server_info($server_info = NULL) {
   return $info;
 }
 
-/**
- * Prepare an error message for returning to the server.
- */
+ /**
+  * Prepare an error message for returning to the server.
+  *
+  * @param string $message
+  *   The error message.
+  * @param int $code
+  *   Optional. A error code, these should map as closely to the applicable
+  *   http error codes as closely as possible.
+  * @param Exception $exception
+  *   Optional. The exception was thrown (if any) when the error occured.
+  * @return mixed
+  */
 function services_error($message, $code = 0, $exception = NULL) {
   $server_info = services_get_server_info();
+
+  // Allow external modules to log this error
+  module_invoke_all('services_error', $message, $code, $exception);
 
   // Look for custom error handling function.
   // Should be defined in each server module.
@@ -216,8 +254,8 @@ function services_auth_info($property = NULL, $module = NULL) {
   $module = $module ? $module : variable_get('services_auth_module', '');
 
   if (!isset($info[$module])) {
-    if (!empty($module) && module_exists($module) && is_callable($module . '_authentication_info')) {
-      $info[$module] = call_user_func($module . '_authentication_info');
+    if (!empty($module) && module_exists($module) && is_callable($module .'_authentication_info')) {
+      $info[$module] = call_user_func($module .'_authentication_info');
     }
     else {
       $info[$module] = FALSE;
@@ -233,13 +271,26 @@ function services_auth_info($property = NULL, $module = NULL) {
   return $info[$module];
 }
 
+/**
+ * Invokes a method for the configured authentication module.
+ *
+ * @param string $method
+ *  The method to call.
+ * @param mixed $arg1
+ *  Optional. First argument.
+ * @param mixed $arg2
+ *  Optional. Second argument.
+ * @param mixed $arg3
+ *  Optional. Third argument.
+ * @return mixed
+ */
 function services_auth_invoke($method, &$arg1 = NULL, &$arg2 = NULL, &$arg3 = NULL) {
   $module = variable_get('services_auth_module', '');
   // Get information about the current auth module
   $func = services_auth_info($method, $module);
   if ($func) {
     if ($file = services_auth_info('file')) {
-      require_once(drupal_get_path('module', $module) . '/' . $file);
+      require_once(drupal_get_path('module', $module) .'/'. $file);
     }
 
     if (is_callable($func)) {
@@ -254,12 +305,27 @@ function services_auth_invoke($method, &$arg1 = NULL, &$arg2 = NULL, &$arg3 = NU
   }
 }
 
+/**
+ * Invokes a method for the given authentication module.
+ *
+ * @param string $module
+ *  The authentication module to call the method for.
+ * @param string $method
+ *  The method to call.
+ * @param mixed $arg1
+ *  Optional. First argument.
+ * @param mixed $arg2
+ *  Optional. Second argument.
+ * @param mixed $arg3
+ *  Optional. Third argument.
+ * @return mixed
+ */
 function services_auth_invoke_custom($module, $method, &$arg1 = NULL, &$arg2 = NULL, &$arg3 = NULL) {
   // Get information about the auth module
   $func = services_auth_info($method, $module);
   if ($func) {
     if ($file = services_auth_info('file', $module)) {
-      require_once(drupal_get_path('module', $module) . '/' . $file);
+      require_once(drupal_get_path('module', $module) .'/'. $file);
     }
 
     if (is_callable($func)) {
@@ -275,9 +341,21 @@ function services_auth_invoke_custom($module, $method, &$arg1 = NULL, &$arg2 = N
 }
 
 /**
- * This is the magic function through which all remote method calls must pass.
+ * Invokes a services method.
+ *
+ * @param mixed $method_name
+ *  The method name or a method definition array.
+ * @param array $args
+ *  Optional. An array containing arguments for the method. These arguments are not
+ *  matched by name but by position.
+ * @param bool $browsing
+ *  Optional. Whether the call was made by the services browser or not.
+ * @return mixed
  */
 function services_method_call($method_name, $args = array(), $browsing = FALSE) {
+  // Allow external modules to log the results of this service call
+  module_invoke_all('services_method_call', $method_name, $args, $browsing);
+
   if (is_array($method_name) && isset($method_name['callback'])) {
     $method = $method_name;
   }
@@ -301,7 +379,7 @@ function services_method_call($method_name, $args = array(), $browsing = FALSE) 
   }
 
   // Check authentication
-  if ($auth_error = services_auth_invoke('authenticate_call', $method, $method_name, $args)) {
+  if ($method['auth'] && $auth_error = services_auth_invoke('authenticate_call', $method, $method_name, $args)) {
     if ($browsing) {
       drupal_set_message(t('Authentication failed: !message', array('!message' => $auth_error)), 'error');
     }
@@ -345,6 +423,9 @@ function services_method_call($method_name, $args = array(), $browsing = FALSE) 
   if ($server_info) {
     chdir($server_root);
   }
+
+  // Allow external modules to log the results of this service call
+  module_invoke_all('services_method_call_results', $method_name, $args, $browsing, $result);
 
   return $result;
 }
@@ -393,7 +474,7 @@ function services_resource_uri($path) {
  *  An array containing all resources.
  */
 function services_get_all_resources($include_services = TRUE, $reset = FALSE) {
-  $cache_key = 'services:resources' . ($include_services?'_with_services':'');
+  $cache_key = 'services:resources'. ($include_services?'_with_services':'');
 
   if (!$reset && ($cache = cache_get($cache_key)) && isset($cache->data)) {
     return $cache->data;
@@ -439,6 +520,9 @@ function services_get_all_resources($include_services = TRUE, $reset = FALSE) {
   }
 }
 
+/**
+ * Implementation of hook_form_alter().
+ */
 function services_form_alter(&$form, $form_state, $form_id) {
   if ($form_id == 'system_modules') {
     // Add our own submit hook to clear cache
@@ -446,11 +530,26 @@ function services_form_alter(&$form, $form_state, $form_id) {
   }
 }
 
+/**
+ * Submit handler for the system_modules form that clears the services cache.
+ */
 function services_system_modules_submit($form, &$form_state) {
   // Reset services cache
   services_get_all(TRUE, TRUE);
 }
 
+/**
+ * Processes the passed resources and adds all the controllers to the
+ * controller array.
+ *
+ * @param array $resources
+ *  The resources that should be processed.
+ * @param string $controllers
+ *  An array (passed by reference) that will be populated with the controllers
+ *  of the passed resources.
+ * @param string $path
+ *  Optional. Deprecated.
+ */
 function services_process_resources(&$resources, &$controllers, $path=array()) {
   foreach ($resources as $name => &$resource) {
     if (drupal_substr($name, 0, 1) != '#') {
@@ -459,6 +558,19 @@ function services_process_resources(&$resources, &$controllers, $path=array()) {
   }
 }
 
+/**
+ * Processes a single resource and adds it's controllers to the controllers
+ * array.
+ *
+ * @param string $name
+ *  The name of the resource.
+ * @param array $resource
+ *  The resource definition.
+ * @param array $controllers
+ *  An array (passed by reference) that will be populated with the controllers
+ *  of the passed resources.
+ * @return void
+ */
 function _services_process_resource($name, &$resource, &$controllers) {
   $path = join($name, '/');
   $resource['name'] = $path;
@@ -466,12 +578,12 @@ function _services_process_resource($name, &$resource, &$controllers) {
   $keys = array('retrieve', 'create', 'update', 'delete');
   foreach ($keys as $key) {
     if (isset($resource[$key])) {
-      $controllers[$path . '/' . $key] = &$resource[$key];
+      $controllers[$path .'/'. $key] = &$resource[$key];
     }
   }
 
   if (isset($resource['index'])) {
-    $controllers[$path . '/index'] = &$resource['index'];
+    $controllers[$path .'/index'] = &$resource['index'];
   }
 
   if (isset($resource['relationships'])) {
@@ -483,7 +595,7 @@ function _services_process_resource($name, &$resource, &$controllers) {
         }
         $resource['relationships'][$relname] = array_merge($resource['retrieve'], $rel);
       }
-      $controllers[$path . '/relationship/' . $relname] = &$resource['relationships'][$relname];
+      $controllers[$path .'/relationship/'. $relname] = &$resource['relationships'][$relname];
     }
   }
 
@@ -495,7 +607,7 @@ function _services_process_resource($name, &$resource, &$controllers) {
         unset($up['args']);
         $resource['actions'][$actname] = array_merge($up, $act);
       }
-      $controllers[$path . '/action/' . $actname] = &$resource['actions'][$actname];
+      $controllers[$path .'/action/'. $actname] = &$resource['actions'][$actname];
     }
   }
 
@@ -508,11 +620,18 @@ function _services_process_resource($name, &$resource, &$controllers) {
         }
         $resource['targeted actions'][$actname] = array_merge($resource['update'], $act);
       }
-      $controllers[$path . '/targeted_action/' . $actname] = &$resource['actions'][$actname];
+      $controllers[$path .'/targeted_action/'. $actname] = &$resource['actions'][$actname];
     }
   }
 }
 
+/**
+ * Should be removed. This code doesn't seem to be used anywhere.
+ *
+ * @param string $perm
+ *  The permission to check for.
+ * @return bool
+ */
 function services_delegate_access($perm) {
   return services_auth_invoke('delegate_access', $perm);
 }
@@ -528,7 +647,7 @@ function services_delegate_access($perm) {
  *   An array containing all services and thir methods
  */
 function services_get_all($include_resources = TRUE, $reset = FALSE) {
-  $cache_key = 'services:methods' . ($include_resources?'_with_resources':'');
+  $cache_key = 'services:methods'. ($include_resources?'_with_resources':'');
 
   if (!$reset && ($cache = cache_get($cache_key)) && isset($cache->data)) {
     return $cache->data;
@@ -580,7 +699,7 @@ function services_get_all($include_resources = TRUE, $reset = FALSE) {
 
         // Translate all resources
         foreach ($resources as $name => $def) {
-          foreach(_services_resource_as_services($def) as $method) {
+          foreach (_services_resource_as_services($def) as $method) {
             $methods[] = $method;
           }
         }
@@ -600,6 +719,14 @@ function services_method_load($method) {
   return isset($method) ? $method : FALSE;
 }
 
+/**
+ * Get's the definition of a method.
+ *
+ * @param string $method_name
+ *  The name of the method to get the definition for.
+ * @return array
+ *  The method definition.
+ */
 function services_method_get($method_name) {
   static $method_cache;
   if (!isset($method_cache[$method_name])) {
@@ -615,6 +742,10 @@ function services_method_get($method_name) {
 
 /**
  * Cleanup function to remove unnecessary hashes from service definitions.
+ *
+ * @param array $array
+ *  A service definition or an array of service definitions.
+ * @return void
  */
 function services_strip_hashes(&$array) {
   foreach ($array as $key => $value) {
@@ -629,7 +760,15 @@ function services_strip_hashes(&$array) {
 }
 
 /**
- * Make any changes we might want to make to node.
+ * Creates an object that only contains the specified attributes from the node
+ * object.
+ *
+ * @param object $node
+ *  The node to get the attributes.
+ * @param array $fields
+ *  An array containing the names of the attributes to get.
+ * @return object
+ *  An object with the specified attributes.
  */
 function services_node_load($node, $fields = array()) {
   if (!isset($node->nid)) {
@@ -721,4 +860,4 @@ function services_session_unload($backup) {
  */
 function services_access_menu() {
   return TRUE;
-} 
+}

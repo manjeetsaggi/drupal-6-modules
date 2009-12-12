@@ -1,5 +1,5 @@
 <?php
-// $Id: disqus.module,v 1.1.2.21 2009/08/27 23:40:14 robloach Exp $
+// $Id: disqus.module,v 1.1.2.23 2009/10/30 17:40:34 robloach Exp $
 
 /**
  * Implementation of hook_help().
@@ -85,9 +85,12 @@ function disqus_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
           // Provide the identifier.
           $node->disqus['identifier'] = 'node/' . $node->nid;
 
-          // Inject the script.
-          if ($developer = variable_get('disqus_developer', FALSE)) {
-            $node->disqus['developer'] = $developer;
+          // The developer flag must always be set when the node is unpublished.
+          if ($node->status == 0) {
+            $node->disqus['developer'] = 1;
+          }
+          elseif ($developer = variable_get('disqus_developer', FALSE)) {
+            $node->disqus['developer'] = intval($developer);
           }
         }
       }
@@ -330,7 +333,7 @@ function disqus_footer($main = 0, $disqus_options = NULL) {
     $domain = variable_get('disqus_domain', '');
     if (!empty($domain)) {
       $output = '<script type="text/javascript">';
-      if ($disqus['developer']) {
+      if (isset($disqus['developer'])) {
         $output .= 'var disqus_developer = 1;';
       }
       $output .= 'var disqus_url = '. drupal_to_js($disqus['url']) .';';

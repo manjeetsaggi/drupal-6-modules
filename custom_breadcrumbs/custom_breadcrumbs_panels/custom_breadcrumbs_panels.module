@@ -1,5 +1,5 @@
 <?php
-// $Id: custom_breadcrumbs_panels.module,v 1.1.2.3 2009/09/28 18:24:41 mgn Exp $
+// $Id: custom_breadcrumbs_panels.module,v 1.1.2.5 2009/11/29 03:54:11 mgn Exp $
 /**
  * @file
  * Provide custom breadcrumbs for panels pages.
@@ -10,6 +10,7 @@ module_load_include('inc', 'page_manager', 'page_manager.admin');
 
 /**
  * Implementation of hook_cb_breadcrumb_info().
+ *
  *   @return an array with elements 
  *     'table' indicating the db_table to load the breadcrumb from,
  *     'field' a unique field of the database table used to identify the breadcrumb
@@ -18,12 +19,23 @@ module_load_include('inc', 'page_manager', 'page_manager.admin');
  */
 function custom_breadcrumbs_panels_cb_breadcrumb_info() {
   $breadcrumb_type_info = array();
-  $breadcrumb_type_info['panels'] = array('table' => 'custom_breadcrumbs_panels', 'field' => 'panel_id', 'type' => 'panels',  'name_constructor' => '_custom_breadcrumbs_panels_breadcrumb_name');
+  $breadcrumb_type_info['panels'] = array(
+    'table' => 'custom_breadcrumbs_panels',
+    'field' => 'panel_id',
+    'type' => 'panels',
+    'name_constructor' => '_custom_breadcrumbs_panels_breadcrumb_name',
+  );
   return $breadcrumb_type_info;
 }
 
 /**
  * Construct a default name to display in the admin screen.
+ *
+ * @param $breadcrumb
+ *   The breadcrumb object.
+ *
+ * @return
+ *   A text string that will be used as the breadcrumb name.
  */
 function _custom_breadcrumbs_panels_breadcrumb_name($breadcrumb) {
   if (isset($breadcrumb->panel_id)) {
@@ -89,7 +101,7 @@ function custom_breadcrumbs_panels_ctools_render_alter($info, $page, $args, $con
   if ($page) {
     global $language;
     $languages = array('language' => $language->language, 'all' => '');
-    // Check to see if the panel ID matches any custom_breadcrumb panel_id
+    // Check to see if the panel ID matches any custom_breadcrumb panel_id.
     $id = 'page-'. $subtask['name'];  
     $breadcrumbs = custom_breadcrumbs_load_breadcrumbs('custom_breadcrumbs_panels', NULL, array('panel_id' => $id), $languages);
     if (!empty($breadcrumbs)) {
@@ -105,34 +117,49 @@ function custom_breadcrumbs_panels_ctools_render_alter($info, $page, $args, $con
   }
 }
 
+/**
+ * Implementation of hook_form_alter().
+ *
+ * @return NONE
+ */
 function custom_breadcrumbs_panels_form_alter(&$form, $form_state, $form_id) {
   if ($form_id == 'custom_breadcrumbs_admin_settings') {
     if (module_exists('custom_breadcrumbs_taxonomy')) {
-      $form['settings']['custom_breadcrumbs_taxonomy_panels'] = array(
-        '#type'           => 'checkbox',
-        '#title'          => t('Use taxonomy breadcrumbs for panels'),
-        '#default_value'  => variable_get('custom_breadcrumbs_taxonomy_panels', FALSE),
-        '#description'    => t('When enabled, the view argument and/or the taxonomy structure of nodes returned by panels will be used to form the taxonomy breadcrumb trail.'),
-        '#weight'         => 45,
+      $form['settings']['custom_breadcrumbs_panels'] = array(
+        '#type'           => 'fieldset',
+        '#title'          => t('Panels'),
+        '#collapsible'    => TRUE,
+        '#collapsed'      => FALSE,
+      );
+      $form['settings']['custom_breadcrumbs_panels']['custom_breadcrumbs_taxonomy_panels'] = array(
+        '#type'          => 'checkbox',
+        '#title'         => t('Use taxonomy breadcrumbs for panels'),
+        '#default_value' => variable_get('custom_breadcrumbs_taxonomy_panels', FALSE),
+        '#description'   => t('If enabled, the view argument and/or the taxonomy structure of nodes returned by panels will be used to form the taxonomy breadcrumb trail.'),
+        '#weight'        => 45,
       );
     }
   }
 }
 
 /**
- * Displays an edit form for a panels breadcrumb.
+ * Form builder; Displays an edit form for a panels breadcrumb.
+ *
+ * @ingroup forms
+ * @see custom_breadcrumbs_form_validate()
+ * @see custom_breadcrumbs_form_submit()
  */
 function custom_breadcrumbs_panels_form(&$form_state, $type) {
   $form = array();
   $breadcrumb = NULL;
   $bid = arg(5);
   if (isset($bid)) {
-    drupal_set_title('Edit Custom Breadcrumb for Panel Page');
+    drupal_set_title(t('Edit Custom Breadcrumb for Panel Page'));
     $breadcrumbs = custom_breadcrumbs_load_breadcrumbs('custom_breadcrumbs_panels', NULL, array('bid' => $bid));
     $breadcrumb = array_pop($breadcrumbs);
   }
   else {
-    drupal_set_title('Add Custom Breadcrumb for Panel Page');
+    drupal_set_title(t('Add Custom Breadcrumb for Panel Page'));
   }
   $options = array();
   $tasks = page_manager_get_tasks_by_type('page');
@@ -144,13 +171,13 @@ function custom_breadcrumbs_panels_form(&$form_state, $type) {
     }
   }
   $form['panel_id'] = array(
-    '#type' => 'select',
-    '#title' => t('Custom Panel Page Id'),
-    '#required' => TRUE,
-    '#options' => $options,
-    '#description' => t('The Panel that this custom breadcrumb trail will apply to.'),
+    '#type'          => 'select',
+    '#title'         => t('Custom Panel Page Id'),
+    '#required'      => TRUE,
+    '#options'       => $options,
+    '#description'   => t('The Panel that this custom breadcrumb trail will apply to.'),
     '#default_value' => isset($breadcrumb->panel_id) ? $breadcrumb->panel_id : NULL,
-    '#weight' => -10,
+    '#weight'        => -10,
   );
   // Store information needed to save this breadcrumb.
   $form['#module'] = 'custom_breadcrumbs_panels';

@@ -1,10 +1,17 @@
 <?php
+// $Id: privatemsg_filter.test,v 1.1.2.5 2009/11/06 13:06:26 berdir Exp $
+
+/*
+ * @file
+ * Tests for privatemsg_filter.module
+ */
+
 /**
  * Test filters, tags and inbox/sent handling.
  */
 class PrivatemsgFilterTestCase extends DrupalWebTestCase {
   /**
-   * Implementation of getInfo().
+   * Implements getInfo().
    */
   function getInfo() {
     return array(
@@ -15,7 +22,7 @@ class PrivatemsgFilterTestCase extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of setUp().
+   * Implements setUp().
    */
   function setUp() {
     parent::setUp('privatemsg', 'privatemsg_filter');
@@ -25,7 +32,7 @@ class PrivatemsgFilterTestCase extends DrupalWebTestCase {
    * Test correct handling of read all permissions.
    */
   function testInboxSentHandling() {
-    $author    = $this->drupalCreateUser(array('write privatemsg', 'read privatemsg'));
+    $author    = $this->drupalCreateUser(array('write privatemsg', 'read privatemsg', 'delete privatemsg'));
     $recipient = $this->drupalCreateUser(array('write privatemsg', 'read privatemsg'));
 
     // Create new message.
@@ -70,6 +77,31 @@ class PrivatemsgFilterTestCase extends DrupalWebTestCase {
     $this->drupalLogin($author);
     $this->drupalGet('messages');
     $this->assertText($edit['subject'], t('Thread displayed in inbox for author.'));
+
+    // Test for bug http://drupal.org/node/617648
+    // Delete all messages for author.
+    $delete = array(
+        'threads[1]' => 1,
+    );
+    $this->drupalPost(NULL, $delete, t('Delete'));
+    $this->assertNoText($edit['subject'], t('Thread has been deleted for author.'));
+
+    // Write a reply as recipient.
+    $this->drupalLogin($recipient);
+    $this->drupalGet('messages');
+
+    // Navigate to the new message.
+    $this->clickLink($edit['subject']);
+    $response = array(
+      'body' => $this->randomName(100),
+    );
+    $this->drupalPost(NULL, $response, t('Send message'));
+    $this->assertText(t('A message has been sent to @recipients.', array('@recipients' => $author->name)), t('Message sent confirmation displayed'));
+
+    // Check if thread is visible again for author.
+    $this->drupalLogin($author);
+    $this->drupalGet('messages');
+    $this->assertText($edit['subject'], t('Thread displayed again in inbox for author.'));
   }
 }
 
@@ -78,7 +110,7 @@ class PrivatemsgFilterTestCase extends DrupalWebTestCase {
  */
 class PrivatemsgTagsTestCase extends DrupalWebTestCase {
   /**
-   * Implementation of getInfo().
+   * Implements getInfo().
    */
   function getInfo() {
     return array(
@@ -89,7 +121,7 @@ class PrivatemsgTagsTestCase extends DrupalWebTestCase {
   }
 
   /**
-   * Implementation of setUp().
+   * Implements setUp().
    */
   function setUp() {
     parent::setUp('privatemsg', 'privatemsg_filter');
@@ -182,11 +214,11 @@ class PrivatemsgTagsTestCase extends DrupalWebTestCase {
       }
       // Extract edit url.
       if ((string)$row->td[0] == $to_edit['tag']) {
-        $edit_url = substr($row->td[3]->a[0]['href'], 1);
+        $edit_url = drupal_substr($row->td[3]->a[0]['href'], 1);
       }
       // Extract edit url.
       if ((string)$row->td[0] == $public['tag']) {
-        $delete_url = substr($row->td[3]->a[1]['href'], 1);
+        $delete_url = drupal_substr($row->td[3]->a[1]['href'], 1);
       }
     }
 

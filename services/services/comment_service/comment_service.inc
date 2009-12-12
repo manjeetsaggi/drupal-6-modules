@@ -1,7 +1,7 @@
 <?php
-// $Id: comment_service.inc,v 1.1.2.1 2009/06/06 22:57:40 marcingy Exp $
+// $Id: comment_service.inc,v 1.1.2.1.2.2 2009/12/05 01:42:38 heyrocker Exp $
+
 /**
- * @author Services Dev Team
  * @file
  *  Link commenting functionality to services module.
  */
@@ -12,7 +12,7 @@
  * If a cid is specified in $comment->cid then that comment is edited.
  *
  * @param $comment
- *   An array matching the form values that would be submitted in the comment 
+ *   An array matching the form values that would be submitted in the comment
  *   edit form.
  * @return
  *   Unique identifier for the comment (cid) or FALSE if there was a problem.
@@ -78,7 +78,7 @@ function comment_service_load_node_comments($nid, $count = 0, $start = 0) {
  * @param $cid
  *   Unique identifier for the specified comment
  * @return
- *   The comment object 
+ *   The comment object
  */
 function comment_service_load($cid) {
   $cid = db_result(db_query("SELECT cid FROM {comments} WHERE cid = %d", $cid));

@@ -1,5 +1,5 @@
 <?php
-// $Id: privatemsg.api.php,v 1.1.2.7 2009/10/10 08:04:48 berdir Exp $
+// $Id: privatemsg.api.php,v 1.1.2.9 2009/11/06 13:06:26 berdir Exp $
 
 /**
  * @file
@@ -63,8 +63,8 @@
  *   // Add a field.
  *   $fragments['select'][] = 'pm.subject';
  *
- *   // Join another table
- *   $fragment['inner_join'][] = 'INNER JOIN {pm_index} pi ON (pi.mid = pm.mid AND pi.uid = %d)';
+ *   // Join another table.
+ *   $fragment['inner_join'][] = 'JOIN {pm_index} pi ON (pi.mid = pm.mid)';
  *   $fragment['query_args']['join'][] $uid;
  *
  *   // And finally add a condition.
@@ -427,6 +427,25 @@ function hook_privatemsg_thread_operations() {
     ),
   );
 }
+
+/**
+ * Hook which allows to look up a user object.
+ *
+ * You can try to look up a user object based on the information passed to the
+ * hook. The first hook that successfully looks up a specific string wins.
+ *
+ * Therefore, it is important to only return something if you can actually look
+ * up the string.
+ */
+function hook_privatemsg_name_lookup($string) {
+  if ((int)$string > 0) {
+    // This is a possible uid, try to load a matching user.
+    if ($recipient = user_load(array('uid' => $string))) {
+      return $recipient;
+    }
+  }
+}
+
 /**
  * @}
  */

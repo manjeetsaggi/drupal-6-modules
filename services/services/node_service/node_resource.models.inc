@@ -1,5 +1,10 @@
 <?php
-// $Id: node_resource.models.inc,v 1.1.2.1 2009/09/05 13:57:58 marcingy Exp $
+// $Id: node_resource.models.inc,v 1.1.2.3 2009/12/05 01:42:38 heyrocker Exp $
+
+/**
+ * @file
+ *  CRUD resource functionality for nodes.
+ */
 
 class NodeResourceFeedModel implements ResourceTimeFeedModel {
   protected $nodes = NULL;
@@ -69,7 +74,7 @@ class NodeResourceFeedModelItem implements ResourceTimeFeedModelItem {
    *  The node url
    */
   public function getUrl() {
-    return url('node/' . $this->node->nid, array('absolute' => TRUE));
+    return url('node/'. $this->node->nid, array('absolute' => TRUE));
   }
 
   /**

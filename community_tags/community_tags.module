@@ -1,5 +1,5 @@
 <?php
-// $Id: community_tags.module,v 1.37.2.8 2009/08/29 17:32:45 entrigan Exp $
+// $Id: community_tags.module,v 1.37.2.10 2009/12/03 01:48:41 entrigan Exp $
 
 /**
  * @file
@@ -277,45 +277,48 @@ function community_tags_taxonomy_node_save($node, $terms, $is_owner, $uid) {
   if (isset($terms['tags'])) {
     $typed_input = $terms['tags'];
     unset($terms['tags']);
+    
+      foreach ($typed_input as $vid=>$vid_value) {
+        if (isset($community_tagged[$vid])) {
 
-    foreach ($typed_input as $vid => $vid_value) {
-      $typed_terms = is_array($vid_value) ? $vid_value : drupal_explode_tags($vid_value);
-      foreach ($typed_terms as $typed_term) {
-        // See if the term exists in the chosen vocabulary
-        // and return the tid, otherwise, add a new record.
-        $possibilities = taxonomy_get_term_by_name($typed_term);
-        $typed_term_tid = NULL; // tid match if any.
-        foreach ($possibilities as $possibility) {
-          if ($possibility->vid == $vid) {
-            $typed_term_tid = $possibility->tid;
+        $typed_terms = is_array($vid_value)?$vid_value:drupal_explode_tags($vid_value);
+        foreach ($typed_terms as $typed_term) {
+          // See if the term exists in the chosen vocabulary
+          // and return the tid, otherwise, add a new record.
+          $possibilities = taxonomy_get_term_by_name($typed_term);
+          $typed_term_tid = NULL; // tid match if any.
+          foreach ($possibilities as $possibility) {
+            if ($possibility->vid == $vid) {
+              $typed_term_tid = $possibility->tid;
+            }
           }
+    
+          if (!$typed_term_tid) {
+            $edit = array ('vid'=>$vid, 'name'=>$typed_term);
+            $status = taxonomy_save_term($edit);
+            $typed_term_tid = $edit['tid'];
+    
+            // Add only new terms to return value
+            $tids[$typed_term_tid] = $typed_term;
+          }
+    
+          // If we already added this term in this cycle, skip this duplicate.
+          if ( isset ($inserted_tids[$typed_term_tid])) {
+            continue ;
+          }
+    
+          // If there was an existing tag by this user, load that data.
+          $tag_node = new stdClass ();
+          $tag_node->tid = $typed_term_tid;
+          $tag_node->nid = $nid;
+          $tag_node->uid = $uid;
+          $tag_node->date = time();
+          $tag_node->vid = $node->vid;
+    
+          // So we don't add this tag again on this run or re-insert the old tag for this user.
+          $inserted_tids[$typed_term_tid] = $typed_term_tid;
+          $tag_nodes[] = $tag_node;
         }
-
-        if (!$typed_term_tid) {
-          $edit = array('vid' => $vid, 'name' => $typed_term);
-          $status = taxonomy_save_term($edit);
-          $typed_term_tid = $edit['tid'];
-
-          // Add only new terms to return value
-          $tids[$typed_term_tid] = $typed_term;
-        }
-
-        // If we already added this term in this cycle, skip this duplicate.
-        if (isset($inserted_tids[$typed_term_tid])) {
-          continue;
-        }
-
-        // If there was an existing tag by this user, load that data.
-        $tag_node = new stdClass();
-        $tag_node->tid = $typed_term_tid;
-        $tag_node->nid = $nid;
-        $tag_node->uid = $uid;
-        $tag_node->date = time();
-        $tag_node->vid = $node->vid;
-
-        // So we don't add this tag again on this run or re-insert the old tag for this user.
-        $inserted_tids[$typed_term_tid] = $typed_term_tid;
-        $tag_nodes[] = $tag_node;
       }
     }
   }
@@ -412,24 +415,24 @@ function _community_tags_get_tag_result($type = 'global', $limit = NULL, $arg1 =
     case 'node':
       $arg1 = (int)$arg1;
       $arg2 = NULL;
-      $sql = "SELECT COUNT(c.tid) AS count, t.tid, t.name, t.vid FROM {term_data} t INNER JOIN {community_tags} c ON c.tid = t.tid WHERE c.nid = %d GROUP BY c.tid ORDER BY count DESC";
+      $sql = "SELECT COUNT(t.tid) AS count, t.tid, t.name, t.vid FROM {term_data} t INNER JOIN {community_tags} c ON c.tid = t.tid WHERE c.nid = %d GROUP BY t.tid, t.name, t.vid ORDER BY count DESC";
       break;
     case 'type':
       $arg1 = (string)$arg1;
       $arg2 = NULL;
-      $sql = "SELECT COUNT(c.tid) AS count, t.tid, t.name, t.vid FROM {term_data} t INNER JOIN {community_tags} c ON c.tid = t.tid INNER JOIN {node} n ON n.nid = c.nid WHERE n.type = '%s' GROUP BY c.tid ORDER BY count DESC";
+      $sql = "SELECT COUNT(t.tid) AS count, t.tid, t.name, t.vid FROM {term_data} t INNER JOIN {community_tags} c ON c.tid = t.tid INNER JOIN {node} n ON n.nid = c.nid WHERE n.type = '%s' GROUP BY t.tid, t.name, t.vid ORDER BY count DESC";
       break;
     case 'user':
       $arg1 = (int)$arg1;
       $arg2 = NULL;
-      $sql = "SELECT COUNT(c.tid) AS count, t.tid, t.name, t.vid FROM {term_data} t INNER JOIN {community_tags} c ON c.tid = t.tid WHERE c.uid = %d GROUP BY c.tid ORDER BY count DESC";
+      $sql = "SELECT COUNT(t.tid) AS count, t.tid, t.name, t.vid FROM {term_data} t INNER JOIN {community_tags} c ON c.tid = t.tid WHERE c.uid = %d GROUP BY t.tid, t.name, t.vid ORDER BY count DESC";
       break;
     case 'user_node':
       $arg1 = (int)$arg1;
       $arg2 = (int)$arg2;
-      $sql = "SELECT COUNT(c.tid) AS count, t.tid, t.name, t.vid FROM {term_data} t INNER JOIN {community_tags} c ON c.tid = t.tid WHERE c.nid = %d AND c.uid = %d GROUP BY c.tid ORDER BY count DESC";
+      $sql = "SELECT COUNT(t.tid) AS count, t.tid, t.name, t.vid FROM {term_data} t INNER JOIN {community_tags} c ON c.tid = t.tid WHERE c.nid = %d AND c.uid = %d GROUP BY t.tid, t.name, t.vid ORDER BY count DESC";
     default:
-      $sql = "SELECT COUNT(c.tid) AS count, t.tid, t.name, t.vid FROM {term_data} t INNER JOIN {community_tags} c ON c.tid = t.tid GROUP BY c.tid ORDER BY count DESC";
+      $sql = "SELECT COUNT(t.tid) AS count, t.tid, t.name, t.vid FROM {term_data} t INNER JOIN {community_tags} c ON c.tid = t.tid GROUP BY t.tid, t.name, t.vid ORDER BY count DESC";
   }
 
   if ($limit) {

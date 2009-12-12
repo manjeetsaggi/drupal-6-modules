@@ -1,7 +1,8 @@
-<!--pre><?php //print print_r($message, 1); ?></pre-->
 <?php
-  //each file loads it's own styles because we cant predict which file will be loaded
-  drupal_add_css(drupal_get_path('module', 'privatemsg').'/styles/privatemsg-view.css');
+// $Id: privatemsg-view.tpl.php,v 1.1.2.7 2009/11/19 15:59:55 berdir Exp $
+// Each file loads it's own styles because we cant predict which file will be
+// loaded.
+drupal_add_css(drupal_get_path('module', 'privatemsg') . '/styles/privatemsg-view.css');
 ?>
 <?php print $anchors; ?>
 <div class="privatemsg-box-fb" id="privatemsg-mid-<?php print $mid; ?>">
@@ -20,9 +21,12 @@
   </div>
   <div class="right-column">
     <div class="message-body">
+      <?php if (isset($new)) : ?>
+        <span class="new"><?php print $new ?></span>
+      <?php endif ?>
       <?php print $message_body; ?>
     </div>
-    <?php if ( isset($message_actions) ) : ?>
+    <?php if ( isset($message_actions)) : ?>
        <?php print $message_actions ?>
     <?php endif ?>
   </div>

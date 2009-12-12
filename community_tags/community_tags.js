@@ -1,4 +1,4 @@
-// $Id: community_tags.js,v 1.4.2.4 2009/08/30 05:29:50 entrigan Exp $
+// $Id: community_tags.js,v 1.4.2.5 2009/09/15 04:04:11 entrigan Exp $
 
 Drupal.communityTags = {};
 
@@ -33,7 +33,7 @@ Drupal.behaviors.communityTags = function(context) {
       $('input[type=submit]', this.form).hide();
 
       // Fetch settings.
-      var nid = $('input[@name=nid]', this.form).val();
+      var nid = $('input[name=nid]', this.form).val();
       var o = Drupal.settings.communityTags['n_' + nid];
 
       var sequence = 0;

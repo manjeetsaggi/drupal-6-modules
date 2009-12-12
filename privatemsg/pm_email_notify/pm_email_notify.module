@@ -1,5 +1,5 @@
 <?php
-// $Id: pm_email_notify.module,v 1.1.2.6 2009/10/08 19:46:57 berdir Exp $
+// $Id: pm_email_notify.module,v 1.1.2.11 2009/11/19 21:35:24 berdir Exp $
 
 /**
  * @file
@@ -7,7 +7,7 @@
  */
 
 /**
- * Implementation of hook_menu().
+ * Implements hook_menu().
  */
 function pm_email_notify_menu() {
   $items['admin/settings/messages/notify'] = array(
@@ -41,11 +41,9 @@ function pm_email_notify_admin_settings_form() {
 
   $form['pm_email']['pm_email_notify_desc'] = array(
     '#type' => 'item',
-    '#value' => t('Customize the email messages sent to users upon receipt of a new private message. <br />Available variables are: !author, !author_uid, !pm_subject, !pm_body, !thread, !site, !login_url, !uri, !uri_brief.'),
+    '#value' => t('Customize the email messages sent to users upon receipt of a new private message. <br />Available variables are: !author, !author_uid, !pm_subject, !pm_body, !thread, !site, !login_url, !uri, !uri_brief, !message (URL) and !settings (URL).'),
     '#weight' => 1,
   );
-
-
 
   $form['pm_email']['pm_email_notify_subject'] = array(
     '#type' => 'textfield',
@@ -77,7 +75,8 @@ function _pm_email_notify_is_enabled($uid) {
   // Cache the result set in case this method is executed in batched operation which will perform many unnecessary repeated selects for the same user
   if ( !isset($notifications[$uid]) ) {
     $mail_notification = db_result(db_query('SELECT email_notify_is_enabled FROM {pm_email_notify} WHERE user_id = %d', $uid));
-    if ($mail_notification === FALSE) { //db_result returns FALSE if result was not found.
+    if ($mail_notification === FALSE) {
+      // db_result() returns FALSE if result was not found.
       $mail_notification = variable_get('pm_email_notify_default', TRUE);
     }
     $notifications[$uid] = $mail_notification;
@@ -86,7 +85,7 @@ function _pm_email_notify_is_enabled($uid) {
 }
 
 /**
- * Implementation of hook_privatemsg_message_insert().
+ * Implements hook_privatemsg_message_insert().
  */
 function pm_email_notify_privatemsg_message_insert($message) {
   foreach ($message['recipients'] as $recipient) {
@@ -101,7 +100,7 @@ function pm_email_notify_privatemsg_message_insert($message) {
 }
 
 /**
- * Implementation of hook_mail().
+ * Implements hook_mail().
  */
 function pm_email_notify_mail($key, &$message, $params) {
   $language = $message['language'];
@@ -119,41 +118,41 @@ function pm_email_notify_mail($key, &$message, $params) {
  * Return an array of token to value mappings for user e-mail messages.
  *
  * @param $message
- *  The private message array being sent.  Must contain at
- *  least the fields 'author', 'subject', and 'body'.
+ *   The private message array being sent.  Must contain at
+ *   least the fields 'author', 'subject', 'thread_id' and 'body'.
  * @return
- *  Array of mappings from token names to values (for use with strtr()).
+ *   Array of mappings from token names to values (for use with strtr()).
  */
 function _pm_email_notify_token($recipient, $message) {
-
   $tokens = array(
     '!author' => $message['author']->name,
-    '!pm_subject' => drupal_html_to_text($message['subject'], array()),
-    '!pm_body' => drupal_html_to_text($message['body'], array()),
+    '!pm_subject' => drupal_html_to_text(check_plain($message['subject'])),
+    '!pm_body' => drupal_html_to_text(check_markup($message['body'], $message['format'], FALSE)),
     '!thread' => $message['thread_id'],
     '!user_uid' => $recipient->uid,
+    '!message' => url('messages/view/' . $message['thread_id'], array('absolute' => TRUE)),
+    '!settings' => url('user/' . $recipient->uid . '/edit', array('absolute' => TRUE)),
   );
 
   return $tokens;
-
 }
 
 /**
  * Returns default email notification body.
  */
 function _pm_email_notify_default_body() {
-  return "Hi !username,\n\nThis is an automatic reminder from the site !site. You have received a new private message from !author.\n\nTo read your message, follow this link:\n!uri/messages\n\nIf you don't want to receive these emails again, change your preferences here:\n!uri/user/!user_uid/edit";
+  return "Hi !username,\n\nThis is an automatic reminder from the site !site. You have received a new private message from !author.\n\nTo read your message, follow this link:\n!message\n\nIf you don't want to receive these emails again, change your preferences here:\n!settings";
 }
 
 /**
- * Implement hook_user().
+ * Implements hook_user().
  *
  * Display settings form and store its information.
  */
 function pm_email_notify_user($op, &$edit, &$account, $category = NULL) {
-  if ($category == 'account') {
-    switch ($op) {
-      case 'form':
+  switch ($op) {
+    case 'form':
+      if ($category == 'account') {
         $form['enable_pm_mail'] = array(
           '#type' => 'fieldset',
           '#title' => t('Privatemsg e-mail notification'),
@@ -166,9 +165,11 @@ function pm_email_notify_user($op, &$edit, &$account, $category = NULL) {
           '#title' => t('Receive email notification for incoming private messages'),
           '#default_value' => _pm_email_notify_is_enabled($account->uid),
         );
-        return $form;
+      }
+      return $form;
 
-      case 'submit':
+     case 'submit':
+      if ($category == 'account') {
         $pm_email_enabled = $edit['pm_send_notifications'];
         unset($edit['pm_send_notifications']);
         // Update database entry with user preference.
@@ -178,8 +179,11 @@ function pm_email_notify_user($op, &$edit, &$account, $category = NULL) {
           // user preference in the database.
           db_query("INSERT INTO {pm_email_notify} (email_notify_is_enabled, user_id) VALUES (%d, %d)", $pm_email_enabled, $account->uid);
         }
-        break;
+      }
+      break;
 
-    }
+     case 'delete':
+      db_query("DELETE FROM {pm_email_notify} WHERE user_id = %d", $account->uid);
+      break;
   }
 }

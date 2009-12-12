@@ -1,5 +1,5 @@
 <?php
-// $Id: apachesolr_autocomplete.module,v 1.2 2009/08/27 23:06:54 janusman Exp $
+// $Id: apachesolr_autocomplete.module,v 1.4 2009/12/04 20:43:21 janusman Exp $
 
 /**
  * @file
@@ -15,15 +15,26 @@ function apachesolr_autocomplete_init() {
 }
 
 /**
- * Implementation of hook_form_alter().
+ * Implementation of hook_form_FORM_ID_alter().
  */
-function apachesolr_autocomplete_form_alter(&$form, $form_state, $form_id) {
-  if ($form_id == "search_form" && $form['module']['#value'] == 'apachesolr_search') {
+function apachesolr_autocomplete_form_search_form_alter(&$form, $form_state) {
+  if ($form['module']['#value'] == 'apachesolr_search') {
     $form['basic']['inline']['keys']['#autocomplete_path'] = 'apachesolr_autocomplete';
   }
-  if ($form_id == 'search_block_form' || $form_id == 'search_theme_form') {
-    $form[$form_id]['#autocomplete_path'] = 'apachesolr_autocomplete';
-  }
+}
+
+/**
+ * Implementation of hook_form_FORM_ID_alter().
+ */
+function apachesolr_autocomplete_form_search_block_form_alter(&$form, $form_state) {
+  $form['search_block_form']['#autocomplete_path'] = 'apachesolr_autocomplete';
+}
+
+/**
+ * Implementation of hook_form_FORM_ID_alter().
+ */
+function apachesolr_autocomplete_form_search_theme_form_alter(&$form, $form_state) {
+  $form['search_theme_form']['#autocomplete_path'] = 'apachesolr_autocomplete';
 }
 
 /**
@@ -83,7 +94,7 @@ function theme_apachesolr_autocomplete_highlight($keys, $suggestion, $count = 0)
   
   $html = '';
   $html .= '<div class="apachesolr_autocomplete suggestion">';
-  $html .= '<strong>' . substr($suggestion, 0, strlen($keys)) . '</strong>' . substr($suggestion, strlen($keys));
+  $html .= '<strong>' . drupal_substr($suggestion, 0, strlen($keys)) . '</strong>' . drupal_substr($suggestion, strlen($keys));
   $html .= '</div>';
   if ($count) {
     if ($first) {
@@ -312,7 +323,7 @@ function apachesolr_autocomplete_get_stopwords() {
   }
   $words = array();
   foreach (explode("\n", $result->data) as $line) {
-    if (substr($line, 0, 1) == "#") {
+    if (drupal_substr($line, 0, 1) == "#") {
       continue;
     }
     if ($word = trim($line)) {

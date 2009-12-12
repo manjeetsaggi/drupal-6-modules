@@ -80,7 +80,7 @@ create or modify custom breadcrumbs.
 
 Breadcrumb Visibility
 ---------------------
-Users given 'use php in custom breadcrumbs' permission can include php code snippet
+Users given 'use php in custom breadcrumbs' permission can include a php code snippet
 that returns TRUE or FALSE to control whether or not the breadcrumb is displayed. Note
 that this code has access to the $node variable, and can check its type or any other
 property.
@@ -142,7 +142,7 @@ based on node type as described above. The following optional modules can also b
 installed to provide custom breadcrumbs in a variety of situations:
 
 + custom_breadcrumbs_views provides custom breadcrumbs on views pages.
-  Once this module is enabled, a new "Views Page" tab
+  Once this module is enabled, a new "Views" tab
   will appear at admin/build/custom_breadcrumbs. To add a views page breadcrumb, click
   on the tab and then select the view from list of available views. Fill in the
   visibility, title and paths sections as described above, and your breadcrumb should
@@ -154,7 +154,7 @@ installed to provide custom breadcrumbs in a variety of situations:
   admin/build/custom_breadcrumbs.  To add a breadcrumb for a node or a view at a specific
   path, just enter the path in the Specific Path section. Fill in the visibility, title
   and paths sections as described above, and save the breadcrumb. Now your breadcrumb
-  should appear on the node/view at the specific path that you selected. Note that custom
+  should appear on the node or view at the specific path that you selected. Note that custom
   breadcrumbs does not check the validity of the entered path. When entering a path for a
   particular language (see below), do not specify the two-letter language prefix. custom
   breadcrumbs will assume the correct prefix according to the selected language. To use '*'
@@ -164,16 +164,16 @@ installed to provide custom breadcrumbs in a variety of situations:
 
 + custom_breadcrumbs_taxonomy provides custom breadcrumbs on taxonomy term pages, views, and
   for nodes that are assigned a taxonomy vocabulary or term. Once this module is enabled,
-  two new tabs will appear appear at admin/build/custom_breadcrumbs: Taxonomy Term and
-  Taxonomy Vocabulary. Breadcrumb generation can be handled in two different ways.  If
+  two new tabs will appear appear at admin/build/custom_breadcrumbs: Term and
+  Vocabulary. Breadcrumb generation can be handled in two different ways. If
   'use the taxonomy term hierarchy' is checked at custom breadcrumbs configuration page,
   then breadcrumbs will be generated similarly to the taxonomy_breadcrumb module. Otherwise,
-  breadcrumb generation will be according to the standard custom_breadcrumb approach.
+  breadcrumb generation will be according to the standard custom breadcrumbs approach.
 
   In taxonomy breadcrumb mode, the breadcrumb trail is automatically constructed based
   on the taxonomy term hierarchy [HOME] >> [VOCABULARY] >> TERM >> [TERM] >> [TITLE].
   In this mode the breadcrumb titles are the term and vocabulary names. The paths these
-  titles are linked to can be assigned via the Taxonomy Term and Taxonomy Vocabulary
+  titles are linked to can be assigned via the Term and Vocabulary
   tabs at admin/build/custom_breadcrumbs. Providing a path for a vocabulary will enable
   the [VOCABULARY] portion of the breadcrumb.  The path for a term can similarly be set,
   but if one is not provided the default taxonomy/term/tid (where tid is a number, the
@@ -181,7 +181,7 @@ installed to provide custom breadcrumbs in a variety of situations:
   the custom breadcrumbs configuration settings page. The option to add the node title
   at the end of the breadcrumb trail can also be enabled on that page.
 
-  In the standard custom_breadcrumbs mode, you can provide the standard titles and paths
+  In the standard custom breadcrumbs mode, you can provide the titles and paths
   for constructing the breadcrumb trail on nodes that have defined taxonomy terms. Note
   that if a node has more than one term, the lightest term in the lightest vocabulary with
   a defined custom breadcrumb will be used.
@@ -192,7 +192,7 @@ installed to provide custom breadcrumbs in a variety of situations:
 
   While at admin/settings/custom-breadcrumbs, go ahead and enable any additional
   taxonomy breadcrumb options that suits your needs. If you are using views to override
-  taxonomy term pages, then be sure to enable the "Use taxonomy breadcrumbs for views?"
+  taxonomy term pages, then be sure to enable the "Use taxonomy breadcrumbs for views"
   option.
 
 + custom_breadcrumbsapi provides a simple api that allows custom breadcrumbs to be defined 
@@ -216,7 +216,16 @@ installed to provide custom breadcrumbs in a variety of situations:
   drupal_alter('breadcrumb', $breadcrumb, 'module_page_name');
 
   Continuing with the forum module example, 'module_page_name' would be replaced with 'forum listing'.
-
+  
+  custom_breadcrumbsapi can also provide custom breadcrumbs for modules implementing theme templates
+  (e.g. files ending in .tpl.php). To add a custom breadcrumb when a specific theme template file is
+  called, click on the module page tab at admin/build/custom_breadcrumbs. Select the template file
+  from the list of theme templates (determined from the theme registry). Then fill in the usual
+  custom breadcrumbs information such as titles as paths. If using a php snippet for breadcrumb
+  visibility or to specify titles and paths (see below), you have access to the template variables
+  through $variables, an associative array defined by the module providing the template. See the
+  documentation in the template file for details. For example, if a template file uses the variable
+  $foo, then access to that variable would be through $variables['foo'].
 
 User Interface
 --------------
@@ -239,11 +248,22 @@ custom breadcrumb modules).
 HOME breadcrumb
 ---------------
 The text to display at beginning of the breadcrumb trail can be assigned from the custom
-breadcrumb configuration settings page. Typically this is home or your site name. You can
-Leave it blank to have no home breadcrumb. Their is also an advanced setting to 
+breadcrumb configuration settings page. Typically this is Home or your site name. You can
+leave it blank to have no home breadcrumb. There is also an advanced setting to
 set the Home breadcrumb text on ALL pages, not just those with defined custom breadcrumbs.
 You can also use this feature to remove the home breadcrumb on all pages on the site - just
-enable the advanced setting and then leaving the home breadcrumb text blank.
+enable the advanced setting and then leave the home breadcrumb text blank.
+
+It is possible to translate the home reference title from custom breadcrumbs using the i18n
+module. Just put this in your settings.php:
+
+  $conf['i18n_variables'] = array(
+    //custom breadcrumbs
+    'custom_breadcrumb_home',
+  );
+
+Then you can change it for each language at
+http://example.com/#lang-prefix#/admin/settings/custom-breadcrumbs.
 
 Use PHP in breadcrumb titles and paths
 ----------------------------------
