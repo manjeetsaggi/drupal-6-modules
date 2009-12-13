@@ -1,5 +1,5 @@
 <?php
-// $Id: activitystream.install,v 1.3.2.2.2.2 2008/10/14 04:36:29 akalsey Exp $
+// $Id: activitystream.install,v 1.3.2.3 2009/05/15 20:38:44 akalsey Exp $
 
 /**
  * @file
@@ -38,8 +38,8 @@ function activitystream_schema() {
        'guid' => array('type' => 'varchar', 'length' => '32', 'not null' => TRUE),
        'link' => array('type' => 'varchar', 'length' => '255'),
        'data' => array('type' => 'text'),
-       'changed' => array('type' => 'int', 'not null' => TRUE, 'default' => 0, 'disp-width' => '11'),
-    ),
+       'changed' => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0, 'disp-width' => '10')
+       ),
     'primary key' => array('guid'),
   );
 
@@ -50,7 +50,7 @@ function activitystream_schema() {
        'userid' => array('type' => 'varchar', 'length' => '255', 'not null' => FALSE),
        'password' => array('type' => 'varchar', 'length' => '255', 'not null' => FALSE),
        'feed' => array('type' => 'varchar', 'length' => '255', 'not null' => FALSE),
-       'lastfetch' => array('type' => 'datetime', 'not null' => TRUE, 'default' => 0)),
+       'lastfetch' => array('type' => 'datetime', 'not null' => TRUE)),
        );
 
   return $schema;
@@ -76,19 +76,4 @@ function activitystream_uninstall() {
 */
 function activitystream_update_1() {
   db_query("DELETE FROM {profile_fields} WHERE title = 'Placeholder' and name = 'profile_activitystream_placeholder'");
-}
-
-/* 
-  Instead of using the dummy category, we now use hook_user's categories $op switch.
-  So we can remove the dummy category from the database.
- */
-function activitystream_update_2() {
-  $ret[] = update_sql("ALTER TABLE {activitystream} ADD COLUMN `changed` int(11) NOT NULL default '0'");
-  $ret[] = update_sql("ALTER TABLE {activitystream} ADD KEY `nid` (`nid`)");
-  return $ret;
-}
-
-function activitystream_update_3() {
-  $ret[] = update_sql("ALTER TABLE {activitystream_accounts} CHANGE COLUMN `lastfetch` `lastfecth` timestamp NOT NULL default 0");
-  return $ret;
 }

@@ -1,5 +1,5 @@
 <?php
-// $Id: activitystream_lastfm.module,v 1.1.4.2.2.1 2008/08/16 08:51:43 akalsey Exp $
+// $Id: activitystream_lastfm.module,v 1.1.4.2 2008/07/31 17:05:27 akalsey Exp $
 
 /**
  * @file
@@ -60,7 +60,7 @@ function theme_activitystream_lastfm_icon() {
 function theme_activitystream_lastfm_item($activity) {
   $node = node_load($activity->nid);
   $date = theme('activitystream_date', $node->created);
-  $user = activitystream_user_load($node->uid);
+  $user = user_load(array('uid' => $node->uid));
   $name = theme('activitystream_username', $user);
   return '<span class="activitystream-item">'. theme('activitystream_lastfm_icon') ." <span>$name listened to ". l($node->title, $activity->link) ." <span class=\"activitystream-created\">$date</span></span>". l('#', 'node/'. $node->nid, array('class' => 'permalink')) .'</span>';
 }
