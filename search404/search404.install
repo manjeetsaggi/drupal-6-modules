@@ -1,5 +1,11 @@
 <?php
-//* $Id: search404.install,v 1.3 2008/03/04 12:14:30 zyxware Exp $
+//* $Id: search404.install,v 1.3.2.1 2009/07/10 08:28:08 zyxware Exp $
+
+/*
+ * @file
+ * search404 Module install file
+ */
+
 /**
  * Setup Search 404 by changing Drupal's 404-page to search404.
  */
