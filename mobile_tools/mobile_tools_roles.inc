@@ -1,5 +1,5 @@
 <?php
-// $Id: mobile_tools_roles.inc,v 1.1.2.3 2009/10/28 03:28:35 tdrycker Exp $
+// $Id: mobile_tools_roles.inc,v 1.1.2.5 2009/12/16 17:55:42 tdrycker Exp $
 /**
  * Being called in the hook_init() implementation
  * This function is in charge of changing the user role 
@@ -81,7 +81,7 @@ function mobile_tools_roles_configuration_form() {
         '#type' => 'checkbox',
         '#title' => $item->name,
         '#default_value' => ($role->has_sibling) ? TRUE : FALSE,
-        '#description' => t('Enabling will create the %role role . the name can be changed aferwards in the !roles settings page', array('%role' => $role->name .' (Mobile)', '!role' =>  l('roles', 'admin/user/roles'))),
+        '#description' => t('Enabling will create the %role role . the name can be changed afterwards in the !roles settings page', array('%role' => $role->name .' (Mobile)', '!role' =>  l('roless', 'admin/user/roles'))),
       );
     }
   }
@@ -246,6 +246,4 @@ function mobile_tools_edit_mobile_role($op, $role) {
       db_query("INSERT INTO {mobile_tools_roles_relations} (rid, mrid) VALUES (%d, %d)", $role->id, db_last_insert_id('role', 'rid'));
     break;  
   }
-
-
 }

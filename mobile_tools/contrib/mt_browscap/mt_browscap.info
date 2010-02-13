@@ -5,9 +5,9 @@ core = 6.x
 package = Mobile
 dependencies[] = browscap
 dependencies[] = mobile_tools
-; Information added by drupal.org packaging script on 2009-10-30
-version = "6.x-1.11"
+; Information added by drupal.org packaging script on 2010-02-12
+version = "6.x-1.12"
 core = "6.x"
 project = "mobile_tools"
-datestamp = "1256938281"
+datestamp = "1266006619"
 
