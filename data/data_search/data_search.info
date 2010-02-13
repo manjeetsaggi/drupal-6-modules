@@ -5,9 +5,9 @@ package = Data
 dependencies[] = data
 dependencies[] = search
 core = 6.x
-; Information added by drupal.org packaging script on 2009-11-18
-version = "6.x-1.0-alpha9"
+; Information added by drupal.org packaging script on 2010-01-25
+version = "6.x-1.0-alpha10"
 core = "6.x"
 project = "data"
-datestamp = "1258579834"
+datestamp = "1264457710"
 
