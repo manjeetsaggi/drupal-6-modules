@@ -5,12 +5,12 @@
     <description></description>
     <language>en</language>
           <item>
-    <title>Open Atrium Translation Workflow: Two Way Translation Updates</title>
+    <title>Managing News Translation Workflow: Two Way Translation Updates</title>
     <link>http://developmentseed.org/blog/2009/oct/06/open-atrium-translation-workflow-two-way-updating</link>
     <description>&lt;div class=&quot;field field-type-text field-field-subtitle&quot;&gt;
     &lt;div class=&quot;field-items&quot;&gt;
             &lt;div class=&quot;field-item odd&quot;&gt;
-                    &lt;p&gt;A new translation process for Open Atrium &amp; integration with Localize Drupal&lt;/p&gt;        &lt;/div&gt;
+                    &lt;p&gt;A new translation process for Open Atrium and integration with Localize Drupal&lt;/p&gt;        &lt;/div&gt;
         &lt;/div&gt;
 &lt;/div&gt;
 &lt;div class=&#039;node-body&#039;&gt;&lt;p&gt;The &lt;a href=&quot;http://openatrium.com/&quot;&gt;Open Atrium&lt;/a&gt; &lt;a href=&quot;http://developmentseed.org/blog/2009/jul/16/open-atrium-solving-translation-puzzle&quot;&gt;translation infrastructure&lt;/a&gt; (and Drupal translations in general) are progressing quickly. For Open Atrium to be well translated we first need Drupal&#039;s modules to be translated, so I am splitting efforts at the moment between helping with &lt;a href=&quot;http://localize.drupal.org&quot;&gt;Localize Drupal&lt;/a&gt; and improving &lt;a href=&quot;https://translate.openatrium.com&quot;&gt;Open Atrium Translate&lt;/a&gt;. Already, it is much easier to automatically download your language, get updates from a translation server, protect locally translated strings, and scale the translation system so that translation servers can talk to each other.&lt;/p&gt;
@@ -240,12 +240,12 @@
  <guid isPermaLink="false">968 at http://developmentseed.org</guid>
   </item>
   <item>
-    <title>Peru&#039;s Software Freedom Day: Impressions &amp; Photos</title>
+    <title>Peru&#039;s Software Freedom Day: Impressions and Photos</title>
     <link>http://developmentseed.org/blog/2009/sep/21/perus-software-freedom-day-impressions-and-photos</link>
     <description>&lt;div class=&#039;node-body&#039;&gt;&lt;p&gt;There was a great turn out a &lt;a href=&quot;http://www.sfdperu.org/&quot;&gt;Software Freedom Day&lt;/a&gt; this weekend with 400 people in attendance and a solid 30 presentations. The &lt;a href=&quot;http://developmentseed.org/blog/2009/sep/15/preparing-perus-software-freedom-day-talks-drupal-features-and-open-atrium&quot;&gt;presentations in the Drupal track&lt;/a&gt; were some of the best attended sessions of the day. To get a sense of Drupal&#039;s traction down here, &quot;Drupal&quot; was mentioned in many sessions and conversations throughout the day, and not just by the people working directly with Drupal.&lt;/p&gt;
 
-&lt;p&gt;&lt;img src=&quot;http://farm3.static.flickr.com/2653/3940335249_57ce995a84.jpg&quot; alt=&quot;Presenting on Features in Drupal and Open Atrium&quot; /&gt;
-&lt;em&gt;Presenting on Features in Drupal and Open Atrium&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;http://farm3.static.flickr.com/2653/3940335249_57ce995a84.jpg&quot; alt=&quot;Presenting on Features in Drupal and Managing News&quot; /&gt;
+&lt;em&gt;Presenting on Features in Drupal and Managing News&lt;/em&gt;&lt;/p&gt;
 
 &lt;p&gt;I had a great time meeting people and learning about the work being done in the different open source communities here in Peru. Software Freedom Day is becoming an annual event in Peru, and there were many discussions on improving the event for next year as well as keeping the energy going to improve the image of open source software in the country. It&#039;s great to see the community looking forward like this, and I&#039;m excited to help keep the open source movement growing in Peru.&lt;/p&gt;
 

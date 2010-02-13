@@ -1,5 +1,5 @@
 <?php
-// $Id: FeedsScheduler.inc,v 1.6 2009/11/02 20:40:22 alexb Exp $
+// $Id: FeedsScheduler.inc,v 1.12 2010/01/28 21:00:45 alexb Exp $
 
 /**
  * @file
@@ -9,7 +9,7 @@
 /**
  * Describe a scheduler.
  */
-interface IFeedsScheduler {
+interface FeedsSchedulerInterface {
 
   /**
    * Run Drupal cron.
@@ -48,7 +48,7 @@ interface IFeedsScheduler {
 }
 
 /**
- * Implementation of IFeedsScheduler.
+ * Implementation of FeedsSchedulerInterface.
  *
  * This scheduler uses the last_scheduled_time paradigm: By storing the time
  * when a particular feed was scheduled to be refreshed last rather than
@@ -59,10 +59,7 @@ interface IFeedsScheduler {
  * 2) The time between refreshes will always be scheduled based on when it
  *    has been scheduled last. Less drift occurs.
  */
-class FeedsScheduler implements IFeedsScheduler {
-
-  // Only used for debugging.
-  protected $debugTime;
+class FeedsScheduler implements FeedsSchedulerInterface {
 
   /**
    * Create a single instance of FeedsScheduler.
@@ -82,17 +79,12 @@ class FeedsScheduler implements IFeedsScheduler {
   protected function __construct() {}
 
   /**
-   * Implementation of IFeedsScheduler::cron().
+   * Implementation of FeedsSchedulerInterface::cron().
    *
    * Refreshes scheduled feeds.
    *
    * If drupal_queue is present, only pushes refresh tasks to queue and
    * returns. If drupal_queue is not available, works off tasks.
-   *
-   * @todo: Run cleanup task that
-   * 1) Picks up items that are scheduled and not worked off for more than
-   *    e. g. 6 hours.
-   * 2) Logs these items with watchdog.
    */
   public function cron() {
 
@@ -119,7 +111,7 @@ class FeedsScheduler implements IFeedsScheduler {
       // Iterate over feed configurations, pick $num feeds for each
       // configuration, push to queue or refresh feeds.
       foreach ($importers as $importer) {
-        foreach (array('import', 'expire') as $callback) {
+        foreach ($importer->getScheduleCallbacks() as $callback) {
 
           // Check whether jobs are scheduled.
           $period = $importer->getSchedulePeriod($callback);
@@ -127,7 +119,7 @@ class FeedsScheduler implements IFeedsScheduler {
 
             // Refresh feeds that have a refresh time older than now minus
             // refresh period.
-            $time = $this->time() - $period;
+            $time = FEEDS_REQUEST_TIME - $period;
 
             $result = db_query_range('SELECT feed_nid, id AS importer_id, callback, last_scheduled_time FROM {feeds_schedule} WHERE id = "%s" AND callback = "%s" AND scheduled = 0 AND (last_scheduled_time < %d OR last_scheduled_time = 0) ORDER BY last_scheduled_time ASC', $importer->id, $callback, $time, 0, $num);
             while ($feed_info = db_fetch_array($result)) {
@@ -158,13 +150,13 @@ class FeedsScheduler implements IFeedsScheduler {
   }
 
   /**
-   * Implementation of IFeedsScheduler::add().
+   * Implementation of FeedsSchedulerInterface::add().
    *
    * Add a feed to the scheduler.
    *
-   * @todo: Create optional parameter $last_scheduled_time to pass in.
-   *        Set this value if a feed is refreshed on creation.
-   * @todo: Create an abstract interface for items that can be added?
+   * @todo Create optional parameter $last_scheduled_time to pass in. Set this
+   *   value if a feed is refreshed on creation.
+   * @todo Create an abstract interface for items that can be added?
    */
   public function add($importer_id, $callback, $feed_nid = 0) {
     $save = array(
@@ -181,14 +173,14 @@ class FeedsScheduler implements IFeedsScheduler {
   }
 
   /**
-   * Implementation of IFeedsScheduler::remove().
+   * Implementation of FeedsSchedulerInterface::remove().
    */
   public function remove($importer_id, $callback, $feed_nid = 0) {
     db_query('DELETE FROM {feeds_schedule} WHERE id = "%s" AND callback = "%s" AND feed_nid = %d', $importer_id, $callback, $feed_nid);
   }
 
   /**
-   * Implementation of IFeedsScheduler::work().
+   * Implementation of FeedsSchedulerInterface::work().
    *
    * Refresh a feed.
    *
@@ -197,71 +189,21 @@ class FeedsScheduler implements IFeedsScheduler {
    */
   public function work($feed_info) {
     $importer = feeds_importer($feed_info['importer_id']);
-
-    // Only refresh if feed is actually in DB or in default configuration.
-    if ($importer->export_type != FEEDS_EXPORT_NONE) {
-
-      // Remove scheduled flag, if we fail after this we'd like to try again
-      // next time around.
-      $this->unflag($feed_info['importer_id'], $feed_info['callback'], $feed_info['feed_nid']);
-
-      // There are 2 possible callbacks: expire or 'import'.
-      if ($feed_info['callback'] == 'expire') {
-        try {
-          $importer->expire();
-        }
-        catch (Exception $e) {
-          watchdog('FeedsScheduler', $e->getMessage(), array(), WATCHDOG_ERROR);
-        }
-      }
-      elseif ($feed_info['callback'] == 'import') {
-        // Import feed if source is available.
-        $source = feeds_source($importer, $feed_info['feed_nid']);
-        if ($source->export_type & FEEDS_EXPORT_NONE) {
-          watchdog('FeedsScheduler', 'Expected source information in database for '. $importer->id .'/'. $feed_info['feed_nid'] .'. Could not find any.', array(), WATCHDOG_ERROR);
-          return;
-        }
-        try {
-          $importer->import($source);
-        }
-        catch (Exception $e) {
-          watchdog('FeedsScheduler', $e->getMessage(), array(), WATCHDOG_ERROR);
-        }
-      }
+    // Remove scheduled flag, if we fail after this we'd like to try again asap.
+    $this->unflag($feed_info['importer_id'], $feed_info['callback'], $feed_info['feed_nid']);
+    try {
+      $importer->work($feed_info);
     }
-  }
-
-  /**
-   * Set the internal time of FeedsScheduler.
-   * Use for debugging.
-   *
-   * @param $time
-   *   UNIX time that the scheduler should use for comparing the schedule. Set
-   *   this time to test the behavior of the scheduler in the future or past.
-   *   If set to 0, FeedsScheduler will use the current time.
-   */
-  public function debugSetTime($time) {
-    $this->debugTime = $time;
-  }
-
-  /**
-   * Returns the internal time that the scheduler is operating on.
-   *
-   * Usually returns FEEDS_REQUEST_TIME, unless a debug time has been set
-   * with debugSetTime();
-   *
-   * @return
-   *   An integer that is a UNIX time.
-   */
-  public function time() {
-    return empty($this->debugTime) ? FEEDS_REQUEST_TIME : $this->debugTime;
+    catch (Exception $e) {
+      watchdog('FeedsScheduler', $e->getMessage(), array(), WATCHDOG_ERROR);
+    }
   }
 
   /**
    * Helper function to flag a feed scheduled.
    *
    * This function sets the feed's scheduled bit to 1 and updates
-   * last_scheduled_time to $this->time().
+   * last_scheduled_time to FEEDS_REQUEST_TIME.
    *
    * @param $id
    *   Id of the importer configuration.
@@ -275,7 +217,7 @@ class FeedsScheduler implements IFeedsScheduler {
       'id' => $id,
       'callback' => $callback,
       'feed_nid' => $feed_nid,
-      'last_scheduled_time' => $this->time(),
+      'last_scheduled_time' => FEEDS_REQUEST_TIME,
       'scheduled' => 1,
     );
     drupal_write_record('feeds_schedule', $save, array('id', 'callback', 'feed_nid'));

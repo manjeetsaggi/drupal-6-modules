@@ -1,5 +1,5 @@
 <?php
-// $Id: feeds.test.inc,v 1.2 2009/10/23 22:38:20 alexb Exp $
+// $Id: feeds.test.inc,v 1.6 2009/12/20 23:48:38 alexb Exp $
 
 /**
  * @file
@@ -41,7 +41,7 @@ class FeedsWebTestCase extends DrupalWebTestCase {
    * Generate an OPML test feed.
    *
    * The purpose of this function is to create a dynamic OPML feed that points
-   * too feeds included in this test.
+   * to feeds included in this test.
    */
   public function generateOPML() {
     $path = $GLOBALS['base_url'] .'/'. drupal_get_path('module', 'feeds') .'/tests/feeds/';
@@ -75,7 +75,7 @@ class FeedsWebTestCase extends DrupalWebTestCase {
   /**
    * Create an importer configuration.
    *
-   * @todo: rename to createImporterConfig()
+   * @todo Rename to createImporterConfig()
    *
    * @param $name
    *   The natural name of the feed.
@@ -88,7 +88,7 @@ class FeedsWebTestCase extends DrupalWebTestCase {
   public function createFeedConfiguration($name = 'Syndication', $id = 'syndication') {
     // Create new feed configuration.
     $this->drupalGet('admin/build/feeds');
-    $this->clickLink('New configuration');
+    $this->clickLink('New importer');
     $edit = array(
       'name' => $name,
       'id' => $id,
@@ -120,6 +120,21 @@ class FeedsWebTestCase extends DrupalWebTestCase {
       $config = unserialize(db_result(db_query('SELECT config FROM {feeds_importer} WHERE id = "%s"', $id)));
       $this->assertEqual($config[$type]['plugin_key'], $plugin_key, 'Verified correct '. $type .' ('. $plugin_key .').');
     }
+  }
+
+  /**
+   * Set importer or plugin settings.
+   *
+   * @param $id
+   *   The importer configuration's id.
+   * @param $plugin
+   *   The plugin (class) name, or NULL to set importer's settings
+   * @param $settings
+   *   The settings to set.
+   */
+  public function setSettings($id, $plugin, $settings) {
+    $this->drupalPost('admin/build/feeds/edit/'. $id .'/settings/'. $plugin, $settings, 'Save');
+    $this->assertText('Your changes have been saved.');
   }
 
   /**
@@ -168,10 +183,35 @@ class FeedsWebTestCase extends DrupalWebTestCase {
 
     // Check whether feed got properly added to scheduler.
     $this->assertEqual(1, db_result(db_query('SELECT COUNT(*) FROM {feeds_schedule} WHERE id = "%s" AND feed_nid = %d AND callback = "import" AND last_scheduled_time = 0 AND scheduled = 0', $id, $nid)));
-    // There must be only one entry for 'expire' - no matter how many actuall feed nodes exist.
+    // There must be only one entry for 'expire' - no matter how many actual feed nodes exist.
     $this->assertEqual(1, db_result(db_query('SELECT COUNT(*) FROM {feeds_schedule} WHERE id = "%s" AND callback = "expire" AND last_scheduled_time = 0 AND scheduled = 0', $id)));
 
     return $nid;
+  }
+
+  /**
+   * Edit the configuration of a feed node to test update behavior.
+   *
+   * @param $nid
+   *   The nid to edit.
+   * @param $feed_url
+   *   The new (absolute) feed URL to use.
+   * @param $title
+   *   Optional parameter to change title of feed node.
+   */
+  public function editFeedNode($nid, $feed_url, $title = '') {
+    $edit = array(
+      'title' => $title,
+      'feeds[FeedsHTTPFetcher][source]' => $feed_url,
+    );
+    // Check that the update was saved.
+    $this->drupalPost('node/' . $nid . '/edit', $edit, 'Save');
+    $this->assertText('has been updated.');
+
+    // Check that the URL was updated in the feeds_source table.
+    $source = db_fetch_object(db_query('select * from {feeds_source} WHERE feed_nid = %d', $nid));
+    $config = unserialize($source->config);
+    $this->assertEqual($config['FeedsHTTPFetcher']['source'], $feed_url, t('URL in DB correct.'));
   }
 
   /**
@@ -231,8 +271,7 @@ class FeedsWebTestCase extends DrupalWebTestCase {
    * @deprecated:
    *   Use setPlugin() instead.
    *
-   * @todo:
-   *   Refactor users of assertPlugin() and make them use setPugin() instead.
+   * @todo Refactor users of assertPlugin() and make them use setPugin() instead.
    */
   public function assertPlugins($id, $fetcher, $parser, $processor) {
     // Assert actual configuration.

@@ -1,4 +1,4 @@
-$Id: README.txt,v 1.14 2009/11/10 20:54:50 alexb Exp $
+$Id: README.txt,v 1.17 2010/02/08 15:30:30 alexb Exp $
 
 
 "It feeds"
@@ -35,9 +35,11 @@ Features
 Requirements
 ============
 
-- CTools 1.1
-- Drupal 6.14 or higher.
-- PHP 5.2.x
+- CTools 1.x
+  http://drupal.org/project/ctools
+- Drupal 6.x
+  http://drupal.org/project/drupal
+- PHP 5.2.x recommended
 
 Installation
 ============
@@ -71,13 +73,8 @@ http://drupal.org/node/622700
 Testing
 =======
 
-For all tests to pass, run tests with the latest releases of these modules
-available in the Drupal search path:
-
-- Views
-- Data
-
-This list does not include modules that are required by Feeds anyway.
+See "The developer's guide to Feeds":
+http://drupal.org/node/622700
 
 Performance
 ===========
@@ -117,9 +114,16 @@ Description: The number of feeds to import on cron time.
 
 Name:        feeds_schedule_queue_num
 Default:     200
-             The number of feeds to queue on cron time. Only has an effect if
+Description: The number of feeds to queue on cron time. Only has an effect if
              Drupal Queue is enabled.
              http://drupal.org/project/drupal_queue
+
+Name:        feeds_data_$importer_id
+Default:     feeds_data_$importer_id
+Description: The table used by FeedsDataProcessor to store feed items. Usually a
+             FeedsDataProcessor builds a table name from a prefix (feeds_data_)
+             and the importer's id ($importer_id). This default table name can
+             be overridden by defining a variable with the same name.
 
 Glossary
 ========
