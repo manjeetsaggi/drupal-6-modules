@@ -1,5 +1,5 @@
 <?php
-// $Id: addresses_user.install,v 1.8 2009/01/15 19:39:46 brmassa Exp $
+// $Id: addresses_user.install,v 1.9 2010/01/13 22:07:57 codycraven Exp $
 /**
  * @author Bruno Massa
  * @file
@@ -27,7 +27,7 @@ function addresses_user_install() {
  */
 function addresses_user_schema() {
   $schema['addresses_user'] = array(
-    'description' => t('Products-specific fields'),
+    'description' => t('Addresses functionality for users'),
     'fields' => array(
       'aid' => array(
         'type'        => 'serial',

@@ -1,5 +1,5 @@
 <?php
-// $Id: cn.inc,v 1.11 2009/01/07 01:10:11 brmassa Exp $
+// $Id: cn.inc,v 1.12 2009/12/14 20:52:46 antoinesolutions Exp $
 
 /**
  * @file
@@ -67,9 +67,9 @@ function addresses_province_list_cn() {
  *   String. The address field tokens
  */
 function addresses_address_format_cn() {
-  return '!aname
-!additional
-!street, !city
-!postal_code, !province_name
-!country_name';
+  return '[addresses_aname_hcard] [addresses_is_primary_hcard]
+[addresses_additional_hcard]
+[addresses_street_hcard], [addresses_city_hcard]
+[addresses_postal_code_hcard], [addresses_province_name_hcard]
+[addresses_country_name_hcard]';
 }

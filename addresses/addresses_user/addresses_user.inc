@@ -1,5 +1,5 @@
 <?php
-// $Id: addresses_user.inc,v 1.27 2009/01/08 08:14:55 brmassa Exp $
+// $Id: addresses_user.inc,v 1.30 2010/02/09 23:18:40 codycraven Exp $
 /**
  * @author Bruno Massa
  * @file
@@ -66,7 +66,7 @@ function _addresses_user_address_get($id, $id_type = 'eid') {
  *   depending on the $type variable
  */
 function _addresses_user_address_save($address, $id) {
-  if (!empty($address) and is_array($address)) {
+  if (!empty($address) && is_array($address)) {
     // If this address is the Primary, change all other address
     // to NOT primary
     if (!empty($address['is_primary'])) {
@@ -127,7 +127,7 @@ function _addresses_user_address($op = NULL, $aid = NULL) {
         // Set the Element ID as User ID form new addresses
         $edit['eid'] = $uid;
       }
-      elseif (empty($access) or $edit['eid'] != $uid) {
+      elseif (empty($access) && $edit['eid'] != $uid) {
         // If the user has no permission or the user from
         // address is not the same as the user that are
         // accessing, deny the access
@@ -204,7 +204,7 @@ function _addresses_user_form(&$form_state, $fields = array(), $values = array()
  * @param &$addresses
  *   Array. A list of user addresses
  */
-function theme_addresses_user_overview($uid, &$addresses) {
+function theme_addresses_user_overview($uid, $addresses) {
   // Get the current page URL, to force the forms
   // to return here.
   $destination = drupal_get_destination();

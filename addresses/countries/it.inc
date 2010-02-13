@@ -1,5 +1,5 @@
 <?php
-// $Id: it.inc,v 1.11 2009/01/07 01:10:11 brmassa Exp $
+// $Id: it.inc,v 1.12 2009/12/14 20:52:46 antoinesolutions Exp $
 
 /**
  * @file
@@ -141,9 +141,9 @@ function addresses_province_list_it() {
  *   String. The address field tokens
  */
 function addresses_address_format_it() {
-  return '!aname
-!additional
-!street
-!postal_code !city !province_code
-!country_name';
+  return '[addresses_aname_hcard] [addresses_is_primary_hcard]
+[addresses_additional_hcard]
+[addresses_street_hcard]
+[addresses_postal_code_hcard] [addresses_city_hcard] [addresses_province_code_hcard]
+[addresses_country_name_hcard]';
 }

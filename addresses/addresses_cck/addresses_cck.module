@@ -1,5 +1,5 @@
 <?php
-// $Id: addresses_cck.module,v 1.16 2008/12/11 18:20:24 brmassa Exp $
+// $Id: addresses_cck.module,v 1.17 2010/01/30 23:44:11 codycraven Exp $
 /**
  * @author Bruno Massa
  * @file
@@ -197,6 +197,17 @@ function _addresses_cck_field_validate(&$form, &$form_state) {
     }
   }
   form_set_value($form['field']['required'], FALSE, $form_state);
+}
+
+/**
+ * Implementation of hook_geocode_handlers_alter.
+ *
+ * Allows the address field to be used by the geocode module.
+ *
+ * @see http://drupal.org/project/geocode
+ */
+function addresses_cck_geocode_handlers_alter(&$handlers) {
+  $handlers['geocode_google']['field types'][] = 'addresses_cck';
 }
 
 /**

@@ -1,5 +1,5 @@
 <?php
-// $Id: ro.inc,v 1.10 2009/01/14 01:21:13 brmassa Exp $
+// $Id: ro.inc,v 1.11 2009/12/14 20:52:46 antoinesolutions Exp $
 
 /**
  * @file
@@ -73,9 +73,9 @@ function addresses_province_list_ro() {
  *   String. The address field tokens
  */
 function addresses_address_format_ro() {
-  return '!aname
-!street
-!additional
-!postal_code !city, !province_name
-!country_name';
+  return '[addresses_aname_hcard] [addresses_is_primary_hcard]
+[addresses_street_hcard]
+[addresses_additional_hcard]
+[addresses_postal_code_hcard] [addresses_city_hcard], [addresses_province_name_hcard]
+[addresses_country_name_hcard]';
 }
