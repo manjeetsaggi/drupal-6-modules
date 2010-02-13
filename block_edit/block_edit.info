@@ -3,9 +3,9 @@ name = Block edit links
 description = "Adds edit links to blocks to make block administration easier."
 core = 6.x
 
-; Information added by drupal.org packaging script on 2009-09-22
-version = "6.x-1.5"
+; Information added by drupal.org packaging script on 2010-02-08
+version = "6.x-1.8"
 core = "6.x"
 project = "block_edit"
-datestamp = "1253637609"
+datestamp = "1265628611"
 
