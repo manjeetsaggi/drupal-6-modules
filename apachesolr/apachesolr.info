@@ -6,9 +6,9 @@ package = Apache Solr
 core = "6.x"
 php = 5.1.4
 
-; Information added by drupal.org packaging script on 2009-10-15
-version = "6.x-1.0-rc3"
+; Information added by drupal.org packaging script on 2010-01-09
+version = "6.x-2.0-alpha2"
 core = "6.x"
 project = "apachesolr"
-datestamp = "1255630506"
+datestamp = "1262998805"
 

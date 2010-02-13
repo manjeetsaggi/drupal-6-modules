@@ -1,5 +1,5 @@
 <?php
-// $Id: Solr_Base_Query.php,v 1.1.4.43 2009/10/14 13:28:40 pwolanin Exp $
+// $Id: Solr_Base_Query.php,v 1.1.4.40.2.10 2009/12/26 13:08:51 robertDouglass Exp $
 
 class Solr_Base_Query implements Drupal_Solr_Query_Interface {
 
@@ -215,6 +215,23 @@ class Solr_Base_Query implements Drupal_Solr_Query_Interface {
   }
 
   /**
+   * Set keywords in this query.
+   *
+   * @param $keys
+   *   New keywords
+   */
+  function set_keys($keys) {
+    $this->keys = $keys;
+  }
+
+  /**
+   * Get this query's keywords.
+   */
+  function get_keys() {
+    return $this->keys;
+  }
+
+  /**
    * A subquery is another instance of a Solr_Base_Query that should be joined
    * to the query. The operator determines whether it will be joined with AND or
    * OR.
@@ -301,8 +318,11 @@ class Solr_Base_Query implements Drupal_Solr_Query_Interface {
    public function get_url_queryvalues() {
     $queryvalues = array();
     if ($fq = $this->rebuild_fq(TRUE)) {
-      $queryvalues['filters'] = implode(' ', $fq);
+      foreach ($fq as $delta => $values) {
+        $queryvalues['filters'] .= ' ' . implode(' ', $values);
+      }
     }
+    $queryvalues['filters'] = isset($queryvalues['filters']) ? trim($queryvalues['filters']) : '';
     $solrsort = $this->solrsort;
     if ($solrsort && ($solrsort['#name'] != 'score' || $solrsort['#direction'] != 'asc')) {
       if (isset($this->field_map[$solrsort['#name']])) {
@@ -332,7 +352,7 @@ class Solr_Base_Query implements Drupal_Solr_Query_Interface {
    *   Optional. When set, this string overrides the query's current keywords.
    */
   public function get_path($new_keywords = NULL) {
-    if ($new_keywords) {
+    if (isset($new_keywords)) {
       return $this->base_path . '/' . $new_keywords;
     }
     return $this->base_path . '/' . $this->get_query_basic();
@@ -360,7 +380,11 @@ class Solr_Base_Query implements Drupal_Solr_Query_Interface {
       }
       $progressive_crumb[] = $this->make_filter($field);
       $options = array('query' => 'filters=' . rawurlencode(implode(' ', $progressive_crumb)));
-      if ($themed = theme("apachesolr_breadcrumb_" . $name, $field['#value'], $field['#exclude'])) {
+      $breadcrumb_name = "apachesolr_breadcrumb_" . $name;
+      // Modules utilize this alter to consolidate several fields into one
+      // theme function. This is how CCK breadcrumbs are handled.
+      drupal_alter('apachesolr_theme_breadcrumb', $breadcrumb_name);
+      if ($themed = theme($breadcrumb_name, $field)) {
         $breadcrumb[] = l($themed, $base, $options);
       }
       else {
@@ -420,13 +444,19 @@ class Solr_Base_Query implements Drupal_Solr_Query_Interface {
       if ($aliases && isset($this->field_map[$field['#name']])) {
         $field['#name'] = $this->field_map[$field['#name']];
       }
-      $fq[] = $this->make_filter($field);
+      $fq[$field['#name']][] = $this->make_filter($field);
     }
     foreach ($this->subqueries as $id => $data) {
       $subfq = $data['#query']->rebuild_fq($aliases);
       if ($subfq) {
         $operator = $data['#fq_operator'];
-        $fq[] = "(" . implode(" {$operator} ", $subfq) .")";
+        $subqueries = array();
+        foreach ($subfq as $key => $values) {
+          foreach ($values as $value) {
+            $subqueries[] = $value;
+          }
+        }
+        $fq['subqueries'][$key] =  " {$data['#q_operataor']} (" . implode(" $operator " , $subqueries) . ")";
       }
     }
     return $fq;

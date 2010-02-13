@@ -1,28 +1,10 @@
 <?php
-// $Id: apachesolr.index.inc,v 1.1.2.13 2009/10/14 19:08:19 pwolanin Exp $
+// $Id: apachesolr.index.inc,v 1.1.2.6.2.18 2010/01/02 23:44:04 robertDouglass Exp $
 
 /**
  * @file
  *   Functions used when indexing content to Apache Solr.
  */
-
-/**
- * Add a document to the $documents array based on a node ID.
- */
-function apachesolr_add_node_document(&$documents, $nid, $namespace) {
-  if ($document = apachesolr_node_to_document($nid, $namespace)) {
-    $documents[] = $document;
-  }
-}
-
-/**
- * Strip control characters that cause Jetty/Solr to fail.
- */
-function apachesolr_strip_ctl_chars($text) {
-  // See:  http://w3.org/International/questions/qa-forms-utf-8.html
-  // Printable utf-8 does not include any of these chars below x7F
-  return preg_replace('@[\x00-\x08\x0B\x0C\x0E-\x1F]@', ' ', $text);
-}
 
 /**
  * Strip html tags and also control characters that cause Jetty/Solr to fail.
@@ -31,22 +13,13 @@ function apachesolr_clean_text($text) {
   // Add spaces before stripping tags to avoid running words together.
   $text = filter_xss(str_replace(array('<', '>'), array(' <', '> '), $text), array());
   // Decode entities and then make safe any < or > characters.
-  $text = htmlspecialchars(html_entity_decode($text, ENT_NOQUOTES, 'UTF-8'), ENT_NOQUOTES, 'UTF-8');
-  // We must strip low bytes second in case there was an encoded
-  // low-byte character.
-  return apachesolr_strip_ctl_chars($text);
+  return htmlspecialchars(html_entity_decode($text, ENT_NOQUOTES, 'UTF-8'), ENT_NOQUOTES, 'UTF-8');
 }
 
 /**
- * Given a node ID, return a document representing that node.
+ * Given a node, return a document representing that node.
  */
-function apachesolr_node_to_document($nid, $namespace) {
-  // Set reset = TRUE to avoid static caching of all nodes that get indexed.
-  $node = node_load($nid, NULL, TRUE);
-  if (empty($node)) {
-    return FALSE;
-  }
-
+function apachesolr_node_to_document($node, $namespace) {
   $document = FALSE;
   // Let any module exclude this node from the index.
   $build_document = TRUE;
@@ -66,7 +39,10 @@ function apachesolr_node_to_document($nid, $namespace) {
 
     $text = $node->body;
 
-    // Fetch extra data normally not visible, including comments.      
+    // Fetch extra data normally not visible, including comments.
+    // We do this manually (with module_implements instead of node_invoke_nodeapi)
+    // because we want a keyed array to come back. Only in this way can we decide
+    // whether to index comments or not.
     $extra = array();
     $exclude_comments = in_array($node->type, variable_get('apachesolr_exclude_comments_types', array()), TRUE);
     foreach (module_implements('nodeapi') as $module) {
@@ -77,14 +53,19 @@ function apachesolr_node_to_document($nid, $namespace) {
       if ($output = module_invoke($module, 'nodeapi', $node, 'update index', FALSE, FALSE)) {
         $extra[$module] = $output;
       }
+
     }
+    if (!variable_get('apachesolr_index_comments_with_node', TRUE)) {
+      unset($extra['comment']);
+    }
+
     $text .= "\n\n" . implode(' ', $extra);
-    $text = apachesolr_strip_ctl_chars($text);
 
     $document = new Apache_Solr_Document();
     $document->id = apachesolr_document_id($node->nid);
     $document->site = url(NULL, array('absolute' => TRUE));
     $document->hash = apachesolr_site_hash();
+    $document->entity = 'node';
     $document->nid = $node->nid;
     $document->uid = $node->uid;
     $document->title = $node->title;
@@ -97,15 +78,20 @@ function apachesolr_node_to_document($nid, $namespace) {
     if (!empty($node->language)) {
       $document->language = $node->language;
     }
+    else {
+      // 'und' is the language-neutral code in Drupal 7.
+      // Note - this was changed from 'zxx'.
+      $document->language = 'und';
+    }
     $document->body = apachesolr_clean_text($text);
     $document->type  = $node->type;
-    $document->type_name = apachesolr_strip_ctl_chars(node_get_types('name', $node));
+    $document->type_name = node_get_types('name', $node);
     $document->created = apachesolr_date_iso($node->created);
     $document->changed = apachesolr_date_iso($node->changed);
     $last_change = (isset($node->last_comment_timestamp) && $node->last_comment_timestamp > $node->changed) ? $node->last_comment_timestamp : $node->changed;
     $document->last_comment_or_change = apachesolr_date_iso($last_change);
     $document->comment_count = isset($node->comment_count) ? $node->comment_count : 0;
-    $document->name = apachesolr_strip_ctl_chars($node->name);
+    $document->name = $node->name;
 
     $path = 'node/' . $node->nid;
     $document->url = url($path, array('absolute' => TRUE));
@@ -118,7 +104,7 @@ function apachesolr_node_to_document($nid, $namespace) {
       $language = empty($node->language) ? '' : $node->language;
       $output = drupal_get_path_alias($path, $language);
       if ($output && $output != $path) {
-        $document->path_alias = apachesolr_strip_ctl_chars($output);
+        $document->path_alias = $output;
       }
     }
 
@@ -127,23 +113,40 @@ function apachesolr_node_to_document($nid, $namespace) {
     foreach ($cck_fields as $key => $cck_info) {
       if (isset($node->$key)) {
         // Got a CCK field. See if it is to be indexed.
-        $function = $cck_info['callback'];
-        if ($cck_info['callback'] && function_exists($function)) {
+        $function = $cck_info['indexing_callback'];
+        if ($cck_info['indexing_callback'] && function_exists($function)) {
           $field = $function($node, $key);
         }
         else {
           $field = $node->$key;
         }
         $index_key = apachesolr_index_key($cck_info);
-        foreach ($field as $value) {
-          // Don't index NULLs or empty strings
-          // We can use 'value' rather than 'safe' since we strip tags and later check_plain().
-          if (isset($value['value']) && strlen($value['value'])) {
-            if ($cck_info['multiple']) {
-              $document->setMultiValue($index_key, apachesolr_clean_text($value['value']));
+        if (is_array($field)) {
+          foreach ($field as $value) {
+            // Don't index NULLs or empty strings
+            // We can use 'value' rather than 'safe' since we strip tags and later check_plain().
+            // Furthermore, what is being indexed is the KEY for the CCK value. It will need
+            // a trip through content_format() later to display the value.
+            switch ($cck_info['field_type']) {
+              case 'nodereference':
+                $index_value = (isset($value['nid']) && strlen($value['nid'])) ? $value['nid'] : FALSE;
+                break;
+  
+              case 'userreference':
+                $index_value = (isset($value['uid']) && strlen($value['uid'])) ? $value['uid'] : FALSE;
+                break;
+  
+              default:
+                $index_value = (isset($value['value']) && strlen($value['value'])) ? $value['value'] : FALSE;
+                break;
             }
-            else {
-              $document->$index_key = apachesolr_clean_text($value['value']);
+            if ($index_value) {
+              if ($cck_info['multiple']) {
+                $document->setMultiValue($index_key, apachesolr_clean_text($index_value));
+              }
+              else {
+                $document->$index_key = apachesolr_clean_text($index_value);
+              }
             }
           }
         }
@@ -157,10 +160,10 @@ function apachesolr_node_to_document($nid, $namespace) {
     apachesolr_add_tags_to_document($document, $text);
     apachesolr_add_taxonomy_to_document($document, $node);
 
-    // Let modules add to the document - TODO convert to drupal_alter().
+    // Let modules add to the document.
     foreach (module_implements('apachesolr_update_index') as $module) {
       $function = $module .'_apachesolr_update_index';
-      $function($document, $node);
+      $function($document, $node, $namespace);
     }
   }
   return $document;
@@ -248,7 +251,7 @@ function apachesolr_add_tags_to_document(&$document, $text) {
 /**
  * Additional index utility functions
  */
-
+ 
 /**
  * hook_cron() helper to try to make {apachesolr_search_node} consistent with {node}.
  */
@@ -300,7 +303,7 @@ function apachesolr_cron_check_node_table() {
     }
   }
 }
-
+ 
 function apachesolr_nodeapi_mass_update($nodes) {
   if (empty($nodes)) {
     return TRUE;
@@ -314,7 +317,7 @@ function apachesolr_nodeapi_mass_update($nodes) {
   $time = time();
   try {
     $solr = apachesolr_get_solr();
-    $solr->deleteMultipleById($ids);
+    $solr->deleteByMultipleIds($ids);
     apachesolr_index_updated($time);
     foreach ($nodes as $node) {
       // There was no exception, so update the table.
@@ -327,7 +330,7 @@ function apachesolr_nodeapi_mass_update($nodes) {
     return FALSE;
   }
 }
-
+ 
 function apachesolr_nodeapi_mass_delete($nodes) {
   if (empty($nodes)) {
     return TRUE;
@@ -340,7 +343,7 @@ function apachesolr_nodeapi_mass_delete($nodes) {
   }
   try {
     $solr = apachesolr_get_solr();
-    $solr->deleteMultipleById($ids);
+    $solr->deleteByMultipleIds($ids);
     apachesolr_index_updated($time);
     // There was no exception, so update the table.
     db_query("DELETE FROM {apachesolr_search_node} WHERE nid  IN (" . db_placeholders($nids) . ")", $nids);
@@ -351,3 +354,4 @@ function apachesolr_nodeapi_mass_delete($nodes) {
     return FALSE;
   }
 }
+
