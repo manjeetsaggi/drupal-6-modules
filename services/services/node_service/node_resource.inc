@@ -1,5 +1,5 @@
 <?php
-// $Id: node_resource.inc,v 1.1.2.3 2009/12/05 01:42:38 heyrocker Exp $
+// $Id: node_resource.inc,v 1.1.2.4 2010/01/26 03:56:51 heyrocker Exp $
 
 /**
  * @file
@@ -9,6 +9,22 @@
 function _node_resource_retrieve($nid) {
   $node = node_load($nid);
   $node->uri = services_resource_uri(array('node', $node->nid));
+
+  if ($node) {
+    // Apply field level content permissions
+    if (module_exists('content_permissions') && variable_get('services_use_content_permissions', FALSE)) {
+      $fields = content_fields(NULL, $node->type);
+      foreach ($fields as $field_name => $field_info) {
+        if (isset($node->$field_name)) {
+          $access = module_invoke_all('field_access', 'view', $field_info, $user, $node);
+          if (in_array(FALSE, $access)) {
+            unset($node->$field_name);
+          }
+        }
+      }
+    }
+    $node->uri = services_resource_uri(array('node', $node->nid));
+  }
   return $node;
 }
 
