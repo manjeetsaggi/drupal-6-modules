@@ -1,5 +1,5 @@
 <?php
-// $Id: syntaxhighlighter.admin.inc,v 1.8 2009/08/24 02:37:52 mattyoung Exp $
+// $Id: syntaxhighlighter.admin.inc,v 1.11 2009/12/08 02:53:03 mattyoung Exp $
 
 /**
  * @file
@@ -26,6 +26,7 @@ function syntaxhighlighter_settings_form() {
     '#default_value' => variable_get('syntaxhighlighter_enabled_languages', array('shBrushPhp.js')),
     '#description' => t('Only the selected languages will be enabled and its corresponding required Javascript files loaded.  You may only want to choose the languages you actual display on your site to lower the amount of Javascript files loaded. For details please see <a href="http://alexgorbatchev.com/wiki/SyntaxHighlighter:Brushes">the Syntax Highlighter Javascript Library Page</a>.'),
     '#multicolumn' => array('width' => 3),
+    '#checkall' => TRUE,
   );
 
   $files = file_scan_directory($path .'/styles', 'shTheme.*\.css', array('.', '..', 'CVS', 'shThemeDefault.css'));
@@ -71,7 +72,10 @@ function syntaxhighlighter_settings_form() {
     '#type' => 'textarea',
     '#title' => t('Default expressions'),
     '#default_value' => variable_get('syntaxhighlighter_default_expressions', ''),
-    '#description' => t("Enter syntaxhihglighter default settings javascript expressions, e.g. !example", array('!example' => 'SyntaxHighlighter.defaults[\'auto-links\'] = true;SyntaxHighlighter.defaults[\'gutter\'] = false;')),
+    '#description' => t('Enter syntaxhihglighter default settings javascript expressions, e.g. !example. See the <a href="!link">syntaxhighlighter js lib doc page</a> for details. Note: these default settings affect the entire site unless they are overridden locally.',
+                         array('!example' => '<code>SyntaxHighlighter.defaults[\'auto-links\'] = true;SyntaxHighlighter.defaults[\'gutter\'] = false;</code>',
+                               '!link' => 'http://alexgorbatchev.com/wiki/SyntaxHighlighter:Configuration',
+                         )),
   );
 
   return system_settings_form($form);

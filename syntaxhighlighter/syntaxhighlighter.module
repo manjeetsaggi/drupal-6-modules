@@ -1,5 +1,5 @@
 <?php
-// $Id: syntaxhighlighter.module,v 1.29 2009/08/25 01:01:00 mattyoung Exp $
+// $Id: syntaxhighlighter.module,v 1.35 2009/12/06 17:03:15 mrfelton Exp $
 
 /**
  * @file
@@ -68,35 +68,25 @@ function syntaxhighlighter_init() {
       drupal_add_js($scripts_path . $lang, 'module');
     }
   }
+  
   $tag_name = variable_get('syntaxhighlighter_tagname', 'pre');
   if ($tag_name !== 'pre') {
-    $code[] = "SyntaxHighlighter.config.tagName = '$tag_name';";
+    $settings['tagname'] = $tag_name;
   }
-
-  $code[] = 'SyntaxHighlighter.config.strings.expandSource = "'. t('+ expand source') .'";';
-  $code[] = 'SyntaxHighlighter.config.strings.viewSource = "'. t('view source') .'";';
-  $code[] = 'SyntaxHighlighter.config.strings.copyToClipboard = "'. t('copy to clipboard') .'";';
-  $code[] = 'SyntaxHighlighter.config.strings.copyToClipboardConfirmation = "'. t('The code is in your clipboard now') .'";';
-  $code[] = 'SyntaxHighlighter.config.strings.print = "'. t('print') .'";';
-  $code[] = 'SyntaxHighlighter.config.strings.help = "'. t('?') .'";';
-  // Reminder: don't change ' to " in t(), we want the \n char to show up in javascript!
-  $code[] = 'SyntaxHighlighter.config.strings.alert = "'. t('SyntaxHighlighter\n\n') .'";';
-  $code[] = 'SyntaxHighlighter.config.strings.noBrush = "'. t('Can\'t find brush for: ') .'";';
-  $code[] = 'SyntaxHighlighter.config.strings.brushNotHtmlScript = "'. t('Brush wasn\'t made for html-script option: ') .'";';
-
   if (file_exists($scripts_path .'clipboard.swf')) {
-    $code[] = "SyntaxHighlighter.config.clipboardSwf = '" .base_path(). "$scripts_path"."clipboard.swf';";
+    $settings['clipboard'] = base_path() . $scripts_path .'clipboard.swf';
   }
-
-  $code[] = variable_get('syntaxhighlighter_default_expressions', '');
-
-  $code[] = 'jQuery(function ($) {';
-  $code[] = "  SyntaxHighlighter.highlight();";
-  if (variable_get('syntaxhighlighter_legacy_mode', 0)) {
-    $code[] = "  dp.SyntaxHighlighter.HighlightAll('code');";
+  if ($setting = variable_get('syntaxhighlighter_legacy_mode', 0)) {
+    $settings['legacy_mode'] = TRUE;
   }
-  $code[] = '});';
-  drupal_add_js(join("\n", $code), 'inline');
+  
+  drupal_add_js(array('syntaxhighlighter' => $settings), 'setting');
+  
+  if ($setting = variable_get('syntaxhighlighter_default_expressions', '')) {
+    drupal_add_js($setting, 'inline');
+  }
+  
+  drupal_add_js(drupal_get_path('module', 'syntaxhighlighter') .'/syntaxhighlighter.min.js', 'module', 'header');
 }
 
 
