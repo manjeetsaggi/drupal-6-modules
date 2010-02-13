@@ -1,5 +1,5 @@
 <?php
-// $Id: fivestar_rec.module,v 1.2 2009/07/21 19:53:03 danithaca Exp $
+// $Id: fivestar_rec.module,v 1.3 2010/01/06 18:41:54 danithaca Exp $
 
 /**
  * @see http://drupal.org/project/fivestar_rec
@@ -96,8 +96,8 @@ function fivestar_rec_block($op='list', $delta=0) {
     }
     // similar items by votes
     elseif ($delta == 2) {
-      if ($current_node = menu_get_object() && variable_get("fivestar_{$current_node->type}", 0)) {
-        $item_list = recommender_top_prediction('fivestar_rec_item2item', $current_node->nid, $display_num, '_fivestar_rec_enforce_same_type');
+      if (($current_node = menu_get_object()) && variable_get("fivestar_{$current_node->type}", 0)) {
+        $item_list = recommender_top_similarity('fivestar_rec_item2item', $current_node->nid, $display_num, '_fivestar_rec_enforce_same_type');
         if (!empty($item_list)) {
           foreach ($item_list as $item) {
             $node = node_load($item['id']);
@@ -148,7 +148,7 @@ function _fivestar_rec_enforce_same_type($item) {
  * Implementation of hook_run_recommender() for RecAPI
  */
 function fivestar_rec_run_recommender() {
-  $sql = "SELECT uid, content_id, value FROM {votingapi_vote} WHERE content_type='node' AND value_type='percent' AND tag='vote' AND uid<>0";
+  $sql = "SELECT uid, content_id, value FROM {votingapi_vote} WHERE content_type='node' AND value_type='percent' AND tag='vote' AND uid>0";
 
   if (variable_get('fivestar_rec_enable_user2user', 1)) {
     watchdog('fivestar_rec', "Computing recommendation for user2user algorithm");
