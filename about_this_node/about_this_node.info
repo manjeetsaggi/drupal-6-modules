@@ -3,9 +3,9 @@ name = About This Node
 description = Displays a block containing information about the currently viewed node.
 core = 6.x
 
-; Information added by drupal.org packaging script on 2008-09-12
-version = "6.x-1.0-rc5"
+; Information added by drupal.org packaging script on 2010-01-31
+version = "6.x-1.0"
 core = "6.x"
 project = "about_this_node"
-datestamp = "1221230102"
+datestamp = "1264980004"
 

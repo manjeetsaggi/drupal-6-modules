@@ -14,14 +14,13 @@ About This Node creates a block that displays information about the node you're 
     * published status
     * promoted to front page status
     * sticky status
-    * commenting status (enabled, read only, or disabled)
+    * commenting status (enabled, read only, or disabled; also supports Node Comments)
+    * translation status
 
 Note: About This Node is not built with end-users in mind. Rather, this is an administrative tool to allow admins and other privileged users quick access to important information about a node. Requests to add end-user-facing features will be denied (with a friendly apology, of course).
 Installation
 
-This module, when enabled, creates a block that displays the information about a node. You will need to display this block in one of your theme's regions (at Admin > Site Building > Blocks).
-
-You will also need to tell the module the content types for which it should display the block. (By default, it only displays for the content type "Story.") To add or remove content types that display the block, go to Admin > Site configuration > About This Node. Simply check off the content types you want.
+This module, when enabled, creates a block that displays the information about a node. You will need to tell the module the content types for which it should display the block and display this block in one of your theme's regions (at Admin > Site Building > Blocks).
 
 Finally, you will need to set your users' permissions. Go to Admin > User management > Permissions (or Admin > User management > Access control in Drupal 5) and look for the row titled "about_this_node module." Now check off which roles you want to administer the module and/or view the block.
 
