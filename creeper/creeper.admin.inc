@@ -1,6 +1,5 @@
 <?php
 function creeper_admin_settings(&$form_state) {
-  @(include_once('tarzan/tarzan.class.php')) or _creeper_tarzan_not_found();
 
   $form = array();
 

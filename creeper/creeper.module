@@ -1,6 +1,6 @@
 <?php
 
-@(include_once('tarzan/tarzan.class.php')) or _creeper_tarzan_not_found();
+@(include_once('cloudfusion/cloudfusion.class.php')) or _creeper_cloudfusion_not_found();
 
 //////////////////////////////// DRUPAL HOOK AND API FUNCTION /////////////////////////// 
 
@@ -10,11 +10,11 @@
 function creeper_menu() {
   $items = array();
 
-  $items['admin/settings/creeper/settings'] = array(
-    'title' => 'Tarzan Settings',
+  $items['admin/settings/creeper'] = array(
+    'title' => 'Cloudfusion Settings',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('creeper_admin_settings'),
-    'description' => t('Configure Tarzan settings'),
+    'description' => t('Configure Cloudfusion settings'),
     'access arguments' => array('administer site configuration'),
     'file' => 'creeper.admin.inc'
     );
@@ -22,14 +22,14 @@ function creeper_menu() {
 }
 
 /**
- * Provide an error message if the tarzan library is not found.
+ * Provide an error message if the cloudfusion library is not found.
  */
  
- function _creeper_tarzan_not_found(){
-    global $tarzancheckalready;
-  if(!$tarzancheckalready) {
-    $tarzancheckalready = TRUE;
-    drupal_set_message(t('The <a href="@url" target="_blank">Tarzan PHP library</a> was not found. Please install it into %creeperdir.', array('@url' => 'http://tarzan-aws.com', '%creeperdir' => drupal_get_path('module', 'creeper') . '/tarzan')), 'error');
- }
- 
- }
+function _creeper_cloudfusion_not_found(){
+  global $cloudfusioncheckalready;
+
+  if(!$cloudfusioncheckalready) {
+    $cloudfusioncheckalready = TRUE;
+    drupal_set_message(t('The <a href="@url" target="_blank">Cloudfusion PHP library</a> was not found. Please install it into %creeperdir.', array('@url' => 'http://code.google.com/p/tarzan-aws/source/checkout', '%creeperdir' => drupal_get_path('module', 'creeper') . '/cloudfusion')), 'error');
+  }
+}
