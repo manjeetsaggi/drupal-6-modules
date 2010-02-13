@@ -18,7 +18,7 @@ function subdomain_check_server() {
   $output.= ltrim(request_uri(),'/') ."\n"; // Use Drupal API's request URI, since REQUEST_URI Apache only
   $output.= ltrim($_SERVER['QUERY_STRING'], 'q=') ."\n";
   $output.= $_SERVER['SCRIPT_FILENAME'] ."\n";
-  $output.= drupal_get_normal_path(ltrim(request_uri(),'/'));
+  $output.= $_REQUEST['q'];
   print $output;
   exit;
 }
@@ -49,12 +49,14 @@ function subdomain_check_server_results($results = NULL) {
 function subdomain_check_apache() {
   $domain = subdomain_base_domain();
   $host = "subdomain-test.$domain";
-  $url = "http://$host/subdomain/test";
+  $url = "http://$host". parse_url($GLOBALS['base_url'], PHP_URL_PATH) .'/subdomain/test';
 
   // Store watchdog count so we can check for errors after http attempt
   $old_watchdog_lastid = subdomain_check_watchdog_lastid();
 
-  $page = file_get_contents($url,"r");
+  $page = drupal_http_request($url);
+  $page = $page->code == 200 ? $page->data : NULL;
+
   $lines = subdomain_check_server_results($page);
 
   // Check for any errors (assumes 1 error for now)
@@ -104,14 +106,14 @@ function subdomain_check_url_rewrite_inbound() {
 
   $server_results = subdomain_check_server_results();
   $internal_path = $server_results[5];
-  $url = "http://subdomain-test.". subdomain_base_domain() ."/subdomain/test";
+  $url = "http://subdomain-test.". subdomain_base_domain() . parse_url($GLOBALS['base_url'], PHP_URL_PATH) ."/subdomain/test";
 
   if ($internal_path == '~subdomain-test/subdomain/test') {
     $output = "HTTP request to $url resulted in an internal Drupal path of $internal_path";
     return array('error' => FALSE, 'output' => $output);
   }
   else {
-    $output = "HTTP request to $url resulted in an internal Drupal path of $internal_path. It should have been ~subdomain-test/subdomain/test<p />";
+    $output = print_r($server_results, TRUE) . "HTTP request to $url resulted in an internal Drupal path of $internal_path. It should have been ~subdomain-test/subdomain/test<p />";
     if (!function_exists('custom_url_rewrite_inbound')) {
       return array('error' => TRUE, 'output' => $output .'The custom_url_rewrite_inbound() function is missing from settings.php. It appears you haven\'t yet patched settings.php. See readme.txt for instructions.');
     }
@@ -125,7 +127,7 @@ function subdomain_check_url_rewrite_inbound() {
 
 function subdomain_check_url_rewrite_outbound() {
 
-  $correct_url = "http://subdomain-test.". subdomain_base_domain() ."/subdomain/test";
+  $correct_url = "http://subdomain-test.". subdomain_base_domain() . parse_url($GLOBALS['base_url'], PHP_URL_PATH) . "/subdomain/test";
   $drupal_url = url('~subdomain-test/subdomain/test');
   
   if ($drupal_url == $correct_url) {

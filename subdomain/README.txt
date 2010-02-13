@@ -1,10 +1,10 @@
 ===========================================================
 OVERVIEW
 ===========================================================
-The subdomain module joins forces with pathauto to automatically 
-place Drupal site content onto subdomains.
+Subdomain automatically creates subdomains and assigns nodes
+to those subdomains based on several administrator chosen criteria.
 
-Currently, it supports 4 modes:
+Currently, Subdomain supports 4 modes:
 
  Node Author:
   EXAMPLE: A user named "Sayuko" and her content would be located at:
@@ -25,33 +25,15 @@ Currently, it supports 4 modes:
 ===========================================================
 UPGRADE
 ===========================================================
-Subdomain no longer needs the .htaccess patch, so if you
-are upgrading from a previous version, either:
+Upgrading from any of the previous 6.x versions (i.e 6.x-1.5 or below):
 
-1) restore your old .htaccess file
+Subdomain no longer needs the custom functions in settings.php
+Please review your settings.php and remove the following two
+functions if present (NOTE: If you've made customizations to
+these functions that you still need, install the url_alter
+module and migrate your customizations to a custom module
+using the hooks provided by url_alter.
 
-  or
-  
-2) locate and delete the following from your .htaccess file:
-
-  # REQUIRED BY SUBDOMAIN.MODULE
-  # Moves subdomain to URI path
-  # e.g: mysubdomain.example.com 
-  # becomes example.com/index.php?_mysubdomain/
-  # NOTE: does not rewrite subdomain if it is "www". 
-  # If you want it to rewrite www, disable the 2nd line
-  RewriteCond %{REQUEST_FILENAME} !-f
-  RewriteCond %{HTTP_HOST} !^www\.([^.]+)\.([^.]+)$
-  RewriteCond %{HTTP_HOST} ^([^.]+)\.([^.]+)\.([^.]+)$
-  RewriteRule ^(.*)$ index.php?q=~%1/$1 [L,QSA]
-
-
-===========================================================
-INSTALL
-===========================================================
-STEP 1: Copy and paste the following to the bottom of your settings.php file
-
-  // ------------- BEGIN COPYING BELOW THIS LINE -------------
   function custom_url_rewrite_outbound(&$path, &$options, $original_path) {
 
     // Used by the Subdomain module to generate URLs with subdomains
@@ -67,22 +49,24 @@ STEP 1: Copy and paste the following to the bottom of your settings.php file
       subdomain_url_rewrite_inbound($result, $path, $path_language); 
     }
   }  
-  // ----------------- COPY UNTIL THIS LINE ------------------
 
 
-STEP 2: Edit settings.php & set $cookie_domain to your site domain. e.g.:
+
+===========================================================
+INSTALL
+===========================================================
+
+STEP 1: Edit settings.php & set $cookie_domain to your site domain. e.g.:
  $cookie_domain = "example.com";
 
-STEP 3: Enable wildcard DNS on your DNS hosting provider (e.g. *.example.com)
+STEP 2: Enable wildcard DNS on your DNS hosting provider (e.g. *.example.com)
 
-STEP 4: Configure wildcard virtual hosts. For apache or lighttpd,
+STEP 3: Configure wildcard virtual hosts. For apache or lighttpd,
  see below. For other web servers, consult their documentation.
 
-STEP 5: Enable Subdomain settings (URL aliases -> Subdomain settings
- select mode (og, node author, taxonomy vocabulary)
- and additional settings as desired
+STEP 4: Enable & configure Subdomain: URL aliases -> Subdomain settings
 
-STEP 6: Configure Pathauto (URL aliases -> Automated alias settings):
+STEP 5: Configure Pathauto (URL aliases -> Automated alias settings):
  1) Go to "Punctuation Settings" and set "Tilde ~:" to "No action"
  2) Place [subdomain] at the *start* of all paths whose content you
     want placed on a subdomain
@@ -91,10 +75,20 @@ STEP 6: Configure Pathauto (URL aliases -> Automated alias settings):
 ===========================================================
 CONFIGURING APACHE
 ===========================================================
-STEP 1: Edit httpd.conf, enable mod_rewrite and configure
-wildcard virtual hosts. An example configuration that you 
-can append to your httpd.conf is below. Replace the domain 
-name and directory as appropriate, save, and restart apache.
+Setting up Apache varies depending on your host and server
+environment and as such is beyond the scope of this document.
+
+If your using Shared Hosting, you'll likely need to ask your
+Host to set wildcard subdomains up for you. 
+
+If you're on a VPS or dedicated server the basic steps are:
+
+1. enable mod_rewrite
+2. configure wildcard virtual hosts. 
+
+The key for #2 is the "ServerAlias" directive. You can find 
+tutorials and documention all over the internet. An example 
+VirtualHost declaration might look something like this:
 
 NameVirtualHost *:80
 <VirtualHost *:80>

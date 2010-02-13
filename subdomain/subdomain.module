@@ -1,5 +1,5 @@
 <?php
-// $Id: subdomain.module,v 1.4.2.12 2009/03/18 12:53:37 setvik Exp $
+// $Id: subdomain.module,v 1.4.2.16 2009/12/31 03:26:52 setvik Exp $
 
 // token.module token prefix
 define('SUBDOMAIN_TOKEN_PREFIX', '~');
@@ -24,8 +24,21 @@ define('SUBDOMAIN_ALLOWCHANGE_YES', 1);
 define('SUBDOMAIN_ALLOWCHANGE_ADMINONLY', 2);
 
 function subdomain_boot() {
-  // do nothing
-  // hook is here just to ensure that module is loaded early in the bootstrap period
+  // function presence ensures that subdomain is loaded during bootstrap
+}
+
+// Define the custom_url_rewrite_outbound() function if not already defined.
+if (!function_exists('custom_url_rewrite_outbound')) {
+  function custom_url_rewrite_outbound(&$path, &$options, $original_path) {
+    subdomain_url_outbound_alter($path, $options, $original_path);
+  }
+}
+
+// Define the custom_url_rewrite_outbound() function if not already defined.
+if (!function_exists('custom_url_rewrite_inbound')) {
+  function custom_url_rewrite_inbound(&$result, &$path, $path_language) {
+    subdomain_url_inbound_alter($result, $path, $path_language);
+  }
 }
 
 /**
@@ -60,40 +73,64 @@ function subdomain_menu() {
   return $items;
 }
 
+function subdomain_type() {
+  return variable_get('subdomain_type', SUBDOMAIN_USER);
+}
+
+function subdomain_form_alter(&$form, $form_state, $form_id) {
+  if ($form_id == 'taxonomy_form_term') {
+    $form['#validate'][] = 'subdomain_taxonomy_form_validate';
+  }
+
+  // Temporary Hack for compatability with ajax_comments module
+  // TODO: revisit with module redesign
+  elseif ($form_id == 'comment_form' && $form['submit']['#id'] == 'ajax-comments-submit' && subdomain_current_subdomain()) {
+    $form['#action'] = str_replace(parse_url($form['#action'], PHP_URL_HOST), $_SERVER['HTTP_HOST'], $form['#action']);
+  }
+}
+
+function subdomain_taxonomy_form_validate($form, &$form_state) {
+  if (subdomain_type() == SUBDOMAIN_VOCAB && variable_get('subdomain_vocab', 0) == $form_state['values']['vid'] && subdomain_reserved(trim($form_state['values']['name']))) {
+    form_set_error('name', t('@term is a reserved keyword and cannot be used as a term name', array('@term' => $form_state['values']['name'])));
+  }
+}
+
 /**
  * Implementation of hook_nodeapi()
  */
 function subdomain_nodeapi(&$node, $op, $teaser, $page) {
   switch ($op) {
     case 'validate':
-      $type = node_get_types('type',$node);
-      $type_name = strtolower($type->name);
-      $type_title = strtolower($type->title_label);
-      if (module_exists('og') && og_is_group_type($node->type)) {
-        $node->title = trim($node->title);
-
-        // Allow only letters, numbers, and spaces
-        if (variable_get('subdomain_allow_onlyalpha', FALSE) && !preg_match('!^[a-zA-Z0-9 ]+$!', $node->title)) {
-          form_set_error('title', t("The @type_name's @type_title can contain only letters, numbers and spaces", array('@type_name'=>$type_name, '@type_title'=> $type_title)));
-        }
-
-        // Disallow reserved subdomain
-        elseif (subdomain_reserved($node->title)) {
-          form_set_error('title', "Sorry. '@node_title' is not available for use. Please enter a different @type_title for your @type_name.", array('@node_title' => $node->title, '@type_name'=>$type_name, '@type_title'=> $type_title));
-        }
-
-        // Ensure group name is unique
-        elseif (db_result(db_query("SELECT 1 FROM {node} WHERE nid <> %d AND type = '%s' AND title = '%s'", $node->nid, $node->type, $node->title))) {
-          form_set_error('title', "There is already a @type_name with that @type_title. Please enter a different @type_name", array('@type_name'=>$type_name, '@type_title'=> $type_title));
-        }
-
-        // Disallow changes to group name (to avoid SEO issues and path alias getting out of sync with group content aliases)
-        if ($node->nid) {
-          $currentgroupname = db_result(db_query("SELECT title FROM {node} WHERE nid = %d", $node->nid));
-          if (strtolower($currentgroupname) != strtolower($node->title)) {
-            if (variable_get('subdomain_allowchange', SUBDOMAIN_ALLOWCHANGE_NO) == SUBDOMAIN_ALLOWCHANGE_NO
-            || (variable_get('subdomain_allowchange', SUBDOMAIN_ALLOWCHANGE_NO) == SUBDOMAIN_ALLOWCHANGE_ADMINONLY && !user_access('administer site configuration'))) {
-              form_set_error('title', t("Sorry, @type_name @type_titles are permanent and may not be changed. You can change capitalization only.", array('@type_name'=>$type_name, '@type_title'=> $type_title)));
+      if (subdomain_type() == SUBDOMAIN_GROUP) {
+        $type = node_get_types('type',$node);
+        $type_name = strtolower($type->name);
+        $type_title = strtolower($type->title_label);
+        if (module_exists('og') && og_is_group_type($node->type)) {
+          $node->title = trim($node->title);
+  
+          // Allow only letters, numbers, and spaces
+          if (variable_get('subdomain_allow_onlyalpha', FALSE) && !preg_match('!^[a-zA-Z0-9 ]+$!', $node->title)) {
+            form_set_error('title', t("The @type_name's @type_title can contain only letters, numbers and spaces", array('@type_name'=>$type_name, '@type_title'=> $type_title)));
+          }
+  
+          // Disallow reserved subdomains
+          elseif (subdomain_reserved($node->title)) {
+            form_set_error('title', t("Sorry. '@node_title' is not available for use. Please enter a different @type_title for your @type_name.", array('@node_title' => $node->title, '@type_name'=>$type_name, '@type_title'=> $type_title)));
+          }
+  
+          // Ensure group name is unique
+          elseif (db_result(db_query("SELECT 1 FROM {node} WHERE nid <> %d AND type = '%s' AND title = '%s'", $node->nid, $node->type, $node->title))) {
+            form_set_error('title', t("There is already a @type_name with that @type_title. Please enter a different @type_name", array('@type_name'=>$type_name, '@type_title'=> $type_title)));
+          }
+  
+          // Disallow changes to group name (to avoid SEO issues and path alias getting out of sync with group content aliases)
+          if ($node->nid) {
+            $currentgroupname = db_result(db_query("SELECT title FROM {node} WHERE nid = %d", $node->nid));
+            if (strtolower($currentgroupname) != strtolower($node->title)) {
+              if (variable_get('subdomain_allowchange', SUBDOMAIN_ALLOWCHANGE_NO) == SUBDOMAIN_ALLOWCHANGE_NO
+              || (variable_get('subdomain_allowchange', SUBDOMAIN_ALLOWCHANGE_NO) == SUBDOMAIN_ALLOWCHANGE_ADMINONLY && !user_access('administer site configuration'))) {
+                form_set_error('title', t("Sorry, @type_name @type_titles are permanent and may not be changed. You can change capitalization only.", array('@type_name'=>$type_name, '@type_title'=> $type_title)));
+              }
             }
           }
         }
@@ -106,7 +143,7 @@ function subdomain_nodeapi(&$node, $op, $teaser, $page) {
       break;
 
     case 'load':
-      if (module_exists('og') && og_is_group_type($node->type)) {
+      if (subdomain_type() == SUBDOMAIN_GROUP && module_exists('og') && og_is_group_type($node->type)) {
         $node->subdomain = subdomain_raw_to_subdomain($node->title);
       }
       break;
@@ -117,7 +154,7 @@ function subdomain_nodeapi(&$node, $op, $teaser, $page) {
  * Implementation of hook_user
  */
 function subdomain_user($op, &$edit, &$user_edit, $category = NULL) {
-  if ($op == 'validate' && variable_get('subdomain_type', SUBDOMAIN_USER) == SUBDOMAIN_USER && $category == 'account') {
+  if ($op == 'validate' && subdomain_type() == SUBDOMAIN_USER && $category == 'account') {
     // If configured, disallow username changes if subdomains are set to Node Authors
     if (is_numeric($user_edit->uid) && $user_edit->name != $edit['name']) {
       if (variable_get('subdomain_allowchange', SUBDOMAIN_ALLOWCHANGE_NO) ==  SUBDOMAIN_ALLOWCHANGE_NO
@@ -127,8 +164,12 @@ function subdomain_user($op, &$edit, &$user_edit, $category = NULL) {
     }
 
     // If configured, allow only letters and spaces in usernames
-    elseif (variable_get('subdomain_allow_onlyalpha', FALSE) && !preg_match('!^[a-zA-Z0-9 ]+$!', $edit['name'])) {
+    if (variable_get('subdomain_allow_onlyalpha', FALSE) && !preg_match('!^[a-zA-Z0-9 ]+$!', $edit['name'])) {
       form_set_error('name', t('User Names can contain only letters, numbers and spaces'));
+    }
+    
+    elseif (subdomain_reserved($edit['name'])) {
+      form_set_error('name', t('%name is a reserved word and cannot be used as a username', array('%name' => $edit['name'])));
     }
   }
 }
@@ -156,7 +197,7 @@ function subdomain_token_values($type, $object = NULL) {
   $values['subdomain'] = NULL;
   switch ($type) {
     case 'node':
-      switch (variable_get('subdomain_type', SUBDOMAIN_USER)) {
+      switch (subdomain_type()) {
         case SUBDOMAIN_GROUP:
           if (module_exists('og') && og_is_group_type($object->type)) {
               $values['subdomain'] = subdomain_build_token($object->title, $object->nid);
@@ -186,7 +227,7 @@ function subdomain_token_values($type, $object = NULL) {
           if (is_array($object->taxonomy)) {
             foreach ($object->taxonomy as $tid) {
               $term_name = db_result(db_query("SELECT name FROM {term_data} WHERE tid = %d AND vid = %d", $tid, variable_get('subdomain_vocab', 0)));
-              if ($term_name) {
+              if ($term_name && !subdomain_reserved($term_name)) { 
             	  $values['subdomain'] = subdomain_build_token($term_name, $tid);
             	  break;
               }
@@ -197,12 +238,12 @@ function subdomain_token_values($type, $object = NULL) {
       break;
 
     case 'taxonomy':
-      if (variable_get('subdomain_type', SUBDOMAIN_USER) == SUBDOMAIN_VOCAB && $object->vid == variable_get('subdomain_vocab', 0)) {
+      if (subdomain_type() == SUBDOMAIN_VOCAB && $object->vid == variable_get('subdomain_vocab', 0)) {
         $values['subdomain'] = subdomain_build_token($object->name, $object->tid);
       }
       break;
     case 'user':
-      if (variable_get('subdomain_type', SUBDOMAIN_USER) == SUBDOMAIN_USER) {
+      if (subdomain_type() == SUBDOMAIN_USER) {
         $values['subdomain'] = subdomain_build_token($object->name, $object->uid);
       }
   }
@@ -254,7 +295,7 @@ function subdomain_admin_settings() {
     '#title' => t('Create subdomains for'), 
     '#description' => !isset($options[SUBDOMAIN_GROUP]) || !isset($options[SUBDOMAIN_VOCAB]) ? t('To use Taxonomy or Organic Group mode, enable and configure those modules') : '',
     '#options' => $options, 
-    '#default_value' => variable_get('subdomain_type', SUBDOMAIN_USER)
+    '#default_value' => subdomain_type()
   );
   if (module_exists('taxonomy') && is_array($vocab_options)) {
     $form['subdomain_settings']['subdomain_vocab'] = array(
@@ -303,12 +344,47 @@ function subdomain_admin_settings() {
     '#description' => t("Disallow changes to ensure that the links/URLs to content on your subdomains doesn't change. This will help prevent links from external sites and search engines breaking."),
   );
   
+  $form['subdomain_settings']['subdomain_prepend_www'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Prepend all non-subdomain URLs with www'),
+    '#default_value' => variable_get('subdomain_prepend_www', FALSE),
+    '#description' => t('Useful if your SSL certificate is for www.example.com'),
+  );
+
   $form['subdomain_settings']['subdomain_next'] = array(
     '#type' => 'markup',
     '#value' => t('<p style="width:500px;">After saving, configure <strong>automated alias settings</strong> and place the <strong>[subdomain]</strong> token at the start of any paths you want on a subdomain</p>')
   );
 
+  $form['subdomain_settings']['expert'] = array(
+    '#type' => 'fieldset',
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#title' => t('Advanced Settings'),
+  );
+
+  $form['subdomain_settings']['expert']['subdomain_ajax_paths'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Ajax callback paths that may appear on subdomain content'),
+    '#description' => t('Enter each path on a separate line. Ajax callbacks on subdomain content will break unless their paths are specified here'),
+    '#default_value' => variable_get('subdomain_ajax_paths', ''),
+  );
+  
+  $form['#submit'][] = 'subdomain_admin_settings_submit';
+  
   return system_settings_form($form);
+}
+
+function subdomain_admin_settings_submit($form, &$form_state) {
+  subdomain_clear_caches();
+}
+
+
+function subdomain_clear_caches() {
+  // Flush all caches; no need to re-implement this.
+  module_load_include('inc', 'system', 'system.admin');
+  $form = $form_state = array();
+  system_clear_cache_submit($form, $form_state);
 }
 
 function subdomain_admin_settings_validate($form, &$form_state) {
@@ -345,6 +421,7 @@ function subdomain_admin_settings_validate($form, &$form_state) {
 function subdomain_reserved($name = NULL) {
   $subdomain = subdomain_raw_to_subdomain($name);
   $reserved_subdomain = strtolower(ereg_replace(chr(13) . chr(10), "\n", variable_get('subdomain_reserved', '')));
+  
   if (in_array($subdomain, explode("\n", $reserved_subdomain))) {
     return TRUE;
   }
@@ -362,27 +439,31 @@ function subdomain_base_domain() {
 /**
  * If host includes subdomain, rewrite URI and lookup internal path
  */
-function subdomain_url_rewrite_inbound(&$result, $path, $path_language) {
+function subdomain_url_inbound_alter(&$result, $path, $path_language) {
   global $cookie_domain;
   static $executed = FALSE;
 
   // Only execute if:
   //  - Subdomain is present in HTTP_HOST
   //  - 1st call to this function or Subdomain module is performing internal test
-  if ((!$executed || $path == 'subdomain/test') && strlen($_SERVER['HTTP_HOST']) > strlen($cookie_domain)) {
+  //  - Not an AJAX callback
+  if (!$executed && strlen($_SERVER['HTTP_HOST']) > strlen($cookie_domain) && !subdomain_ajax_path($path)) {
 
     $subdomain_length = strpos($_SERVER['HTTP_HOST'], $cookie_domain);
     $subdomain = substr($_SERVER['HTTP_HOST'], 0, $subdomain_length);
 
-    // Exit if user has indicated this is a reserved subdomain (e.g. static or www, et cetera.) that shouldn't be rewritten
-    if (subdomain_reserved($subdomain)) {
+    $prepend_www = variable_get('subdomain_prepend_www', FALSE);
+
+    // Exit if we're forcing 'www' & subdomain is 'www' or if subdomain is reserved
+    if ($prepend_www && $subdomain == 'www' || subdomain_reserved($subdomain)) {
       $executed = true;
       return;
     }
 
     // Rewrite $GLOBAL['base_url'] without the subdomain so that we don't interfere
     // with other modules like imagecache (substr removes leading period)
-    $GLOBALS['base_url'] = 'http://'. substr($cookie_domain,1);
+    $www = $prepend_www ? 'www.' : '';
+    $GLOBALS['base_url'] = 'http://'. $www . substr($cookie_domain,1) . parse_url($GLOBALS['base_url'], PHP_URL_PATH);
 
     if ($path == variable_get('site_frontpage', 'node') && ltrim(request_uri(),'/') != ltrim($path, '/')) {
       $alias_path = '';
@@ -392,6 +473,9 @@ function subdomain_url_rewrite_inbound(&$result, $path, $path_language) {
     }
 
     $alias = "~". $subdomain . ($alias_path ? "/$alias_path" : "");
+
+    // Update $_REQUEST so we don't send global redirect into an eternal loop
+    $_REQUEST['q'] = $alias;
 
     if ($internal_path = drupal_lookup_path('source', $alias, $path_language)) {
       $result = $internal_path;
@@ -406,17 +490,59 @@ function subdomain_url_rewrite_inbound(&$result, $path, $path_language) {
 /**
  * Looks for subdomain token in Drupal generated URLs; if present, prepends to domain
  */
-function subdomain_url_rewrite_outbound(&$path, &$options) {
+function subdomain_url_outbound_alter(&$path, &$options) {
+  global $cookie_domain;
+
   $options['absolute'] = TRUE;
+
+  $base_path = parse_url($options['base_url'], PHP_URL_PATH);
 
   if (substr($path, 0, SUBDOMAIN_TOKEN_PREFIX_LENGTH) == SUBDOMAIN_TOKEN_PREFIX) {
     $path_parts = explode('/', substr($path, SUBDOMAIN_TOKEN_PREFIX_LENGTH));
-    $options['base_url'] = _subdomain_get_protocol() . array_shift($path_parts) .'.'. subdomain_base_domain();
+    $options['base_url'] = _subdomain_get_protocol() . array_shift($path_parts) .'.'. subdomain_base_domain() . $base_path;
     $path = implode('/', $path_parts);
   }
   else {
-    $options['base_url'] = _subdomain_get_protocol() . subdomain_base_domain();
+    // Prepend www to non subdomain URLs if necessary
+    $www = variable_get('subdomain_prepend_www', FALSE) ? 'www.' : '';
+    $options['base_url'] = _subdomain_get_protocol() . $www . subdomain_base_domain() . $base_path;
   }
+
+  // Handle AJAX paths: If we're currently on a subdomain, preserve it…
+  if (strlen($_SERVER['HTTP_HOST']) > strlen($cookie_domain) && subdomain_ajax_path($path)) {
+    $options['base_url'] = _subdomain_get_protocol() . $_SERVER['HTTP_HOST'] . $base_path;
+  }
+}
+
+/**
+ * Returns current subdomain
+ */
+
+function subdomain_current_subdomain() {
+  static $subdomain;
+  
+  if (!isset($subdomain)) {
+    global $cookie_domain;
+    $cd = array_shift(explode('.', trim($cookie_domain, '.')));
+    $sd = array_shift(explode('.', $_SERVER['HTTP_HOST']));
+    $subdomain = $sd == $cd || $sd == 'www' ? '' : $sd;
+  }
+  return $subdomain;
+}
+
+function subdomain_ajax_path($path) {
+  static $ajax_paths;
+  
+  if (!isset($ajax_paths)) {
+    $ajax_paths = explode("\n", strtolower(ereg_replace(chr(13) . chr(10), "\n", variable_get('subdomain_ajax_paths', ''))));
+  }
+
+  foreach($ajax_paths as $ajax_path) {
+    if ($ajax_path && strpos($path, $ajax_path) === 0) {
+      return TRUE;
+    }
+  }
+  return FALSE;
 }
 
 function subdomain_raw_to_subdomain($groupname) {

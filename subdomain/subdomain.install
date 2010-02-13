@@ -1,15 +1,33 @@
 <?php
 
 function subdomain_install() {
+  // set defaults
   variable_set('subdomain_base_domain', $_SERVER['HTTP_HOST']);
+  variable_set('subdomain_type', "2");
+  variable_set('subdomain_style', "1");
+  variable_set('subdomain_custom', "");
+  variable_set('subdomain_reserved', "www\nstatic\n");
+  variable_set('subdomain_ajax_paths', "fivestar/vote\nflag/flag\n/flag/unflag\nplus1/vote");
+  variable_set('subdomain_allow_onlyalpha', 0);
+  variable_set('subdomain_allowchange', "1");
 }
 
 function subdomain_uninstall() {
   variable_del('subdomain_base_domain');
+  variable_del('subdomain_type');
+  variable_del('subdomain_style');
+  variable_del('subdomain_custom');
+  variable_del('subdomain_reserved');
+  variable_del('subdomain_allow_onlyalpha');
+  variable_del('subdomain_allowchange');
 }
 
 function subdomain_update_6001() {
   variable_del('subdomain_base_domain');
   drupal_set_message('Updated Subdomain: cleaned up Subdomain.module variables');
   return array();
+}
+
+function subdomain_update_6002() {
+  variable_set('subdomain_ajax_paths', "fivestar/vote\nflag/flag\n/flag/unflag\nplus1/vote");  
 }
