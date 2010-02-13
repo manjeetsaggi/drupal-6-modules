@@ -1,10 +1,10 @@
 <?php
-// $Id: rsvp_eventconnector.module,v 1.2.2.3 2009/03/01 22:54:10 ulf1 Exp $
+// $Id: rsvp_eventconnector.module,v 1.2.2.4 2009/11/05 22:36:47 ulf1 Exp $
 
 class RsvpEventConnectorImpl extends RsvpConnectorImpl {
 
   function get_event_field($field_name, $content_type) {
-    return array();
+    return array('event' => 'event');
   }
   
   
@@ -12,14 +12,19 @@ class RsvpEventConnectorImpl extends RsvpConnectorImpl {
     return 1;
   }
 	
-  //returns startdate as unix timestamp in utc
-  function get_startdate($node, $field, $pos) {
-    $eventstart = $node->event['start'];
-    $unixutc = strtotime($eventstart);
-      	
-    return $unixutc;
+  //returns startdate as hash
+  function get_startdateAsHash($node, $field, $pos) {
+    return $this->get_startdateAsUTC($node, $field, $pos);
   }
 
+  //returns startdate as unix timestamp in utc
+  function get_startdateAsUTC($node, $field, $pos) {
+    $eventstart = $node->event['start'];
+    $unixutc = strtotime($eventstart);
+        
+    return $unixutc;
+  }
+  
   //startdate as string in local timezone
   function get_startdateAsString($node, $field, $pos) {
     
@@ -27,18 +32,23 @@ class RsvpEventConnectorImpl extends RsvpConnectorImpl {
   }
   
   //returns enddate as unix timestamp in utc
-  function get_enddate($node, $field, $pos) {
+  function get_enddateAsUTC($node, $field, $pos) {
     $eventend = $node->event['end'];
     $unixutc = strtotime($eventend);
-    $r1 = date('r', $unixutc);
+    //debug: $r1 = date('r', $unixutc);
     return $unixutc;
+  }
+  
+  //returns if event has a valid enddate
+  function has_enddate($node, $field, $pos) {
+    return $node->event['has_end_date'];
   }
   
   function format_date($node, $field, $pos, $include_to_date = FALSE) {
 
     $date_out = $node->event['start'];
 
-    if ($include_to_date) {
+    if ($include_to_date && $this->has_enddate($node, $field, $pos)) {
       $eventend = $node->event['end'];
       
       if ($eventend) {

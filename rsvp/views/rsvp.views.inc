@@ -1,5 +1,5 @@
 <?php
-// $Id: rsvp.views.inc,v 1.1.2.7 2009/06/01 23:20:31 ulf1 Exp $
+// $Id: rsvp.views.inc,v 1.1.2.8 2009/12/31 17:38:39 ulf1 Exp $
 
 /**
  * @module rsvp
@@ -79,6 +79,24 @@ function rsvp_views_data() {
       'handler' => 'views_handler_filter_numeric',
       'help' => t('Invitation ids that guests belong to.'),
       'label' => t('Invitation Id'),
+    ),
+  );
+  
+  $data['rsvp']['rsvp_manage_page'] = array(
+    'title' => t('RSVP manage page'),
+    'help' => t('Provide a link to the RSVP send/manage page.'),
+    'real field' => 'rid',
+    'field' => array(
+      'handler' => 'rsvp_views_handler_field_rsvp_rsvp_manage_page',
+    ),
+  );
+  
+  $data['rsvp']['rsvp_send_message'] = array(
+    'title' => t('RSVP send group message page'),
+    'help' => t('Provide a link to the RSVP send group message page.'),
+    'real field' => 'rid',
+    'field' => array(
+      'handler' => 'rsvp_views_handler_field_rsvp_rsvp_send_message',
     ),
   );
   
@@ -186,12 +204,12 @@ function rsvp_views_data() {
     ),
   );
   
-/*  
+/*
   $data['rsvp']['total_rsvps'] = array(
     'title' => t(' Total Invitations'),
     'help' => t('Display total number of Invitations for the node.'),
     'field' => array(
-      'handler' => 'rsvp_views_handler_field_rsvp_total_rsvps',
+      'handler' => 'rsvp_views_handler_field_rsvp_invite_total_invites',
       'click sortable' => true,
     ),
 //          'sort' => array(
@@ -200,7 +218,7 @@ function rsvp_views_data() {
 //        ),
         
   );  
-*/  
+*/ 
   
   
   
@@ -220,6 +238,11 @@ function rsvp_views_data() {
       'name field' => 'name', // the field to display in the summary.
       'numeric' => TRUE,
       'validate type' => 'rid',
+    ),
+    'relationship' => array(
+      'base' => 'rsvp',
+      'handler' => 'views_handler_relationship',
+      'label' => t('rid'),
     ),
 /*
     'filter' => array(
@@ -262,12 +285,48 @@ function rsvp_views_data() {
       'help' => t('Email address of the user who received an invitation.') .' <strong>'. t('WARNING: only expose this data in a view that is restricted to users whom you can trust with such sensitive information.') .'</strong>',
     ),
   );
+  
+  $data['rsvp_invite']['email_prefix'] = array(
+    'real field' => 'email',
+    'title' => t('Invitee email address prefix'),
+    'help' => t('The section of the invitee email before the @ symbol, rendered with punctuation removed.'),
+    'field' => array(
+      'handler' => 'rsvp_views_handler_field_user_mail_prefix',
+      'help' => t('The section of the invitee email before the @ symbol, rendered for human display.'),
+    ),
+  );
 
   $data['rsvp_invite']['hash'] = array(
     'title' => t('Invitee hash'),
     'field' => array(
       'handler' => 'rsvp_views_handler_field_rsvp_invite_hash_link',
       'help' => t('Hash of the user who received an invitation.'),
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_string',
+      'field' => 'hash', // the field to use.
+      'name table' => 'rsvp', // the table to display in the summary.
+      'name field' => 'name', // the field to display in the summary.
+      'validate type' => 'hash',
+      'help' => t('Hash of the user who received an invitation, can be used to filter on invitation pages.'),
+    ),
+  );
+  
+  $data['rsvp_invite']['invitee_remove'] = array(
+    'title' => t('Remove invitee link'),
+    'real field' => 'hash',
+    'field' => array(
+      'handler' => 'rsvp_views_handler_field_rsvp_invite_remove_link',
+      'help' => t('Provide a link to remove the invitee from the event.'),
+    ),
+  );
+  
+  $data['rsvp_invite']['invitee_message'] = array(
+    'title' => t('Message invitee link'),
+    'real field' => 'hash',
+    'field' => array(
+      'handler' => 'rsvp_views_handler_field_rsvp_invite_message_link',
+      'help' => t('Provide a link to send a message to the invitee.'),
     ),
   );
   
@@ -293,8 +352,26 @@ function rsvp_views_data() {
       'label' => t('Response:'),
     ),
   );
-
-/*  
+  
+  $data['rsvp_invite']['timestamp'] = array(
+    'title' => t('Invitation timestamp'),
+    'help' => t('The last time this invitation was updated by either creator or invitee.'),
+    'field' => array(
+      'handler' => 'views_handler_field_date',
+      'click sortable' => TRUE,
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_date',
+      'help' => t('The last time this invitation was updated by either creator or invitee.'),
+      'label' => t('Invitation timestamp'),
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort_date',
+      'help' => t('Sort by the last time this invitation was updated by either creator or invitee.'),
+    ),
+  );
+  
+/* 
   $data['rsvp_invite']['total_invites'] = array(
     'title' => t('Total number of guests'),
     'help' => t('Display total number of guests for all invitations on the node.'),
@@ -307,7 +384,7 @@ function rsvp_views_data() {
 //          ),
 
   );    
-*/  
+*/
 
  
   return $data;
@@ -341,13 +418,27 @@ function rsvp_views_handlers() {
       'rsvp_views_handler_field_rsvp_rid' => array(
         'parent' => 'views_handler_field',
       ),
+      'rsvp_views_handler_field_user_mail_prefix' => array(
+        'parent' => 'views_handler_field',
+      ),
+      'rsvp_views_handler_field_rsvp_invite_remove_link' => array(
+        'parent' => 'views_handler_field',
+      ),
+      'rsvp_views_handler_field_rsvp_invite_message_link' => array(
+        'parent' => 'views_handler_field',
+      ),
+      'rsvp_views_handler_field_rsvp_rsvp_manage_page' => array(
+        'parent' => 'views_handler_field',
+      ),
+      'rsvp_views_handler_field_rsvp_rsvp_send_message' => array(
+        'parent' => 'views_handler_field',
+      ),
       
 /*      'rsvp_views_handler_field_rsvp_total_rsvps' => array(
         'parent' => 'views_handler_field',
       ),
-*/
             
-/*      'rsvp_handler_field_rsvp_invite_total_invites' => array(
+      'rsvp_views_handler_field_rsvp_invite_total_invites' => array(
         'parent' => 'views_handler_field',
       ),
       'rsvp_handler_field_rsvp_invite_total_invites' => array(

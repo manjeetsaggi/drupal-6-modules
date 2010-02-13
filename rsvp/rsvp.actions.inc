@@ -1,5 +1,5 @@
 <?php
-// $Id: rsvp.actions.inc,v 1.2.2.2 2009/02/07 01:10:30 ulf1 Exp $
+// $Id: rsvp.actions.inc,v 1.2.2.3 2009/11/05 22:36:47 ulf1 Exp $
 
 /**
  * @module rsvp_action
@@ -91,7 +91,7 @@ function rsvp_create_invitation_action(&$node, $context = array()) {
 	  
       if ($connector->hasMultipleDatesPerField()) {
         $field = rsvp_function_getFieldforContentType($node->type);
-        $startdate = $connector->get_startdate($node, $field, 0);
+        $startdate = $connector->get_startdateAsHash($node, $field, 0);
       }
 	  
 	  

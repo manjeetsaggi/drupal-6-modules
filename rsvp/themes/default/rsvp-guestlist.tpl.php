@@ -1,5 +1,5 @@
 <?php
-// $Id: rsvp-guestlist.tpl.php,v 1.2.2.5 2009/07/31 23:43:55 ulf1 Exp $
+// $Id: rsvp-guestlist.tpl.php,v 1.2.2.6 2009/11/05 22:36:47 ulf1 Exp $
 
 /**
  * @file rsvp-guestlist.tpl.php
@@ -60,7 +60,7 @@
           <div class="rsvp_form_content rsvp_guestlist_whoiscoming rsvp_color_inner">
             <?php if ($is_anonymous): ?>
               <div>
-                <?php print t('Please sign-in to display eventually more details about other invitees.') ?>
+                <?php print t('Please sign-in to display more details about other invitees.') ?>
               </div><br />
             <?php endif; ?>
             <b><?php print $text_whoiscoming ?></b><br />

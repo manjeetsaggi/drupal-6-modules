@@ -1,3 +1,19 @@
+12/23/09: added by muhleder-[#547990,#583498] additional view additions.
+
+12/23/09: added by jcmarco-[#658790] added vertical tab support for Drupal 7.
+
+11/16/09: added number of guests to CSV export file.
+
+11/02/09: fixed by ulf1- [#2219464] Fixed handling for events that have no enddate set.
+                                    If you use "rsvp event connector", please disable, store and enable "rsvp event connector" again.
+                                    Fixed handling for reply_start and reply_end fields.
+
+10/27/09: fixed by ulf1- [#613890] function rsvp_function_load_guests creating invalid SQL for PostgreSQL
+
+10/13/09: fixed by ulf1- [#517462] fixing "Warning: Illegal offset type in isset or empty" errors when deleting nodes containing invitations.
+10/13/09: fixed by ulf1- [#583448] event with an optional 'to date' caused php error in rare situations
+10/13/09: fixed by ulf1- [#599034]  Invitations tab does not appear under some circumstances.
+
 8/22/09: fixed by ulf1- [#523980] Schema reports errors in table setup
                         Uninstall and reinstall of rsvp module will apply the fix (loss of data).
 8/22/09: fixed by ulf1- [#555270] "Trying to get property of non-object" errors when enabling RSVP.

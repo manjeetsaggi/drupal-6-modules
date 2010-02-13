@@ -1,5 +1,5 @@
 <?php
-// $Id: rsvp.api.inc,v 1.2.2.4 2009/03/01 22:26:13 ulf1 Exp $
+// $Id: rsvp.api.inc,v 1.2.2.6 2009/11/05 22:36:47 ulf1 Exp $
 
 /**
  * @module rsvp_api
@@ -58,13 +58,13 @@ function rsvp_api_create_invitation($nid, $invite_text, $startdate) {
         $count = $connector->get_datecount($node, $field);
         if ($count == 1) {
           //if count = 1 ignore parameter startdate completely because there is only one startdate
-          $rsvp->startdate = $connector->get_startdate($node, $field, 0);
+          $rsvp->startdate = $connector->get_startdateAsHash($node, $field, 0);
         }
         else {
           $do_create = false;
           //iterate through all specified startdates (in case of repeating dates)
           for ($i = 0; $i < $count; $i++) {
-            $key = $connector->get_startdate($node, $field, $i);
+            $key = $connector->get_startdateAsHash($node, $field, $i);
 
             if ($key == $startdate) {
               $rsvp->startdate = $key;
@@ -136,7 +136,8 @@ function rsvp_api_remove_invitation($rid, $nid) {
         if ($perm_del == true) {
           $success = rsvp_function_delete_rsvp($rsvp->rid);
           if ($success == true) {
-            drupal_set_message(t('Invitation %rsvp_name(%rid) has been removed successfully.'), array('%rsvp_name' => $rsvp->name, '%rid' => $rsvp->rid));
+            //if this function is called by nodeapi when deleting a node, drupal_set_message generates illegal offset errors.
+            //drupal_set_message(t('Invitation %rsvp_name(%rid) has been removed successfully.'), array('%rsvp_name' => $rsvp->name, '%rid' => $rsvp->rid));
             watchdog('action', 'Removed invitation %rsvp_name(%rid) successfully.', array('%rsvp_name' => $rsvp->name, '%rid' => $rsvp->rid)); 
           }
         }

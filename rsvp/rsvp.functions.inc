@@ -1,6 +1,6 @@
 <?php
 
-// $Id: rsvp.functions.inc,v 1.3.2.14 2009/07/08 18:55:52 ulf1 Exp $
+// $Id: rsvp.functions.inc,v 1.3.2.16 2009/11/05 22:36:47 ulf1 Exp $
 
 /**
  * @module rsvp_functions
@@ -146,6 +146,15 @@ define('RSVP_VAR_CONTENT_TYPES', 'rsvp_content_types');
 define('RSVP_VAR_CONNECTOR', 'rsvp_connector');
 
 
+define('RSVP_OPTION_OPENINVITATION',           0x00000001); //Can other registered users signup to the invitation
+define('RSVP_OPTION_DISABLE_MAYBE',            0x00000002); //Allow maybe as answer or not.
+define('RSVP_OPTION_REPLY_STARTDATE_ENABLED',  0x00000004); //is reply startdate enabled.
+define('RSVP_OPTION_REPLY_ENDDATE_ENABLED',    0x00000008); //is reply enddate enabled.
+define('RSVP_OPTION_SEND_PRIVATEMSG',          0x00000010); //Send emails by privatemsg for registered users.
+define('RSVP_OPTION_SEND_CONF_OWNER',          0x00000020); //Send confirmation emails to owner when guest replies.
+define('RSVP_OPTION_SEND_CONF_GUEST',          0x00000040); //Send confirmation emails to guest when he replies.
+
+
 /**
  * RSVP SELECT Query statements that we use for all types of queries
  */
@@ -173,7 +182,7 @@ function rsvp_function_create_rsvp($rsvp) {
   $vals[] = $user->uid;
   $markers[] = "%d";
   
-  foreach (array('nid', 'uid_moderator', 'reply_startdate', 'reply_enddate', 'max_guests', 'open_invitation', 'disable_maybe', 'send_privatemsg', 'send_conf_guest', 'send_conf_owner', 'invite_filterformat') as $key) {
+  foreach (array('nid', 'uid_moderator', 'reply_startdate', 'reply_enddate', 'max_guests', 'option_enabled', 'invite_filterformat') as $key) {
     $fields[] = $key;
     $vals[] = $rsvp->$key;
     $markers[] = "%d";
@@ -219,7 +228,7 @@ function rsvp_function_update_rsvp($rsvp) {
   $fields[] = 'timestamp = %d';
   $vals[] = time();
 
-  foreach (array('nid', 'uid', 'uid_moderator', 'reply_startdate', 'reply_enddate', 'max_guests', 'open_invitation', 'disable_maybe', 'send_privatemsg', 'send_conf_guest', 'send_conf_owner','invite_filterformat') as $key) {
+  foreach (array('nid', 'uid', 'uid_moderator', 'reply_startdate', 'reply_enddate', 'max_guests', 'option_enabled', 'invite_filterformat') as $key) {
     $fields[] = $key ." = %d";
     $vals[] = $rsvp->$key;
   }
@@ -398,12 +407,15 @@ function rsvp_function_load_invitation_hash($hash) {
 */
 function rsvp_function_load_guests($rid, $status = RSVP_ATT_ALL, $count = FALSE, $tablesort = ' ORDER BY u.email') {
 
+  if ($count == TRUE)
+    $tablesort = '';
+    
 	if ($status == RSVP_ATT_ALL || !isset($status))
     //US orig $result = db_query('SELECT '. ($count ? 'SUM(totalguests)' : 'u.*,n.realname,us.name as username') .' FROM {rsvp_invite} u LEFT JOIN {users} us ON u.uid = us.uid LEFT JOIN {rsvp_realname} n ON u.email = n.email WHERE u.rid = %d ' . $tablesort, $rid);
     $result = db_query('SELECT '. ($count ? 'SUM(totalguests)' : RSVP_QUERY_FIELDS_rsvp_invite) .' FROM ' . RSVP_QUERY_FROM_rsvp_invite . ' WHERE u.rid = %d ' . $tablesort, $rid);
   else
     //US orig $result = db_query('SELECT '. ($count ? 'SUM(totalguests)' : 'u.*,n.realname,us.name as username') .' FROM {rsvp_invite} u LEFT JOIN {users} us ON u.uid = us.uid LEFT JOIN {rsvp_realname} n ON u.email = n.email WHERE u.rid = %d AND response=\'%s\'' . $tablesort, $rid, $status);
-    $result = db_query('SELECT '. ($count ? 'SUM(totalguests)' : RSVP_QUERY_FIELDS_rsvp_invite) .' FROM ' . RSVP_QUERY_FROM_rsvp_invite . ' WHERE u.rid = %d AND u.response=\'%s\'' . $tablesort, $rid, $status);
+    $result = db_query('SELECT '. ($count ? 'SUM(totalguests)' : RSVP_QUERY_FIELDS_rsvp_invite) .' FROM ' . RSVP_QUERY_FROM_rsvp_invite . ' WHERE u.rid = %d AND u.response=\'%s\' ' . $tablesort, $rid, $status);
     
   if ($result == false) {
     drupal_set_message(t('The invitation you requested (rid=%rid) is invalid or has been deleted.', array('%rid' => $rid)));
@@ -600,23 +612,69 @@ function rsvp_function_initialize_default_rsvp() {
   $rsvp->list_email = variable_get('rsvp_default_list_email', RSVP_SEND_NONE);
   $rsvp->allow_invite = variable_get('rsvp_default_allow_invite', RSVP_INVITE_NONE);
 
-  $rsvp->send_conf_owner = variable_get('rsvp_default_send_conf_owner', RSVP_OPTION_NO);
-  $rsvp->send_conf_guest = variable_get('rsvp_default_send_conf_guest', RSVP_OPTION_NO);
-  $rsvp->send_privatemsg = variable_get('rsvp_default_send_privatemsg', RSVP_OPTION_NO);
-  $rsvp->disable_maybe = variable_get('rsvp_default_disable_maybe', RSVP_OPTION_NO);
-  $rsvp->open_invitation = variable_get('rsvp_default_open_invitation', RSVP_OPTION_NO);
   $rsvp->max_guests = variable_get('rsvp_default_max_guests', 0);
   $rsvp->theme = variable_get('rsvp_default_theme', RSVP_THEME_DEFAULT);
   $rsvp->stylesheet = variable_get('rsvp_default_stylesheet', RSVP_STYLESHEET_DEFAULT);
   $rsvp->iconset = variable_get('rsvp_default_iconset', RSVP_ICONSET_DEFAULT);
   $rsvp->backgroundimage = variable_get('rsvp_default_backgroundimage', RSVP_BACKGROUNDIMAGE_DEFAULT);
   $rsvp->image = variable_get('rsvp_default_image', RSVP_IMAGE_DEFAULT);
+  $rsvp->option_enabled = variable_get('rsvp_default_option_enabled', 0);
+    
+  $rsvp->reply_startdate = 0;
+  $rsvp->reply_enddate = 0;
   
   $rsvp->invite_filterformat = FILTER_FORMAT_DEFAULT;
   
   return $rsvp; 
 }
 
+/**
+ * Internal function
+ * 
+ * Sets a bit on a int field based on the passed information
+ * 
+ * Permission check needs to be done outside.
+ *
+ * @ingroup rsvp_functions
+ *
+ * @param &$variable reference to an int variable.
+ * @param $option_bit  The bit we want to work with.
+ * @param $value  can be either RSVP_OPTION_NO or RSVP_OPTION_YES (we test for != 0 internally 
+ *
+ */
+function _rsvp_function_setbit(&$variable, $option_bit, $value) {
+
+  if (($value == 0) || ($value == RSVP_OPTION_NO)) {
+    $variable = $variable & ~$option_bit; 
+  }
+  else if (($value > 0) || ($value == RSVP_OPTION_YES)) {
+    $variable = $variable | $option_bit;
+  }
+  
+  
+}
+
+/**
+ * Internal function
+ * 
+ * Checks a bit on a int field based on the passed information
+ * 
+ * Permission check needs to be done outside.
+ *
+ * @ingroup rsvp_functions
+ *
+ * @param $variable int variable.
+ * @param $option_bit  The bit we want to work with.
+ *
+ * @return RSVP_OPTION_NO or RSVP_OPTION_YES
+ */
+function _rsvp_function_checkbit($variable, $option_bit) {
+
+  if (($variable & $option_bit) > 0)
+    return RSVP_OPTION_YES;
+  else
+    return RSVP_OPTION_NO;
+}
 
 /**
  * Internal function
@@ -1610,6 +1668,9 @@ function rsvp_function_is_expired($node, $rsvp = NULL) {
   if (is_null($node))
     return true;
 
+  if (variable_get('rsvp_for_expired_event', RSVP_OPTION_NO) == RSVP_OPTION_YES)
+    return false;
+    
   $now = time();
     
   $field = $connector->get_event_field($node->type);
@@ -1618,15 +1679,21 @@ function rsvp_function_is_expired($node, $rsvp = NULL) {
     $allExpired = true;
     //debug $end_dates = array();
     $count = $connector->get_datecount($node, $field);
-    //iterate through all specified enddates (in case of repeating dates)
+    //iterate through all specified enddates (in case of repeating dates) to find at least one with enddate.
     //debug $end_dates[] = array('current time stamp' => $time, 'current time readable' => date('r', $time) );
     for ($i = 0; $i < $count; $i++) {
-      $t2 = $connector->get_enddate($node, $field, $i);
-      //debug $end_dates[] = array('field' => $field, 'stamp' => $t2, 'readable' => date('r', $t2) );
+      if ($connector->has_enddate($node, $field, $i)) {
+        $t2 = $connector->get_enddateAsUTC($node, $field, $i);
+        //debug $end_dates[] = array('field' => $field, 'stamp' => $t2, 'readable' => date('r', $t2) );
           
-      if ($t2 > $now) {
-        $allExpired = false;
-        break;
+        if ($t2 > $now) {
+          $allExpired = false;
+          break;
+        }
+      }
+      else {
+          $allExpired = false;
+          break;
       }
     }
     //debug var_dump($allExpired, $end_dates);
@@ -1636,16 +1703,17 @@ function rsvp_function_is_expired($node, $rsvp = NULL) {
   }
   else {
     $pos = $connector->get_posByHash($node, $field, $rsvp->startdate);
-  
-    return ($now > $connector->get_enddate($node, $field, $pos));
-    
+    if ($connector->has_enddate($node, $field, $pos))
+      return ($now > $connector->get_enddateAsUTC($node, $field, $pos));
+    else
+      return false;
   }
   
 }
 
 /**
  * Verifies if a user can reply to a rsvp at this time or not.
- *
+ * We use the highest bit to determine if we use the reply dates at this point or not.
  * @ingroup rsvp_functions
  *  
  * Permission check needs to be done outside.
@@ -1656,17 +1724,22 @@ function rsvp_function_is_expired($node, $rsvp = NULL) {
  */
 function rsvp_function_is_replypermitted($rsvp) {
   
-  $connector = new RsvpConnector();
-
   $now = time();
 
-  if (($now >= $rsvp->reply_startdate) && 
-      ($now <= $rsvp->reply_enddate))
-    return true;
-    
-  return false;
+  if (_rsvp_function_checkbit($rsvp->option_enabled, RSVP_OPTION_REPLY_STARTDATE_ENABLED) == RSVP_OPTION_YES) {
+    if ($now < $rsvp->reply_startdate) {
+      return false;
+    }
+  }
+  
+  if (_rsvp_function_checkbit($rsvp->option_enabled, RSVP_OPTION_REPLY_ENDDATE_ENABLED) == RSVP_OPTION_YES) {
+      if ($now > $rsvp->reply_enddate) {
+        return false;
+    }
+  }
+  
+  return true;
 }
-
 
 /**
  * Verifies if a user (by role) is entitled to view an invitation or not.
@@ -2104,9 +2177,6 @@ function rsvp_function_create_invitation_access($connector, $node, $access, $add
     return false;
 
   $allExpired = rsvp_function_is_expired($node);
-  if (variable_get('rsvp_for_expired_event', RSVP_OPTION_NO) == RSVP_OPTION_YES) {
-    $allExpired = false;
-  }
     
   if (!is_null($addtlparam)) {  
     $addtlperm = user_access($addtlparam);

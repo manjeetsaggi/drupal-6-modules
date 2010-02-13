@@ -1,6 +1,6 @@
 <?php
 
-// $Id: rsvp.form.inc,v 1.3.2.6 2009/08/14 22:02:54 ulf1 Exp $
+// $Id: rsvp.form.inc,v 1.3.2.7 2009/11/05 22:36:47 ulf1 Exp $
 
 /**
  * @module rsvp_form
@@ -441,7 +441,7 @@ function rsvp_form_element_reply_blind_node($rsvp, $field_attr = array()) {
 
 /////////////////////////
 /**
-* Displays the 'Send confirmation message to host when gues replies' form element to set $rsvp->send_conf_owner
+* Displays the 'Send confirmation message to host when gues replies' form element to set $rsvp->option_enabled | RSVP_OPTION_SEND_CONF_OWNER
 *
 * @ingroup rsvp_form
 * @param $rsvp The rsvp instance to display.
@@ -458,13 +458,13 @@ function rsvp_form_element_send_conf_owner($rsvp, $field_attr = array()) {
     '#type' => 'select',
     '#title' => t('Send confirmation message to organizer when guest replies'),
     '#options' => array_map('check_plain', $send_confimation),
-    '#default_value' => $rsvp->send_conf_owner,
+    '#default_value' => (_rsvp_function_checkbit($rsvp->option_enabled, RSVP_OPTION_SEND_CONF_OWNER) == RSVP_OPTION_YES) ? 1 : 0,
     '#description' => t(''),
   ));
 }
 
 /**
-* Displays the 'Send confirmation message to guest when he replies' form element to set $rsvp->send_conf_guest
+* Displays the 'Send confirmation message to guest when he replies' form element to set $rsvp->option_enabled | RSVP_OPTION_SEND_CONF_GUEST
 *
 * @ingroup rsvp_form
 * @param $rsvp The rsvp instance to display.
@@ -481,13 +481,13 @@ function rsvp_form_element_send_conf_guest($rsvp, $field_attr = array()) {
     '#type' => 'select',
     '#title' => t('Send confirmation message to guest when he replies'),
     '#options' => array_map('check_plain', $send_confimation),
-    '#default_value' => $rsvp->send_conf_guest,
+    '#default_value' => (_rsvp_function_checkbit($rsvp->option_enabled, RSVP_OPTION_SEND_CONF_GUEST) == RSVP_OPTION_YES) ? 1 : 0,
     '#description' => t(''),
   ));
 }
 
 /**
-* Displays the 'Send messages to registered guests by privatemsg' form element to set $rsvp->send_privatemsg
+* Displays the 'Send messages to registered guests by privatemsg' form element to set $rsvp->option_enabled | RSVP_OPTION_SEND_PRIVATEMSG
 *
 * @ingroup rsvp_form
 * @param $rsvp The rsvp instance to display.
@@ -504,13 +504,13 @@ function rsvp_form_element_send_privatemsg($rsvp, $field_attr = array()) {
     '#type' => 'select',
     '#title' => t('Send messages to registered guests by privatemsg if possible'),
     '#options' => array_map('check_plain', $send_privatemsg),
-    '#default_value' => $rsvp->send_privatemsg,
+    '#default_value' => (_rsvp_function_checkbit($rsvp->option_enabled, RSVP_OPTION_SEND_PRIVATEMSG) == RSVP_OPTION_YES) ? 1 : 0,
     '#description' => t(''),
   ));
 }
 
 /**
-* Displays the 'Answer \'Maybe\' disabled' form element to set $rsvp->disable_maybe
+* Displays the 'Answer \'Maybe\' disabled' form element to set $rsvp->option_enabled | RSVP_OPTION_DISABLE_MAYBE
 *
 * @ingroup rsvp_form
 * @param $rsvp The rsvp instance to display.
@@ -527,7 +527,7 @@ function rsvp_form_element_disable_maybe($rsvp, $field_attr = array()) {
     '#type' => 'select',
     '#title' => t('Display answer option \'Maybe\''),
     '#options' => array_map('check_plain', $disable_maybe),
-    '#default_value' => $rsvp->disable_maybe,
+    '#default_value' => (_rsvp_function_checkbit($rsvp->option_enabled, RSVP_OPTION_DISABLE_MAYBE) == RSVP_OPTION_YES) ? 1 : 0,
     '#description' => t('When guests reply to invitations, they may choose \'Yes\', \'No\', or \'Maybe\' as their response. If you do not wish to offer the \'Maybe\' option, set this option to \'Hide\''),
   
   
@@ -535,7 +535,7 @@ function rsvp_form_element_disable_maybe($rsvp, $field_attr = array()) {
 }
 
 /**
-* Displays the 'Open invitation' form element to set $rsvp->open_invitation
+* Displays the 'Open invitation' form element to set $rsvp->option_enabled | RSVP_OPTION_OPENINVITATION
 *
 * @ingroup rsvp_form
 * @param $rsvp The rsvp instance to display.
@@ -552,7 +552,7 @@ function rsvp_form_element_open_invitation($rsvp, $field_attr = array()) {
     '#type' => 'select',
     '#title' => t('Open invitation'),
     '#options' => array_map('check_plain', $open_invitation),
-    '#default_value' => $rsvp->open_invitation,
+    '#default_value' => (_rsvp_function_checkbit($rsvp->option_enabled, RSVP_OPTION_OPENINVITATION) == RSVP_OPTION_YES) ? 1 : 0,
     '#description' => t('Select if invitation is open to uninvited guests. If you select \'yes\', you have to select roles under \'Invitation message - view permissions\' to make the invitation visible to those uninvited guests to begin with. Only authenticated persons can signup to open invitations. Anonymous users are not permitted.'),
   ));
 }
@@ -589,24 +589,51 @@ function rsvp_form_element_max_guests($rsvp, $field_attr = array()) {
 */
 function rsvp_form_element_reply_startdate($rsvp, $field_attr = array()) {
 
-	$date_local = $rsvp->reply_startdate;
-	return array_merge($field_attr, array(
+  $date_local = $rsvp->reply_startdate;
+  
+  $reply_start_field = array(
     '#type' => 'date',
     '#title' => t('Reply start date'),
     '#default_value' => array('year' => (int) date('Y',$date_local ), 'month' => (int) date('m',$date_local ), 'day' => (int) date('d',$date_local ) ),
     '#description' => t('Specify the start date of a time window guests can reply to the invitation.'),
 /*    '#description' => ' <br /> sd1:' . $rsvp->reply_startdate 
                        . ' <br /> sd2:' . date('r', $rsvp->reply_startdate)
-	                     . ' <br /> sd3:' . format_date($rsvp->reply_startdate, 'custom', 'U')
+                       . ' <br /> sd3:' . format_date($rsvp->reply_startdate, 'custom', 'U')
                        . ' <br /> sd4:' . format_date($rsvp->reply_startdate, 'custom')
                        . ' <br /> sd5:' . format_date($rsvp->reply_startdate, 'custom', 'r')
                        . ' <br /> sd6:' . format_date($rsvp->reply_startdate, 'small', 'U')
-	                     . ' <br /> sd7:' . format_date($rsvp->reply_startdate, 'small'),
-*/	
-	
-	
-	  '#required' => FALSE
-  ));  
+                       . ' <br /> sd7:' . format_date($rsvp->reply_startdate, 'small'),
+*/  
+  
+  
+    '#required' => FALSE,
+  
+  );
+      
+  
+	return array_merge($field_attr, $reply_start_field);  
+
+}  
+
+/**
+* Displays the 'Reply start date option' form element to set $rsvp->option_enabled | RSVP_OPTION_REPLY_STARTDATE_ENABLED
+*
+* @ingroup rsvp_form
+* @param $rsvp The rsvp instance to display.
+*  
+* @return $form array.
+*
+*/
+function rsvp_form_element_reply_startdate_option($rsvp, $field_attr = array()) {
+
+  $reply_start_option = array(
+        '#type' => 'checkbox',
+        '#title' => t('Invitation has reply start date'),
+        '#default_value' => (_rsvp_function_checkbit($rsvp->option_enabled, RSVP_OPTION_REPLY_STARTDATE_ENABLED) == RSVP_OPTION_YES) ? 1 : 0,
+        '#description' => t('Check if you want to specify a reply start date for this invitation, then choose reply start date below.')
+      );
+  
+  return array_merge($field_attr, $reply_start_option);  
 
 }  
 
@@ -628,9 +655,31 @@ function rsvp_form_element_reply_enddate($rsvp, $field_attr = array()) {
     '#title' => t('Reply end date'),
     '#default_value' => array('year' => (int) date('Y', $date_local ), 'month' => (int) date('m', $date_local ), 'day' => (int) date('d', $date_local )),
     '#description' => t('Specify the end date of a time window guests can reply to the invitation.'),
-    '#required' => FALSE
+    '#required' => FALSE,
     ));  
     
+}  
+
+/**
+* Displays the 'Reply start date option' form element to set $rsvp->option_enabled | RSVP_OPTION_REPLY_ENDDATE_ENABLED
+*
+* @ingroup rsvp_form
+* @param $rsvp The rsvp instance to display.
+*  
+* @return $form array.
+*
+*/
+function rsvp_form_element_reply_enddate_option($rsvp, $field_attr = array()) {
+
+  $reply_end_option = array(
+        '#type' => 'checkbox',
+        '#title' => t('Invitation has reply end date'),
+        '#default_value' => (_rsvp_function_checkbit($rsvp->option_enabled, RSVP_OPTION_REPLY_ENDDATE_ENABLED) == RSVP_OPTION_YES) ? 1 : 0,
+        '#description' => t('Check if you want to specify a reply end date for this invitation, then choose reply end date below.')
+      );
+  
+  return array_merge($field_attr, $reply_end_option);  
+
 }  
 
 

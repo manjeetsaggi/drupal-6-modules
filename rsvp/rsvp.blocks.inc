@@ -1,5 +1,5 @@
 <?php
-// $Id: rsvp.blocks.inc,v 1.2.2.4 2009/08/14 22:02:54 ulf1 Exp $
+// $Id: rsvp.blocks.inc,v 1.2.2.6 2009/11/17 05:52:24 ulf1 Exp $
 
 /**
  * @module rsvp_blocks
@@ -95,7 +95,7 @@ function rsvp_block_toolbox_host() {
 	
       $links[] = l(t('Remove guests'), 'rsvp/'. $rsvp->rid .'/attendees', array('attributes' => array('title' => t('Remove guests from the invitation.'))));
       $links[] = l(t('Add guests'), 'rsvp/'. $rsvp->rid .'/attendees', array('attributes' => array('title' => t('Add more guests to the invitation.'))));
-      if ($rsvp->send_conf_owner != RSVP_OPTION_YES)
+      if (_rsvp_function_checkbit($rsvp->option_enabled, RSVP_OPTION_SEND_CONF_OWNER) == RSVP_OPTION_YES)
         $links[] = l(t('Email me when guests reply'), 'rsvp/'. $rsvp->rid .'/msg_moderator', array('attributes' => array('title' => t('Enable notification messages for the event organizer(host).'))));
 
       $links[] = l(t('Export guest list'), 'rsvp/'. $rsvp->rid .'/attendees/csv', array('attributes' => array('title' => t('Export guest list into csv format.'))));
@@ -122,7 +122,7 @@ function rsvp_block_toolbox_guest() {
   $invite_hash = arg(2);
   $is_invite_hash = (arg(0)=='rsvp') && (arg(1)=='email') && isset($invite_hash);
 
-  if ( $is_invite_hash && $invite_hash ) {
+  if ( $is_invite_hash ) {
     $connector = new RsvpConnector();
 
     $invite_target = rsvp_function_load_invitation_hash($invite_hash);
@@ -136,7 +136,7 @@ function rsvp_block_toolbox_guest() {
       
     list($perm_reply, $perm_guest) = rsvp_function_invitation_by_invite_accessarray($connector, $rsvp, $invite_target, NULL, array(RSVP_ACCESS_REPLY, RSVP_ACCESS_GUEST), NULL);
 
-    // show only content for the toolbox only if we are the guest itself.
+    // show only content for the toolbox if we are the guest itself.
     if ($perm_guest == true) 
     {
       $perm_export = rsvp_csv_hash_form_access($connector, $rsvp, $invite_target);

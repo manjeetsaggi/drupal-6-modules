@@ -142,7 +142,7 @@ Theme enhancements.
 ----------------------------------
 Administrators now can create their own RSVP templates, stylesheets and iconsets that can be used 
 to display future invitations. You either can add stylesheets to an existing template to support 
-a different color scheme or styles. If that is not enough you can add your own templates to rsvp.
+a different color scheme or style. If that is not enough you can add your own templates to rsvp.
 RSVP comes with one build in theme and stylesheet which is called default and is located 
 in subfolder modules\rsvp\themes\default and you can use those files as template for your own styles.
 
@@ -154,7 +154,7 @@ the extension is the style that is being displayed when creating an rsvp.
 
 -To create an additional stylesheet "dream" for your nexus template, copy one of the existing .css files 
 from folder sites\default\files\rsvp\temes\nexus and rename it to dream.css. Then change the content 
-of dream.css to your likings.
+of dream.css to fit your requirements.
 
 -To create your own iconset, with name "moon", create a folder sites\default\files\rsvp\icons\moon, 
 then copy all the icon files from modules\rsvp\icons\flags into the newly created moon subfolder. The
@@ -166,6 +166,10 @@ then copy your images into the folder that you want use as background for your i
 
 -To add your own images, create a folder sites\default\files\rsvp\images, then copy your images 
 into the folder that you want use as images that are being displayed with your invitation.
+
+-Each invitation stores its utilized theme, stylesheet file, iconset, images and background.
+Therefore, when you implement new styles, you have to change existing invitations to reflect your new style.
+
 
 Terminology:
 -----------------------

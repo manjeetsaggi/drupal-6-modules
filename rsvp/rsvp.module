@@ -1,5 +1,5 @@
 <?php
-// $Id: rsvp.module,v 1.22.2.38 2009/08/23 05:53:51 ulf1 Exp $
+// $Id: rsvp.module,v 1.22.2.41 2009/11/17 05:52:24 ulf1 Exp $
 
 /**
  * @module rsvp
@@ -706,9 +706,6 @@ function rsvp_overview_created_form(&$form_state, $node = NULL, $usr = NULL) {
   //check if there is at least one date that has not been expired. 
   if (!$allNodes) {
     $allExpired = rsvp_function_is_expired($node);
-
-    if (variable_get('rsvp_for_expired_event', RSVP_OPTION_NO) == RSVP_OPTION_YES)
-      $allExpired = false;
   }
 
   //fill array with invitations
@@ -913,8 +910,7 @@ function rsvp_overview_created_form_access($connector, $node, $usr) {
     if (is_null($usr)) {
       //if usr and node is null we assume that we are a moderator. Lets check it here.
       $perm_maintain = rsvp_function_invitation_by_invite_access($connector, NULL, NULL, NULL, RSVP_ACCESS_MAINTAIN, NULL);
-      if ($perm_maintain == false)
-        return false;
+      return $perm_maintain;
     }
     else {
       global $user;
@@ -1440,23 +1436,23 @@ function rsvp_overview_form_access($connector, $usr, $node) {
   if ($perm_create == true)
     return true;
   
-  //check if user has been invited to any invitation for this node. If we have more then 2 invitations, show the form  
+  //check if user has been invited to any invitation for this node.
   $nid2inviteslist = rsvp_load_invited($node, $usr);
   $counter = 0;
   foreach ($nid2inviteslist as $nid => $inviteslist) {
     $counter += (count($inviteslist));
   }
-  if ($counter > 1) 
+  if ($counter > 0) 
     return true;
 
     
-  //check if user has view permissions to invitations for this node. If we have more then 2 invitations, show the form  
+  //check if user has view permissions to invitations for this node.  
   $nid2rsvplist = rsvp_load_visibleinvitations($node, $usr);
   $counter = 0;
   foreach ($nid2rsvplist as $nid => $rsvplist) {
     $counter += (count($rsvplist));
   }
-  if ($counter > 1) 
+  if ($counter > 0) 
     return true;
 
   return false;
@@ -2367,7 +2363,7 @@ function rsvp_csv_hash_form(&$form_state, $rsvp, $invite_target) {
   $form = array();
   	
   //fields to export
-  $field_list = array( 'response', 'email', 'invited', 'received' );
+  $field_list = array( 'response', 'email', 'invited', 'received', 'totalguests' );
 
   if (is_null($rsvp)) {
     $rid = $invite_target->rid;
@@ -2749,7 +2745,7 @@ function rsvp_reply_form(&$form_state, $rsvp, $invite_target) {
   $first_reply = false;
   
   $responses = array(RSVP_ATT_YES => t('Yes'), RSVP_ATT_NO => t('No'));
-  if ($rsvp->disable_maybe == RSVP_OPTION_NO) {
+  if (_rsvp_function_checkbit($rsvp->option_enabled, RSVP_OPTION_DISABLE_MAYBE) == RSVP_OPTION_NO) {
     $responses[RSVP_ATT_MAYBE] = t('Maybe');
   }
   if ($invite_target->response == RSVP_ATT_NONE) {
@@ -2798,9 +2794,31 @@ function rsvp_reply_form(&$form_state, $rsvp, $invite_target) {
       );
 
   if ($disabled == true) {
+    $reply_start = false;
+    $reply_end = false;
+    
+    $msg = t('You can not change your response at this time.');
+    $dt_start = format_date($rsvp->reply_startdate, 'custom', 'm/d/Y');
+    $dt_end = format_date($rsvp->reply_enddate, 'custom', 'm/d/Y');
+        
+    if (_rsvp_function_checkbit($rsvp->option_enabled, RSVP_OPTION_REPLY_STARTDATE_ENABLED) == RSVP_OPTION_YES)
+      $reply_start = true;
+
+    if (_rsvp_function_checkbit($rsvp->option_enabled, RSVP_OPTION_REPLY_ENDDATE_ENABLED) == RSVP_OPTION_YES)
+      $reply_end = true;
+
+      
+    if (($reply_start == true) && ($reply_end == true))
+      $msg = t('You can not change your response at this time.<br />You can reply to the invitation only between !start and !end.', array('!start' => $dt_start,'!end' => $dt_end));
+    else if (($reply_start == true) && ($reply_end == false))
+      $msg = t('You can not change your response at this time.<br />You can reply to the invitation only after !start.', array('!start' => $dt_start));
+    else if (($reply_start == false) && ($reply_end == true))
+      $msg = t('You can not change your response at this time.<br />You can reply to the invitation only before !end.', array('!end' => $dt_end));
+      
+      
     $form['reply_text1'] = array(
       '#prefix' => '<b><div class="rsvp_form_content rsvp_reply_form_content rsvp_color_inner">',
-      '#value' => t('You can not change your response at this time.<br />You can reply to the invitation only between !start and !end.', array('!start' => format_date($rsvp->reply_startdate, 'custom', 'm/d/Y'),'!end' => format_date($rsvp->reply_enddate, 'custom', 'm/d/Y'))),
+      '#value' => $msg,
       '#suffix' => '</b><br /><br /></div>',
     );
   }
@@ -2935,8 +2953,8 @@ function rsvp_reply_form_submit($form, &$form_state) {
   //send confirmation emails
   if ($is_own_invitation == true) {
   	// send confirmations only if guest himself makes the changes.
-  	if ($rsvp->send_conf_guest == RSVP_OPTION_YES) {
-  		$subject = t('Your response to the invitation has been changed');
+    if (_rsvp_function_checkbit($rsvp->option_enabled, RSVP_OPTION_SEND_CONF_GUEST) == RSVP_OPTION_YES) {
+      $subject = t('Your response to the invitation has been changed');
       $body = t('This is a confirmation email that your response to the invitation has been updated.<br />&nbsp;<br />&nbsp;<br />&nbsp;<br />');
       $body .= rsvp_function_guest_status($rsvp, $invite_target);
       
@@ -2944,7 +2962,7 @@ function rsvp_reply_form_submit($form, &$form_state) {
       rsvp_function_send_message_guest($rsvp, $invite_target->hash, 'notification_guest', $subject, $body, NULL);
   	}
 
-    if ($rsvp->send_conf_owner == RSVP_OPTION_YES) {
+    if (_rsvp_function_checkbit($rsvp->option_enabled, RSVP_OPTION_SEND_CONF_OWNER) == RSVP_OPTION_YES) {
       //send confirmation but do not update "send status" on screen.
       $subject = t('!name has changed his response to the invitation', array('!name' => $target_name));
       $body = t('This is a confirmation email that the user updated the response to his invitation.<br />&nbsp;<br />&nbsp;<br />&nbsp;<br />');
@@ -3027,6 +3045,9 @@ function rsvp_addedit_form(&$form_state, $node = NULL, $rsvp = NULL) {
   //first set the stylesheet based on the setting.
   $stylesheet_file = rsvp_function_getStylesheet($rsvp->theme, $rsvp->stylesheet);
   drupal_add_css($stylesheet_file, 'module', 'all', TRUE);
+
+  //add javascript to support expandable selections
+  drupal_add_js(drupal_get_path('module', 'rsvp') .'/rsvp_edit.js');
   
   $form = array();
   $fields = array();
@@ -3080,14 +3101,17 @@ function rsvp_addedit_form(&$form_state, $node = NULL, $rsvp = NULL) {
     $count = $connector->get_datecount($node, $field);
     //iterate through all specified startdates (in case of repeating dates)
     for ($i = 0; $i < $count; $i++) {
-        $key = $connector->get_startdate($node, $field, $i);
+        $key = $connector->get_startdateAsHash($node, $field, $i);
         $value = $connector->get_startdateAsString($node, $field, $i);
-        //only add dates to the select box that can be selected (are not expired
-        if (variable_get('rsvp_for_expired_event', RSVP_OPTION_NO) == RSVP_OPTION_YES) {
-          $fields[$key] = $value . ' - ' .$key;
+        //only add dates to the select box that can be selected (not expired events)
+        if (variable_get('rsvp_for_expired_event', RSVP_OPTION_NO) == RSVP_OPTION_YES ||           
+              $connector->has_enddate($node, $field, $i) == false)
+        {
+          //debug: $fields[$key] = $value . ' - ' .$key;
+          $fields[$key] = $value;
         }
         else {
-          $enddate = $connector->get_enddate($node, $field, $i);
+          $enddate = $connector->get_enddateAsUTC($node, $field, $i);
           if ($enddate > $now) {
             $fields[$key] = $value;
           }
@@ -3217,7 +3241,9 @@ function rsvp_addedit_form(&$form_state, $node = NULL, $rsvp = NULL) {
     );
 
     $form['rsvp_addedit_form']['rsvp_field_4']['disable_maybe'] = rsvp_form_element_disable_maybe($rsvp, $inside_fieldset);
+    $form['rsvp_addedit_form']['rsvp_field_4']['reply_startdate_option'] = rsvp_form_element_reply_startdate_option($rsvp, $inside_fieldset);
     $form['rsvp_addedit_form']['rsvp_field_4']['reply_startdate'] = rsvp_form_element_reply_startdate($rsvp, $inside_fieldset);
+    $form['rsvp_addedit_form']['rsvp_field_4']['reply_enddate_option'] = rsvp_form_element_reply_enddate_option($rsvp, $inside_fieldset);
     $form['rsvp_addedit_form']['rsvp_field_4']['reply_enddate'] = rsvp_form_element_reply_enddate($rsvp, $inside_fieldset);
     $form['rsvp_addedit_form']['rsvp_field_4']['reply_blind_node'] = rsvp_form_element_reply_blind_node($rsvp, $inside_fieldset);
   }
@@ -3240,9 +3266,29 @@ function rsvp_addedit_form(&$form_state, $node = NULL, $rsvp = NULL) {
   }
   $form['rsvp_addedit_form']['buttons_end'] = array('#value' => '</div>');
   
+  //$form['#validate'][] = 'rsvp_addedit_form_validate';
+  
   return $form;
   
 }
+
+/**
+ * Special validate handler for the addedit form
+ */
+/*
+function rsvp_addedit_form_validate($form, &$form_state) {
+  // If a reply start date is specified, it needs to be validated.
+  if ($form_state['values']['rsvp_addedit_form']['rsvp_field_4']['reply_startdate_option']) {
+    $form['rsvp_addedit_form']['rsvp_field_4']['reply_startdate']['#skip_validate'] = FALSE;
+//    event_validate($form['event']['end_exploded']);
+  }
+  // We set the end date to the start date.
+  else {
+    $form_item['#parents'] = array('rsvp_addedit_form', 'rsvp_field_4', 'reply_startdate');
+    form_set_value($form_item, $form_state['rsvp_addedit_form']['rsvp_field_4']['reply_startdate_expand'], $form_state);
+  }
+}
+*/
 
 
 /**
@@ -3284,32 +3330,52 @@ function rsvp_addedit_form_submit($form, &$form_state) {
       //array_diff removes all '0' values from the returned selection 
       $rsvp->rsvp_view_roles = implode(";", array_diff($form_state['values']['rsvp_view_roles'], array('0')));
     }
-
-    if (isset($form_state['values']['reply_startdate'])) {
-    	
-    	$dt = $form_state['values']['reply_startdate'];
-      $date_local = mktime(0,0,0,(int)$dt['month'],(int)$dt['day'],(int)$dt['year']);
-      $rsvp->reply_startdate = $date_local;
     
+    if (isset($form_state['values']['reply_startdate_option'])) {
+      _rsvp_function_setbit($rsvp->option_enabled, RSVP_OPTION_REPLY_STARTDATE_ENABLED, $form_state['values']['reply_startdate_option']);
+      
+      if ($form_state['values']['reply_startdate_option'] == true) {
+      	$dt = $form_state['values']['reply_startdate'];
+        $date_local = (int)mktime(0,0,0,(int)$dt['month'],(int)$dt['day'],(int)$dt['year']);
+        $rsvp->reply_startdate = $date_local;
+      }
+      else {
+        //for a new rsvp, set reply_startdate to now
+        $rsvp->reply_startdate = time();
+      }
     }
     else {
-      //for a new rsvp, set reply_startdate to now
-      $rsvp->reply_startdate = time();
+      _rsvp_function_setbit($rsvp->option_enabled, RSVP_OPTION_REPLY_STARTDATE_ENABLED, RSVP_OPTION_NO);      
     }
 
-    if (isset($form_state['values']['reply_enddate'])) {
-      $dt = $form_state['values']['reply_enddate'];
-      $date_local = mktime(0,0,0,(int)$dt['month'],(int)$dt['day'],(int)$dt['year']);
-      $rsvp->reply_enddate = $date_local;
+    if (isset($form_state['values']['reply_enddate_option']))
+    {
+      _rsvp_function_setbit($rsvp->option_enabled, RSVP_OPTION_REPLY_ENDDATE_ENABLED, $form_state['values']['reply_enddate_option']);
+      
+      if ($form_state['values']['reply_enddate_option'] == true) {
+        $dt = $form_state['values']['reply_enddate'];
+        $date_local = (int)mktime(0,0,0,(int)$dt['month'],(int)$dt['day'],(int)$dt['year']);
+        $rsvp->reply_enddate = $date_local;
+      }
+      else {
+        //for a new rsvp, set reply_enddate to enddate of event. If we have no enddate, use start date.
+        $field = $connector->get_event_field($node->type);
+        $pos = $connector->get_posByHash($node, $field, $form_state['values']['startdate']);
+        if ($pos >= 0) {
+          if ($connector->has_enddate($node, $field, $pos) == true) {
+            $rsvp->reply_enddate = $connector->get_enddateAsUTC($node, $field, $pos);
+          }
+          else {
+            $rsvp->reply_enddate = $connector->get_startdateAsUTC($node, $field, $pos);
+          }
+        }
+        else {
+          drupal_set_message(t('UNKNOWN STARTDATE: %startdate', array('%startdate' => $form_state['values']['startdate'])));
+        }
+      }
     }
     else {
-      //for a new rsvp, set reply_enddate to enddate of event
-      $field = $connector->get_event_field($node->type);
-      $pos = $connector->get_posByHash($node, $field, $form_state['values']['startdate']);
-      if ($pos >= 0)
-        $rsvp->reply_enddate = $connector->get_enddate($node, $field, $pos);
-      else
-        drupal_set_message(t('UNKNOWN STARTDATE: %startdate', array('%startdate' => $form_state['values']['startdate'])));
+      _rsvp_function_setbit($rsvp->option_enabled, RSVP_OPTION_REPLY_ENDDATE_ENABLED, RSVP_OPTION_NO);      
     }
     
     $rsvp->invite_filterformat = $form_state['values']['format']; 
@@ -3317,7 +3383,25 @@ function rsvp_addedit_form_submit($form, &$form_state) {
     $rsvp->invite_text = $form_state['values']['invite_text'];
     
     
-    foreach (array('name', 'nid', 'startdate', 'theme', 'stylesheet', 'iconset', 'backgroundimage', 'image', 'response_blind', 'response_blind_node', 'reply_blind_node', 'attendees_visible', 'list_email', 'allow_invite', 'text_whoiscoming', 'text_yes', 'text_no', 'text_maybe', 'max_guests', 'open_invitation', 'disable_maybe', 'send_privatemsg', 'send_conf_guest', 'send_conf_owner') as $key) {
+    if (isset($form_state['values']['open_invitation']))
+      _rsvp_function_setbit($rsvp->option_enabled, RSVP_OPTION_OPENINVITATION, $form_state['values']['open_invitation']);
+    
+    if (isset($form_state['values']['disable_maybe']))
+      _rsvp_function_setbit($rsvp->option_enabled, RSVP_OPTION_DISABLE_MAYBE, $form_state['values']['disable_maybe']);
+    
+    if (isset($form_state['values']['send_privatemsg']))
+      _rsvp_function_setbit($rsvp->option_enabled, RSVP_OPTION_SEND_PRIVATEMSG, $form_state['values']['send_privatemsg']);
+    
+    if (isset($form_state['values']['send_conf_owner']))
+      _rsvp_function_setbit($rsvp->option_enabled, RSVP_OPTION_SEND_CONF_OWNER, $form_state['values']['send_conf_owner']);
+
+    if (isset($form_state['values']['send_conf_guest']))
+      _rsvp_function_setbit($rsvp->option_enabled, RSVP_OPTION_SEND_CONF_GUEST, $form_state['values']['send_conf_guest']);
+    
+    
+    foreach (array('name', 'nid', 'startdate', 'theme', 'stylesheet', 'iconset', 'backgroundimage', 'image', 
+                   'response_blind', 'response_blind_node', 'reply_blind_node', 'attendees_visible', 'list_email', 
+                   'allow_invite', 'text_whoiscoming', 'text_yes', 'text_no', 'text_maybe', 'max_guests', 'option_enabled') as $key) {
       if (isset($form_state['values'][$key]))
         $rsvp->$key = $form_state['values'][$key];
     	
@@ -3673,7 +3757,7 @@ function rsvp_msg_moderator_form(&$form_state, $rsvp) {
 	
 	$form = array();
   
-  $rsvp->send_conf_owner = RSVP_OPTION_YES; 
+  _rsvp_function_setbit($rsvp->option_enabled, RSVP_OPTION_SEND_CONF_OWNER, RSVP_OPTION_YES);  
 
   rsvp_function_update_rsvp($rsvp);
   drupal_set_message(t('The organizer will now receive messages about guests responses.'));
@@ -3822,7 +3906,7 @@ function rsvp_register_form_access($connector, $rsvp) {
 	if (!is_null($rsvp)) {
     $perm_byrole = rsvp_function_invitation_by_invite_access($connector, $rsvp, NULL, NULL, RSVP_ACCESS_BYROLE);
 		
-    if (($perm_byrole == true) && ($rsvp->open_invitation == RSVP_OPTION_YES)) {
+    if (($perm_byrole == true) && (_rsvp_function_checkbit($rsvp->option_enabled, RSVP_OPTION_OPENINVITATION) == RSVP_OPTION_YES)) {
       return true;
     }      
     
@@ -4165,7 +4249,7 @@ function template_preprocess_rsvp_invitation(&$variables) {
   $variables['totalsarray'][RSVP_ATT_NONE]  = array(check_plain($params['totalsarray'][RSVP_ATT_NONE]),   'not.gif',  t('No response'));
   
   $variables['max_guests'] = $rsvp->max_guests;
-  $variables['is_openinvitation'] = ($rsvp->open_invitation == RSVP_OPTION_YES);
+  $variables['is_openinvitation'] = (_rsvp_function_checkbit($rsvp->option_enabled, RSVP_OPTION_OPENINVITATION) == RSVP_OPTION_YES);
   $variables['event_subject'] = check_plain($node->title);
   $variables['event_startdate'] = check_plain($startdate);
   $variables['event_link'] = l($node->title, 'node/'. $node->nid);
@@ -4283,7 +4367,7 @@ function template_preprocess_rsvp_guestlist(&$variables) {
   $variables['is_moderator']      = $params['is_moderator'];
   $variables['is_anonymous']      = $params['is_anonymous'];
   $variables['show_responses']    = $params['show_responses'];
-  $variables['show_maybe']        = !$rsvp->disable_maybe;
+  $variables['show_maybe']        = !_rsvp_function_checkbit($rsvp->option_enabled, RSVP_OPTION_DISABLE_MAYBE);
   $variables['rid']               = $rsvp->rid;
   
   
@@ -4444,7 +4528,12 @@ class RsvpConnectorImpl {
   }
  
   //returns startdate as is to use it as a hash when working with reocurring dates.
-  function get_startdate($node, $field, $pos) {
+  function get_startdateAsHash($node, $field, $pos) {
+    return NULL;
+  }
+
+  //returns startdate as unix timestamp in utc.
+  function get_startdateAsUTC($node, $field, $pos) {
     return NULL;
   }
   
@@ -4454,10 +4543,15 @@ class RsvpConnectorImpl {
   }
   
   //returns enddate as unix timestamp in utc
-  function get_enddate($node, $field, $pos) {
+  function get_enddateAsUTC($node, $field, $pos) {
     return NULL;
   }
 
+  //returns if event has a valid enddate
+  function has_enddate($node, $field, $pos) {
+    return NULL;
+  }
+  
   function format_date($node, $field, $pos, $include_to_date = FALSE) {
     return NULL;  
   }
@@ -4511,8 +4605,13 @@ class RsvpConnector {
   }
   
   //returns startdate as is to use it as a hash when working with reocurring dates.
-  function get_startdate($node, $field, $pos) {
-  	return $this->connector->get_startdate($node, $field, $pos);
+  function get_startdateAsHash($node, $field, $pos) {
+  	return $this->connector->get_startdateAsHash($node, $field, $pos);
+  }
+
+  //returns startdate as unix timestamp in utc.
+    function get_startdateAsUTC($node, $field, $pos) {
+    return $this->connector->get_startdateAsUTC($node, $field, $pos);
   }
   
   //returns startdate as string in local timezone
@@ -4525,10 +4624,15 @@ class RsvpConnector {
   }
   
     //returns enddate in utc form
-  function get_enddate($node, $field, $pos) {
-    return $this->connector->get_enddate($node, $field, $pos);
+  function get_enddateAsUTC($node, $field, $pos) {
+    return $this->connector->get_enddateAsUTC($node, $field, $pos);
   }
 
+  //returns if event has a valid enddate
+  function has_enddate($node, $field, $pos) {
+    return $this->connector->has_enddate($node, $field, $pos);
+  }
+  
   function format_date($node, $field, $pos, $include_to_date = FALSE) {
     return $this->connector->format_date($node, $field, $pos, $include_to_date);
   }

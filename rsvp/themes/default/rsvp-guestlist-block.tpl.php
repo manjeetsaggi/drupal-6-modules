@@ -1,5 +1,5 @@
 <?php
-// $Id: rsvp-guestlist-block.tpl.php,v 1.2.2.2 2009/03/04 20:09:36 ulf1 Exp $
+// $Id: rsvp-guestlist-block.tpl.php,v 1.2.2.3 2009/11/05 22:36:47 ulf1 Exp $
 
 /**
  * @file rsvp-guestlist-block.tpl.php
@@ -44,7 +44,7 @@
   <div class="rsvp_guestlist_block">
     <?php if ($is_anonymous): ?>
       <div>
-        <?php print t('Please sign-in to display eventually more details about other invitees.') ?>
+        <?php print t('Please sign-in to display more details about other invitees.') ?>
       </div><br />
     <?php endif; ?>
 

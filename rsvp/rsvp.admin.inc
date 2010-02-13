@@ -1,6 +1,6 @@
 <?php
 
-// $Id: rsvp.admin.inc,v 1.3.2.7 2009/06/23 19:52:55 ulf1 Exp $
+// $Id: rsvp.admin.inc,v 1.3.2.9 2009/12/23 23:07:00 ulf1 Exp $
 
 /**
  * @module rsvp_admin
@@ -321,14 +321,25 @@ function rsvp_admin_settings_default_submit($form, &$form_state) {
   $vals_rsvp_view_roles = implode(";", array_diff($form_state['values']['rsvp_view_roles'], array('0')));
 	
   
-  foreach (array('max_guests', 'open_invitation', 'disable_maybe', 'send_privatemsg', 
-                 'send_conf_guest', 'send_conf_owner',
-                 'response_blind', 'response_blind_node', 
+  foreach (array('max_guests', 'response_blind', 'response_blind_node', 
                  'reply_blind_node', 'attendees_visible', 'list_email', 'allow_invite', 
                  'text_whoiscoming', 'text_yes', 'text_no', 'text_maybe', 'theme', 'stylesheet', 'iconset', 'backgroundimage', 'image') as $key) {
 
     variable_set('rsvp_default_' . $key, $form_state['values'][$key]);
   }
+  
+  $option_enabled = (int)0;
+  
+  _rsvp_function_setbit($option_enabled, RSVP_OPTION_DISABLE_MAYBE, $form_state['values']['disable_maybe']);
+  _rsvp_function_setbit($option_enabled, RSVP_OPTION_OPENINVITATION, $form_state['values']['open_invitation']);
+  _rsvp_function_setbit($option_enabled, RSVP_OPTION_REPLY_STARTDATE_ENABLED, $form_state['values']['reply_startdate_option']);
+  _rsvp_function_setbit($option_enabled, RSVP_OPTION_REPLY_ENDDATE_ENABLED, $form_state['values']['reply_enddate_option']);
+  _rsvp_function_setbit($option_enabled, RSVP_OPTION_SEND_PRIVATEMSG, $form_state['values']['send_privatemsg']);
+  _rsvp_function_setbit($option_enabled, RSVP_OPTION_SEND_CONF_OWNER, $form_state['values']['send_conf_owner']);
+  _rsvp_function_setbit($option_enabled, RSVP_OPTION_SEND_CONF_GUEST, $form_state['values']['send_conf_guest']);
+    
+  variable_set('rsvp_default_option_enabled', $option_enabled);
+  
   
   variable_set('rsvp_default_response_view_roles', $vals_response_view_roles);
   variable_set('rsvp_default_rsvp_view_roles', $vals_rsvp_view_roles);
@@ -416,6 +427,7 @@ function rsvp_form_node_type_form_alter(&$form, &$form_state) {
     $form['rsvp'] = array(
       '#type' => 'fieldset',
       '#title' => t('RSVP settings'),
+      '#group' => 'additional_settings',
       '#collapsible' => TRUE,
       '#collapsed' => TRUE,
     );

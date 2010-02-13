@@ -1,5 +1,5 @@
 <?php
-// $Id: rsvp_eventconnector.install,v 1.2.2.2 2009/03/09 21:51:54 ulf1 Exp $
+// $Id: rsvp_eventconnector.install,v 1.2.2.3 2009/11/05 22:36:47 ulf1 Exp $
 
 /**
  * Implementation of hook_install().
@@ -42,7 +42,7 @@ function rsvp_eventconnector_enable() {
   }
   else {
     variable_set(RSVP_VAR_CONNECTOR, 'event');
-    variable_set(RSVP_VAR_CONTENT_TYPES, array('event' => ''));    
+    variable_set(RSVP_VAR_CONTENT_TYPES, array('event' => 'event'));    
   }
 	
 }

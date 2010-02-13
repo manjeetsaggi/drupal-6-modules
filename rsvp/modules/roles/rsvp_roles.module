@@ -1,5 +1,5 @@
 <?php
-// $Id: rsvp_roles.module,v 1.1.2.2 2009/03/04 20:09:37 ulf1 Exp $
+// $Id: rsvp_roles.module,v 1.1.2.3 2009/08/27 16:03:58 ulf1 Exp $
 
 /**
  * @module rsvp_roles
@@ -89,7 +89,7 @@ function rsvp_roles_linklist($rsvp) {
   $links = array();
 
   foreach (user_roles(TRUE) as $rid => $role) {
-    $links[] = l($role, 'rsvp/'. $rsvp->rid .'/attendees/role/'. $rid, array('attributes' => array('title' => t('Add %role members to this invitation', array('%term' => $role)))));
+    $links[] = l($role, 'rsvp/'. $rsvp->rid .'/attendees/role/'. $rid, array('attributes' => array('title' => t('Add %role members to this invitation', array('%role' => $role)))));
   }
   
   return $links;  

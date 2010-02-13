@@ -1,5 +1,5 @@
 <?php
-// $Id: rsvp.install,v 1.10.2.4 2009/08/23 04:13:46 ulf1 Exp $ 
+// $Id: rsvp.install,v 1.10.2.5 2009/11/05 22:36:47 ulf1 Exp $ 
 
 function rsvp_install() {
   drupal_install_schema('rsvp');
@@ -150,38 +150,6 @@ function rsvp_schema() {
         'not null' => TRUE,
         'default' => 0
       ),
-      'send_conf_owner' => array(
-        'description' => ('Send confirmation emails to owner when guest replies'),
-        'type' => 'int',
-        'size' => 'tiny',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 0
-      ),
-      'send_conf_guest' => array(
-        'description' => ('Send confirmation emails to guest when he replies'),
-        'type' => 'int',
-        'size' => 'tiny',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 0
-      ),
-      'send_privatemsg' => array(
-        'description' => ('Send emails by privatemsg for registered users'),
-        'type' => 'int',
-        'size' => 'tiny',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 0
-      ),
-      'disable_maybe' => array(
-        'description' => ('Allow maybe as answer or not.'),
-        'type' => 'int',
-        'size' => 'tiny',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 0
-      ),
       'reply_startdate' => array(
         'description' => ('Determines when guests can start replying'),
         'type' => 'int',
@@ -192,14 +160,6 @@ function rsvp_schema() {
       'reply_enddate' => array(
         'description' => ('Determines when guests can not reply anymore'),
         'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 0
-      ),
-      'open_invitation' => array(
-        'description' => ('Can other registered users signup to the invitation'),
-        'type' => 'int',
-        'size' => 'tiny',
         'unsigned' => TRUE,
         'not null' => TRUE,
         'default' => 0
@@ -240,6 +200,13 @@ function rsvp_schema() {
         'type' => 'varchar',
         'length' => 128,
         'default' => ''
+      ),
+      'option_enabled' => array(
+        'description' => ('A field with bits each having a different meaning'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0
       ),
       
     ),
@@ -365,8 +332,7 @@ function rsvp_uninstall() {
   variable_del('rsvp_from_address');
   variable_del('rsvp_for_expired_event');
 
-  foreach (array('max_guests', 'open_invitation', 'disable_maybe', 'send_privatemsg', 
-                 'send_conf_guest', 'send_conf_owner',
+  foreach (array('max_guests', 'option_enabled',
                  'rsvp_view_roles', 'response_view_roles', 'response_blind', 'response_blind_node', 
                  'reply_blind_node', 'attendees_visible', 'list_email', 'allow_invite', 
                  'text_whoiscoming', 'text_yes', 'text_no', 'text_maybe', 'theme', 'stylesheet', 'iconset', 'backgroundimage', 'image') as $key) {
@@ -720,6 +686,37 @@ function rsvp_update_6201() {
   );
   
   drupal_set_message(t('Please edit all existing invitations and reset the startdate to the correct value.'));
+  
+  return $ret;
+}
+
+function rsvp_update_6202() {
+
+  $ret = array();
+
+  db_add_field($ret, 'rsvp', 'option_enabled', array(
+        'description' => ('A field with bits each having a different meaning'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0
+        )
+  );
+  
+  db_drop_field($ret, 'rsvp', 'open_invitation');
+  db_drop_field($ret, 'rsvp', 'disable_maybe');
+  db_drop_field($ret, 'rsvp', 'send_privatemsg');
+  db_drop_field($ret, 'rsvp', 'send_conf_owner');
+  db_drop_field($ret, 'rsvp', 'send_conf_guest');
+
+  foreach (array('open_invitation', 'disable_maybe', 'send_privatemsg', 
+                 'send_conf_guest', 'send_conf_owner') as $key) {
+
+    variable_del('rsvp_default_' . $key);
+  }
+  
+  
+  drupal_set_message(t('RSVP options: Please edit default settings and all existing invitations and set send_conf_owner, send_conf_guest, send_privatemsg, disable_maybe and open_invitation'));
   
   return $ret;
 }

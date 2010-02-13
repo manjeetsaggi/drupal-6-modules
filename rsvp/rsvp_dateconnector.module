@@ -1,5 +1,5 @@
 <?php
-// $Id: rsvp_dateconnector.module,v 1.2.2.9 2009/06/17 19:10:25 ulf1 Exp $
+// $Id: rsvp_dateconnector.module,v 1.2.2.11 2009/11/05 22:36:47 ulf1 Exp $
 
 
 class RsvpDateConnectorImpl extends RsvpConnectorImpl {
@@ -29,11 +29,17 @@ class RsvpDateConnectorImpl extends RsvpConnectorImpl {
 
   
   //returns startdate as is to use it as hash
-  function get_startdate($node, $field, $pos) {
+  function get_startdateAsHash($node, $field, $pos) {
 
     $date_value = $node->{$field['field_name']}[$pos]['value'];
     return $date_value;
-/*    
+  }
+
+  //returns startdate as is to use it as hash
+  function get_startdateAsUTC($node, $field, $pos) {
+
+    $date_value = $this->get_startdateAsHash($node, $field, $pos);
+    
     $db_tz = $this->_get_dbtimezone($node, $field, $pos);
 
     // Create a date object
@@ -44,9 +50,9 @@ class RsvpDateConnectorImpl extends RsvpConnectorImpl {
     $date_utc = date_format($date, 'U');
 
     return $date_utc;
-*/
-  }
 
+  }
+  
   
   //returns startdate as string in local timezone
   function get_startdateAsString($node, $field, $pos) {
@@ -54,24 +60,31 @@ class RsvpDateConnectorImpl extends RsvpConnectorImpl {
   }
   
   //returns enddate in utc form
-  function get_enddate($node, $field, $pos) {
+  function get_enddateAsUTC($node, $field, $pos) {
 
-    //if no "toDate" is set, return the "StartDate" of the event instead.
-    if (!isset($node->{$field['field_name']}[$pos]['value2']))
-      $date_value = $this->get_startdate($node, $field, $pos);
-    else    
+    if ($this->has_enddate($node, $field, $pos) == true)
+    {
       $date_value = $node->{$field['field_name']}[$pos]['value2'];
 
-    $db_tz = $this->_get_dbtimezone($node, $field, $pos);
+      $db_tz = $this->_get_dbtimezone($node, $field, $pos);
 
-    // Create a date object
-    $date = date_make_date($date_value, $db_tz, $field['type']);
-    // Make sure the date object is going to print UTC values.
-    date_timezone_set($date, timezone_open('UTC'));
+      // Create a date object
+      $date = date_make_date($date_value, $db_tz, $field['type']);
+      // Make sure the date object is going to print UTC values.
+      date_timezone_set($date, timezone_open('UTC'));
 
-    $date_utc = date_format($date, 'U');
+      $date_utc = date_format($date, 'U');
 
-    return $date_utc;
+      return $date_utc;
+    }
+    else {
+      return null;
+    }
+  }
+  
+  //returns if event has a valid enddate
+  function has_enddate($node, $field, $pos) {
+    return isset($node->{$field['field_name']}[$pos]['value2']);
   }
   
   //returns the position for a particular hash, or -1 if invalid hash
@@ -80,7 +93,7 @@ class RsvpDateConnectorImpl extends RsvpConnectorImpl {
     $count = $this->get_datecount($node, $field);
 
     for ($i = 0; $i < $count; $i++) {
-      $unixdate = $this->get_startdate($node, $field, $i);
+      $unixdate = $this->get_startdateAsHash($node, $field, $i);
       if ($unixdate == $hash) {
         return $i;
       }
@@ -144,7 +157,7 @@ class RsvpDateConnectorImpl extends RsvpConnectorImpl {
     }
     $date_out = date_format_date($date, 'custom', $format);
     
-    if ($include_to_date) {
+    if ($include_to_date && $this->has_enddate($node, $field, $pos)) {
       if (isset($node->{$field['field_name']})) {
         $date_value = $node->{$field['field_name']}[$pos]['value2'];
       }
@@ -152,7 +165,7 @@ class RsvpDateConnectorImpl extends RsvpConnectorImpl {
         $date_value = $node->{$field['database']['columns']['value2']['column']};
       }
       $date = date_make_date($date_value, $db_tz, $field['type']);
-      if ($db_tz != $display_tz) {
+      if ($db_tz != $display_tz && $date) {
         date_timezone_set($date, timezone_open($display_tz));
       }
 
