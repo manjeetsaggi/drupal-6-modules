@@ -1,5 +1,5 @@
 <?php
-// $Id: apachesolr_stats.install,v 1.1.2.2 2009/08/18 22:14:42 janusman Exp $
+// $Id: apachesolr_stats.install,v 1.1.2.3 2010/02/10 16:55:15 janusman Exp $
 
 /**
  * Implementation of hook_install().
@@ -20,7 +20,7 @@ function apachesolr_stats_uninstall() {
  * Implementation of hook_enable().
  */
 function apachesolr_stats_enable() {
-  drupal_set_message(t("Apache Solr Statistics module enabled. Please go to the !link", array('!link' => l('module configuration page', 'admin/settings/apachesolr/stats'))));
+  drupal_set_message(t("Apache Solr Statistics module enabled. Enable logging and other settings at the !link", array('!link' => l('module configuration page', 'admin/settings/apachesolr/stats'))));
 }
 
 /**
